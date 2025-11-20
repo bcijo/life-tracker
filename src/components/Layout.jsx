@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, ShoppingCart, CreditCard, Activity, LogOut } from 'lucide-react';
+import { Home, CheckSquare, ShoppingCart, CreditCard, Activity } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
+import ProfileMenu from './ProfileMenu';
 import '../styles/index.css';
 
 const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
-  };
 
   const routes = ['/', '/todos', '/habits', '/shopping', '/expenses'];
 
@@ -65,31 +61,23 @@ const Layout = () => {
         borderBottom: '1px solid var(--glass-border)',
         background: 'rgba(255,255,255,0.8)',
         backdropFilter: 'blur(10px)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
       }}>
-        <div style={{ fontSize: '14px', opacity: 0.8 }}>
-          {user?.email}
+        <div style={{
+          fontWeight: '700',
+          fontSize: '20px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          letterSpacing: '-0.5px'
+        }}>
+          LifeTracker
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 16px',
-            background: 'rgba(245, 101, 101, 0.1)',
-            color: '#f56565',
-            border: '1px solid rgba(245, 101, 101, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-          }}
-        >
-          <LogOut size={16} />
-          Logout
-        </button>
+        <ProfileMenu />
       </header>
-      <main style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: '20px', overflowY: 'auto', paddingBottom: '80px' }}>
         <Outlet />
       </main>
 
