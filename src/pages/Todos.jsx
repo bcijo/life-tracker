@@ -1,35 +1,25 @@
 import React, { useState } from 'react';
 import { ArrowRight, Trash2, Check, Circle } from 'lucide-react';
-import useLocalStorage from '../hooks/useLocalStorage';
-import { v4 as uuidv4 } from 'uuid';
+import useTodos from '../hooks/useTodos';
 
 const Todos = () => {
-    const [todos, setTodos] = useLocalStorage('todos', []);
+    const { todos, loading, addTodo: addTodoDb, toggleTodo: toggleTodoDb, deleteTodo: deleteTodoDb } = useTodos();
     const [inputValue, setInputValue] = useState('');
 
-    const addTodo = (e) => {
+    const addTodo = async (e) => {
         e.preventDefault();
         if (!inputValue.trim()) return;
 
-        const newTodo = {
-            id: uuidv4(),
-            text: inputValue,
-            completed: false,
-            createdAt: new Date().toISOString(),
-        };
-
-        setTodos([newTodo, ...todos]);
+        await addTodoDb(inputValue);
         setInputValue('');
     };
 
-    const toggleTodo = (id) => {
-        setTodos(todos.map(todo =>
-            todo.id === id ? { ...todo, completed: !todo.completed } : todo
-        ));
+    const toggleTodo = async (id) => {
+        await toggleTodoDb(id);
     };
 
-    const deleteTodo = (id) => {
-        setTodos(todos.filter(todo => todo.id !== id));
+    const deleteTodo = async (id) => {
+        await deleteTodoDb(id);
     };
 
     return (

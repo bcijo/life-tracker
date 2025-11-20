@@ -1,12 +1,15 @@
 import React from 'react';
-import useLocalStorage from '../hooks/useLocalStorage';
+import useTodos from '../hooks/useTodos';
+import useHabits from '../hooks/useHabits';
+import useShopping from '../hooks/useShopping';
+import useTransactions from '../hooks/useTransactions';
 import { isToday, parseISO } from 'date-fns';
 
 const Dashboard = () => {
-    const [todos] = useLocalStorage('todos', []);
-    const [habits] = useLocalStorage('habits', []);
-    const [shoppingItems] = useLocalStorage('shopping-items', []);
-    const [transactions] = useLocalStorage('transactions', []);
+    const { todos } = useTodos();
+    const { habits } = useHabits();
+    const { items: shoppingItems } = useShopping();
+    const { transactions } = useTransactions();
 
     const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 

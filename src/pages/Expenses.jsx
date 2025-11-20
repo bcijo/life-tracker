@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, ArrowUpRight, ArrowDownLeft, DollarSign, Trash2, TrendingUp, X, ChevronDown, ShoppingBag } from 'lucide-react';
-import useLocalStorage from '../hooks/useLocalStorage';
-import { v4 as uuidv4 } from 'uuid';
+import useTransactions from '../hooks/useTransactions';
+import useCategories from '../hooks/useCategories';
+import useShopping from '../hooks/useShopping';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const DEFAULT_CATEGORIES = [
@@ -16,9 +17,10 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const Expenses = () => {
-    const [transactions, setTransactions] = useLocalStorage('transactions', []);
-    const [categories, setCategories] = useLocalStorage('expense-categories', DEFAULT_CATEGORIES);
-    const [shoppingItems, setShoppingItems] = useLocalStorage('shopping-items', []);
+    const { transactions, loading: transactionsLoading, addTransaction: addTransactionDb, deleteTransaction: deleteTransactionDb } = useTransactions();
+    const { categories, loading: categoriesLoading, addCategory: addCategoryDb } = useCategories();
+    const { items: shoppingItems, markAddedToExpenses } = useShopping();
+
     const [showForm, setShowForm] = useState(false);
     const [showCategoryForm, setShowCategoryForm] = useState(false);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -28,67 +30,58 @@ const Expenses = () => {
     const [selectedCategory, setSelectedCategory] = useState('food');
     const [newCategoryName, setNewCategoryName] = useState('');
 
-    const addTransaction = (e) => {
+    const addTransaction = async (e) => {
         e.preventDefault();
         if (!amount || !description) return;
 
-        const newTransaction = {
-            id: uuidv4(),
-            amount: parseFloat(amount),
+        await addTransactionDb({
+            amount,
             description,
             type,
             category: selectedCategory,
             date: new Date().toISOString(),
-        };
+        });
 
-        setTransactions([newTransaction, ...transactions]);
         setAmount('');
         setDescription('');
         setShowForm(false);
     };
 
-    const addTransactionFromSuggestion = (item, price) => {
-        const newTransaction = {
-            id: uuidv4(),
-            amount: parseFloat(price),
+    const addTransactionFromSuggestion = async (item, price) => {
+        await addTransactionDb({
+            amount: price,
             description: item.name,
             type: 'expense',
             category: 'shopping',
             date: new Date().toISOString(),
-        };
-
-        setTransactions([newTransaction, ...transactions]);
+        });
 
         // Mark item as added to expenses
-        setShoppingItems(shoppingItems.map(i =>
-            i.id === item.id ? { ...i, addedToExpenses: true } : i
-        ));
+        await markAddedToExpenses(item.id);
     };
 
-    const dismissSuggestion = (itemId) => {
-        setShoppingItems(shoppingItems.map(i =>
-            i.id === itemId ? { ...i, addedToExpenses: true } : i
-        ));
+    const dismissSuggestion = async (itemId) => {
+        await markAddedToExpenses(itemId);
     };
 
-    const addCategory = (e) => {
+    const addCategory = async (e) => {
         e.preventDefault();
         if (!newCategoryName.trim()) return;
 
-        const newCategory = {
-            id: uuidv4(),
-            name: newCategoryName,
-            color: `hsl(${Math.random() * 360}, 70%, 60%)`,
-            type: 'both',
-        };
+        const categoryId = Date.now().toString();
+        await addCategoryDb(
+            categoryId,
+            newCategoryName,
+            `hsl(${Math.random() * 360}, 70%, 60%)`,
+            'both'
+        );
 
-        setCategories([...categories, newCategory]);
         setNewCategoryName('');
         setShowCategoryForm(false);
     };
 
-    const deleteTransaction = (id) => {
-        setTransactions(transactions.filter(t => t.id !== id));
+    const deleteTransaction = async (id) => {
+        await deleteTransactionDb(id);
     };
 
     const income = transactions

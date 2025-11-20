@@ -1,6 +1,11 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import Layout from './components/Layout'
+import MigrationBanner from './components/MigrationBanner'
+import ProtectedRoute from './components/ProtectedRoute'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import Todos from './pages/Todos'
 import Habits from './pages/Habits'
@@ -9,17 +14,27 @@ import Expenses from './pages/Expenses'
 
 function App() {
     return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Layout />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="todos" element={<Todos />} />
-                    <Route path="habits" element={<Habits />} />
-                    <Route path="shopping" element={<Shopping />} />
-                    <Route path="expenses" element={<Expenses />} />
-                </Route>
-            </Routes>
-        </Router>
+        <AuthProvider>
+            <MigrationBanner />
+            <Router>
+                <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/" element={
+                        <ProtectedRoute>
+                            <Layout />
+                        </ProtectedRoute>
+                    }>
+                        <Route index element={<Dashboard />} />
+                        <Route path="todos" element={<Todos />} />
+                        <Route path="habits" element={<Habits />} />
+                        <Route path="shopping" element={<Shopping />} />
+                        <Route path="expenses" element={<Expenses />} />
+                    </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Router>
+        </AuthProvider>
     )
 }
 

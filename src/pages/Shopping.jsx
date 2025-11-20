@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, Trash2, Check, Plus } from 'lucide-react';
+import useShopping from '../hooks/useShopping';
 import useLocalStorage from '../hooks/useLocalStorage';
-import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_SHOPPING_CATEGORIES = [
     { id: 'grocery', name: 'Grocery', color: '#ff6b6b' },
@@ -11,7 +11,7 @@ const DEFAULT_SHOPPING_CATEGORIES = [
 ];
 
 const Shopping = () => {
-    const [items, setItems] = useLocalStorage('shopping-items', []);
+    const { items, loading, addItem: addItemDb, toggleBought: toggleBoughtDb, deleteItem: deleteItemDb } = useShopping();
     const [categories, setCategories] = useLocalStorage('shopping-categories', DEFAULT_SHOPPING_CATEGORIES);
 
     const [newItemName, setNewItemName] = useState('');
@@ -19,21 +19,11 @@ const Shopping = () => {
     const [showCategoryForm, setShowCategoryForm] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
 
-    const addItem = (e) => {
+    const addItem = async (e) => {
         e.preventDefault();
         if (!newItemName.trim()) return;
 
-        const newItem = {
-            id: uuidv4(),
-            name: newItemName,
-            isBought: false,
-            category: selectedCategory,
-            createdAt: new Date().toISOString(),
-            boughtAt: null,
-            addedToExpenses: false,
-        };
-
-        setItems([newItem, ...items]);
+        await addItemDb(newItemName);
         setNewItemName('');
     };
 
@@ -42,7 +32,7 @@ const Shopping = () => {
         if (!newCategoryName.trim()) return;
 
         const newCategory = {
-            id: uuidv4(),
+            id: Date.now().toString(),
             name: newCategoryName,
             color: `hsl(${Math.random() * 360}, 70%, 60%)`,
         };
@@ -52,18 +42,12 @@ const Shopping = () => {
         setShowCategoryForm(false);
     };
 
-    const toggleItem = (id) => {
-        setItems(items.map(i =>
-            i.id === id ? {
-                ...i,
-                isBought: !i.isBought,
-                boughtAt: !i.isBought ? new Date().toISOString() : null
-            } : i
-        ));
+    const toggleItem = async (id) => {
+        await toggleBoughtDb(id);
     };
 
-    const deleteItem = (id) => {
-        setItems(items.filter(item => item.id !== id));
+    const deleteItem = async (id) => {
+        await deleteItemDb(id);
     };
 
     const activeItems = items.filter(i => !i.isBought);

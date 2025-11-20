@@ -1,55 +1,51 @@
 import React, { useState } from 'react';
 import { Plus, Flame, Check, Calendar as CalendarIcon } from 'lucide-react';
-import useLocalStorage from '../hooks/useLocalStorage';
-import { v4 as uuidv4 } from 'uuid';
+import useHabits from '../hooks/useHabits';
 import { format, isToday, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, subMonths, addMonths } from 'date-fns';
 
 const Habits = () => {
-    const [habits, setHabits] = useLocalStorage('habits', []);
+    const { habits, loading, addHabit: addHabitDb, toggleHabit: toggleHabitDb, deleteHabit: deleteHabitDb } = useHabits();
     const [showForm, setShowForm] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedHabit, setSelectedHabit] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
-    const addHabit = (e) => {
+    const addHabit = async (e) => {
         e.preventDefault();
         if (!newHabitName.trim()) return;
 
-        const newHabit = {
-            id: uuidv4(),
-            name: newHabitName,
-            streak: 0,
-            history: [],
-            color: `hsl(${Math.random() * 360}, 70%, 60%)`,
-        };
-
-        setHabits([newHabit, ...habits]);
+        await addHabitDb(newHabitName);
         setNewHabitName('');
         setShowForm(false);
     };
 
-    const toggleHabitForToday = (id) => {
-        setHabits(habits.map(habit => {
-            if (habit.id !== id) return habit;
+    const toggleHabitForToday = async (id) => {
+        await toggleHabitDb(id);
+    };
 
-            const today = new Date().toISOString().split('T')[0];
-            const lastCompleted = habit.history[0] ? habit.history[0].split('T')[0] : null;
+    // Calculate streak from history
+    const calculateStreak = (history) => {
+        if (!history || history.length === 0) return 0;
 
-            if (lastCompleted === today) {
-                return {
-                    ...habit,
-                    history: habit.history.slice(1),
-                    streak: Math.max(0, habit.streak - 1)
-                };
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (let i = 0; i < history.length; i++) {
+            const historyDate = new Date(history[i]);
+            historyDate.setHours(0, 0, 0, 0);
+
+            const expectedDate = new Date(today);
+            expectedDate.setDate(today.getDate() - i);
+
+            if (historyDate.getTime() === expectedDate.getTime()) {
+                streak++;
             } else {
-                const isConsecutive = lastCompleted === format(new Date(Date.now() - 86400000), 'yyyy-MM-dd');
-                return {
-                    ...habit,
-                    history: [new Date().toISOString(), ...habit.history],
-                    streak: isConsecutive ? habit.streak + 1 : 1
-                };
+                break;
             }
-        }));
+        }
+
+        return streak;
     };
 
     const isCompletedToday = (habit) => {
@@ -133,8 +129,8 @@ const Habits = () => {
                                 <div>
                                     <h3 style={{ marginBottom: '4px' }}>{habit.name}</h3>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: 0.7 }}>
-                                        <Flame size={14} color={habit.streak > 0 ? '#ff6b6b' : 'currentColor'} />
-                                        <span>{habit.streak} day streak</span>
+                                        <Flame size={14} color={calculateStreak(habit.history) > 0 ? '#ff6b6b' : 'currentColor'} />
+                                        <span>{calculateStreak(habit.history)} day streak</span>
                                     </div>
                                 </div>
 
