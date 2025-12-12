@@ -11,6 +11,9 @@ const Layout = () => {
   const { user } = useAuth();
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [touchOffset, setTouchOffset] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState(null);
 
   const routes = ['/', '/todos', '/habits', '/shopping', '/expenses'];
 
@@ -18,16 +21,24 @@ const Layout = () => {
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
+    if (isTransitioning) return;
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
+    setTouchOffset(0);
   };
 
   const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (!touchStart || isTransitioning) return;
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    setTouchOffset(currentTouch - touchStart);
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || isTransitioning) {
+      setTouchOffset(0);
+      return;
+    }
 
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
@@ -38,11 +49,29 @@ const Layout = () => {
 
       if (isLeftSwipe && currentIndex < routes.length - 1) {
         // Swipe left - go to next page
-        navigate(routes[currentIndex + 1]);
+        setSwipeDirection('left');
+        setIsTransitioning(true);
+        setTimeout(() => {
+          navigate(routes[currentIndex + 1]);
+          setIsTransitioning(false);
+          setSwipeDirection(null);
+          setTouchOffset(0);
+        }, 300);
       } else if (isRightSwipe && currentIndex > 0) {
         // Swipe right - go to previous page
-        navigate(routes[currentIndex - 1]);
+        setSwipeDirection('right');
+        setIsTransitioning(true);
+        setTimeout(() => {
+          navigate(routes[currentIndex - 1]);
+          setIsTransitioning(false);
+          setSwipeDirection(null);
+          setTouchOffset(0);
+        }, 300);
+      } else {
+        setTouchOffset(0);
       }
+    } else {
+      setTouchOffset(0);
     }
   };
 
@@ -77,7 +106,17 @@ const Layout = () => {
         </div>
         <ProfileMenu />
       </header>
-      <main style={{ flex: 1, padding: '20px', overflowY: 'auto', paddingBottom: '80px' }}>
+      <main style={{
+        flex: 1,
+        padding: '20px',
+        overflowY: 'auto',
+        paddingBottom: '80px',
+        transform: `translateX(${isTransitioning
+          ? swipeDirection === 'left' ? '-100%' : '100%'
+          : touchOffset * 0.3}px)`,
+        transition: isTransitioning ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+        opacity: isTransitioning ? 0 : 1 - Math.abs(touchOffset / 500),
+      }}>
         <Outlet />
       </main>
 

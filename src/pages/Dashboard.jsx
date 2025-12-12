@@ -3,6 +3,7 @@ import useTodos from '../hooks/useTodos';
 import useHabits from '../hooks/useHabits';
 import useShopping from '../hooks/useShopping';
 import useTransactions from '../hooks/useTransactions';
+import { useProfile } from '../hooks/useProfile';
 import { isToday, parseISO } from 'date-fns';
 
 const Dashboard = () => {
@@ -10,6 +11,7 @@ const Dashboard = () => {
     const { habits } = useHabits();
     const { items: shoppingItems } = useShopping();
     const { transactions } = useTransactions();
+    const { profile } = useProfile();
 
     const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
@@ -31,7 +33,7 @@ const Dashboard = () => {
         <div className="page-container">
             <header style={{ marginBottom: '24px' }}>
                 <p style={{ fontSize: '14px', opacity: 0.8, marginBottom: '4px' }}>{date}</p>
-                <h1>Hello, Abhin</h1>
+                <h1>Hello, {profile?.display_name || 'there'}</h1>
             </header>
 
             <div className="glass-card" style={{ padding: '20px', marginBottom: '20px', background: 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%)' }}>

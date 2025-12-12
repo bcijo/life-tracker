@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ChevronDown } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
+import { useProfile } from '../hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
 
 const ProfileMenu = () => {
     const { user, signOut } = useAuth();
+    const { profile } = useProfile();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
     const navigate = useNavigate();
@@ -30,8 +32,9 @@ const ProfileMenu = () => {
 
     if (!user) return null;
 
-    // Get user initial or first letter of email
-    const initial = user.email ? user.email[0].toUpperCase() : 'U';
+    // Get user initial from name or email
+    const displayName = profile?.display_name || user.email;
+    const initial = displayName ? displayName[0].toUpperCase() : 'U';
 
     return (
         <div style={{ position: 'relative' }} ref={menuRef}>
@@ -89,8 +92,12 @@ const ProfileMenu = () => {
                         borderBottom: '1px solid rgba(0,0,0,0.05)',
                         marginBottom: '8px',
                     }}>
-                        <p style={{ margin: 0, fontSize: '12px', opacity: 0.5, fontWeight: '500' }}>Signed in as</p>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '14px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {profile?.display_name && (
+                            <p style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
+                                {profile.display_name}
+                            </p>
+                        )}
+                        <p style={{ margin: 0, fontSize: '13px', opacity: 0.6, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {user.email}
                         </p>
                     </div>

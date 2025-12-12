@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, Mail, Lock, AlertCircle, User } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 const Signup = () => {
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -16,18 +18,33 @@ const Signup = () => {
         setError('');
         setLoading(true);
 
+        if (!name.trim()) {
+            setError('Please enter your name');
+            setLoading(false);
+            return;
+        }
+
         if (password.length < 6) {
             setError('Password must be at least 6 characters');
             setLoading(false);
             return;
         }
 
-        const { error } = await signUp(email, password);
+        const { data, error: signUpError } = await signUp(email, password);
 
-        if (error) {
-            setError(error.message);
+        if (signUpError) {
+            setError(signUpError.message);
             setLoading(false);
-        } else {
+        } else if (data.user) {
+            // Create user profile with display name
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .insert([{ id: data.user.id, display_name: name.trim() }]);
+
+            if (profileError) {
+                console.error('Error creating profile:', profileError);
+            }
+
             navigate('/');
         }
     };
@@ -104,6 +121,36 @@ const Signup = () => {
                 )}
 
                 <form onSubmit={handleSubmit}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                            Your Name
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                            <User size={18} style={{
+                                position: 'absolute',
+                                left: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                opacity: 0.5,
+                            }} />
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Abhin"
+                                required
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 12px 12px 40px',
+                                    border: '1px solid var(--glass-border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    background: 'rgba(255,255,255,0.7)',
+                                    fontSize: '16px',
+                                }}
+                            />
+                        </div>
+                    </div>
+
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
                             Email
