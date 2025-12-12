@@ -2,6 +2,28 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 /**
+ * Convert snake_case object keys to camelCase
+ * @param {Object} obj - Object with snake_case keys
+ * @returns {Object} Object with camelCase keys
+ */
+const camelizeKeys = (obj) => {
+    if (Array.isArray(obj)) {
+        return obj.map(item => camelizeKeys(item));
+    }
+
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+
+    return Object.keys(obj).reduce((acc, key) => {
+        // Convert snake_case to camelCase
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        acc[camelKey] = camelizeKeys(obj[key]);
+        return acc;
+    }, {});
+};
+
+/**
  * Generic hook for real-time Supabase data synchronization
  * @param {string} table - The name of the Supabase table
  * @param {string} orderBy - Column to order by (default: 'created_at')
@@ -28,7 +50,7 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                     .order(orderBy, { ascending });
 
                 if (fetchError) throw fetchError;
-                setData(fetchedData || []);
+                setData(camelizeKeys(fetchedData) || []);
                 setError(null);
             } catch (err) {
                 console.error(`Error fetching ${table}:`, err);
@@ -56,11 +78,11 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                     const userId = user?.id || '00000000-0000-0000-0000-000000000000';
 
                     if (payload.eventType === 'INSERT' && payload.new.user_id === userId) {
-                        setData((current) => [payload.new, ...current]);
+                        setData((current) => [camelizeKeys(payload.new), ...current]);
                     } else if (payload.eventType === 'UPDATE' && payload.new.user_id === userId) {
                         setData((current) =>
                             current.map((item) =>
-                                item.id === payload.new.id ? payload.new : item
+                                item.id === payload.new.id ? camelizeKeys(payload.new) : item
                             )
                         );
                     } else if (payload.eventType === 'DELETE' && payload.old.user_id === userId) {
