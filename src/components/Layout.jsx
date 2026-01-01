@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, ShoppingCart, CreditCard, Activity } from 'lucide-react';
+import { Home, CheckSquare, ShoppingCart, CreditCard, Activity, Wallet } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
+import AskAI from './AskAI';
 import '../styles/index.css';
 
 const Layout = () => {
@@ -15,7 +16,7 @@ const Layout = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState(null);
 
-  const routes = ['/', '/todos', '/habits', '/shopping', '/expenses'];
+  const routes = ['/', '/todos', '/habits', '/shopping', '/expenses', '/bank-accounts'];
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -139,10 +140,16 @@ const Layout = () => {
         </NavLink>
         <NavLink to="/expenses" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <CreditCard size={24} />
+          <span>Expenses</span>
+        </NavLink>
+        <NavLink to="/bank-accounts" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          {/* Using a different icon for Money/Banks */}
+          <Wallet size={24} />
           <span>Money</span>
         </NavLink>
       </nav>
 
+      <AskAI />
       <style>{`
         .bottom-nav {
           position: fixed;

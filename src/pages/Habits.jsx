@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { Plus, Flame, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Flame, Check, X, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import useHabits from '../hooks/useHabits';
-import { format, isToday, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, subMonths, addMonths } from 'date-fns';
+import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, isFuture, subDays } from 'date-fns';
 
 const Habits = () => {
-    const { habits, loading, addHabit: addHabitDb, toggleHabit: toggleHabitDb, deleteHabit: deleteHabitDb } = useHabits();
+    const {
+        habits,
+        loading,
+        addHabit: addHabitDb,
+        cycleHabitStatus,
+        getStatusForDate,
+        deleteHabit: deleteHabitDb
+    } = useHabits();
     const [showForm, setShowForm] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedHabit, setSelectedHabit] = useState(null);
@@ -19,50 +26,110 @@ const Habits = () => {
         setShowForm(false);
     };
 
-    const toggleHabitForToday = async (id) => {
-        await toggleHabitDb(id);
+    const handleHabitClick = async (habitId, dateStr = null) => {
+        await cycleHabitStatus(habitId, dateStr);
     };
 
-    // Calculate streak from history
-    const calculateStreak = (history) => {
-        if (!history || history.length === 0) return 0;
+    const handleDeleteHabit = async (habitId) => {
+        if (window.confirm('Are you sure you want to delete this habit? This will remove all history.')) {
+            await deleteHabitDb(habitId);
+            if (selectedHabit === habitId) {
+                setSelectedHabit(null);
+            }
+        }
+    };
+
+    // Calculate streak from history (only counts consecutive 'completed' days)
+    const calculateStreak = (habit) => {
+        if (!habit.history || habit.history.length === 0) return 0;
 
         let streak = 0;
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
-        for (let i = 0; i < history.length; i++) {
-            const historyDate = new Date(history[i]);
-            historyDate.setHours(0, 0, 0, 0);
+        for (let i = 0; i <= 365; i++) {
+            const checkDate = subDays(today, i);
+            const dateStr = format(checkDate, 'yyyy-MM-dd');
 
-            const expectedDate = new Date(today);
-            expectedDate.setDate(today.getDate() - i);
+            const status = getStatusForDate(habit, dateStr);
 
-            if (historyDate.getTime() === expectedDate.getTime()) {
+            if (status === 'completed') {
                 streak++;
-            } else {
+            } else if (status === 'failed') {
+                break; // Streak broken by failure
+            } else if (i > 0) {
+                // For past days, no entry means streak is broken
                 break;
             }
+            // For today (i === 0), neutral is okay - streak can continue
         }
 
         return streak;
     };
 
-    const isCompletedToday = (habit) => {
-        if (!habit.history.length) return false;
-        return isToday(parseISO(habit.history[0]));
-    };
-
-    const isCompletedOnDate = (habit, date) => {
-        return habit.history.some(historyDate =>
-            isSameDay(parseISO(historyDate), date)
-        );
+    const getTodayStatus = (habit) => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        return getStatusForDate(habit, today);
     };
 
     // Calendar logic
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    // Get button appearance based on status
+    const getTickButtonStyle = (status) => {
+        if (status === 'completed') {
+            return {
+                background: '#48bb78',
+                border: 'none',
+                color: '#fff',
+            };
+        } else if (status === 'failed') {
+            return {
+                background: '#f56565',
+                border: 'none',
+                color: '#fff',
+            };
+        }
+        return {
+            background: 'rgba(255,255,255,0.3)',
+            border: '2px solid rgba(0,0,0,0.1)',
+            color: 'var(--text-secondary)',
+        };
+    };
+
+    const getCalendarDayStyle = (status, isCurrentDay, isFutureDay) => {
+        let bg = 'rgba(0,0,0,0.05)';
+        let color = 'var(--text-primary)';
+
+        if (status === 'completed') {
+            bg = '#48bb78';
+            color = '#fff';
+        } else if (status === 'failed') {
+            bg = '#f56565';
+            color = '#fff';
+        }
+
+        if (isFutureDay) {
+            bg = 'rgba(0,0,0,0.02)';
+            color = 'rgba(0,0,0,0.3)';
+        }
+
+        return {
+            aspectRatio: '1',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            fontSize: '11px',
+            background: bg,
+            color: color,
+            fontWeight: isCurrentDay ? 'bold' : 'normal',
+            border: isCurrentDay ? '2px solid var(--text-primary)' : 'none',
+            cursor: isFutureDay ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease',
+        };
+    };
 
     return (
         <div className="page-container">
@@ -122,35 +189,66 @@ const Habits = () => {
 
             <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
                 {habits.map(habit => {
-                    const completed = isCompletedToday(habit);
+                    const todayStatus = getTodayStatus(habit);
+                    const streak = calculateStreak(habit);
+                    const tickStyle = getTickButtonStyle(todayStatus);
+
                     return (
                         <div key={habit.id} className="glass-card" style={{ padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <div>
+                                <div style={{ flex: 1 }}>
                                     <h3 style={{ marginBottom: '4px' }}>{habit.name}</h3>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: 0.7 }}>
-                                        <Flame size={14} color={calculateStreak(habit.history) > 0 ? '#ff6b6b' : 'currentColor'} />
-                                        <span>{calculateStreak(habit.history)} day streak</span>
+                                        <Flame size={14} color={streak > 0 ? '#ff6b6b' : 'currentColor'} />
+                                        <span>{streak} day streak</span>
                                     </div>
                                 </div>
 
+                                {/* Delete Button */}
                                 <button
-                                    onClick={() => toggleHabitForToday(habit.id)}
+                                    onClick={() => handleDeleteHabit(habit.id)}
+                                    style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        background: 'rgba(245, 101, 101, 0.1)',
+                                        color: '#f56565',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        marginRight: '8px',
+                                    }}
+                                    title="Delete habit"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+
+                                {/* Tri-state Toggle Button */}
+                                <button
+                                    onClick={() => handleHabitClick(habit.id)}
                                     style={{
                                         width: '48px',
                                         height: '48px',
                                         borderRadius: '12px',
-                                        border: completed ? 'none' : '2px solid rgba(0,0,0,0.1)',
-                                        background: completed ? habit.color : 'rgba(255,255,255,0.3)',
-                                        color: completed ? '#fff' : 'var(--text-secondary)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        transform: completed ? 'scale(1.05)' : 'scale(1)',
+                                        transform: todayStatus ? 'scale(1.05)' : 'scale(1)',
+                                        cursor: 'pointer',
+                                        ...tickStyle,
                                     }}
+                                    title={
+                                        todayStatus === 'completed' ? 'Click: mark as failed' :
+                                            todayStatus === 'failed' ? 'Click: clear status' :
+                                                'Click: mark as completed'
+                                    }
                                 >
-                                    <Check size={24} strokeWidth={3} style={{ opacity: completed ? 1 : 0.3 }} />
+                                    {todayStatus === 'completed' && <Check size={24} strokeWidth={3} />}
+                                    {todayStatus === 'failed' && <X size={24} strokeWidth={3} />}
+                                    {!todayStatus && <Check size={24} strokeWidth={3} style={{ opacity: 0.3 }} />}
                                 </button>
                             </div>
 
@@ -168,6 +266,7 @@ const Habits = () => {
                                     justifyContent: 'center',
                                     gap: '4px',
                                     opacity: 0.7,
+                                    cursor: 'pointer',
                                 }}
                             >
                                 <CalendarIcon size={14} />
@@ -204,6 +303,29 @@ const Habits = () => {
                                         </button>
                                     </div>
 
+                                    {/* Legend */}
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        gap: '16px',
+                                        marginBottom: '12px',
+                                        fontSize: '10px',
+                                        opacity: 0.8,
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#48bb78' }} />
+                                            <span>Done</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#f56565' }} />
+                                            <span>Missed</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'rgba(0,0,0,0.1)' }} />
+                                            <span>Pending</span>
+                                        </div>
+                                    </div>
+
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
                                         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
                                             <div key={idx} style={{ textAlign: 'center', fontSize: '10px', opacity: 0.6, padding: '4px' }}>
@@ -217,23 +339,22 @@ const Habits = () => {
                                         ))}
 
                                         {daysInMonth.map(day => {
-                                            const isCompleted = isCompletedOnDate(habit, day);
+                                            const dateStr = format(day, 'yyyy-MM-dd');
+                                            const status = getStatusForDate(habit, dateStr);
                                             const isCurrentDay = isToday(day);
+                                            const isFutureDay = isFuture(day);
+
                                             return (
                                                 <div
                                                     key={day.toString()}
-                                                    style={{
-                                                        aspectRatio: '1',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        borderRadius: '6px',
-                                                        fontSize: '11px',
-                                                        background: isCompleted ? habit.color : 'rgba(0,0,0,0.05)',
-                                                        color: isCompleted ? '#fff' : 'var(--text-primary)',
-                                                        fontWeight: isCurrentDay ? 'bold' : 'normal',
-                                                        border: isCurrentDay ? '2px solid var(--text-primary)' : 'none',
-                                                    }}
+                                                    onClick={() => !isFutureDay && handleHabitClick(habit.id, dateStr)}
+                                                    style={getCalendarDayStyle(status, isCurrentDay, isFutureDay)}
+                                                    title={
+                                                        isFutureDay ? 'Cannot mark future days' :
+                                                            status === 'completed' ? 'Completed - click to change' :
+                                                                status === 'failed' ? 'Missed - click to change' :
+                                                                    'Click to mark as completed'
+                                                    }
                                                 >
                                                     {format(day, 'd')}
                                                 </div>
@@ -246,6 +367,12 @@ const Habits = () => {
                     );
                 })}
             </div>
+
+            {habits.length === 0 && !loading && (
+                <div style={{ textAlign: 'center', padding: '40px', opacity: 0.6 }}>
+                    <p>No habits yet. Add your first habit to start tracking!</p>
+                </div>
+            )}
         </div>
     );
 };

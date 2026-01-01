@@ -8,7 +8,9 @@ function useTransactions() {
             amount: parseFloat(transactionData.amount),
             description: transactionData.description,
             type: transactionData.type,
-            category: transactionData.category,
+            category: transactionData.category, // Legacy or fallback string
+            card_id: transactionData.card_id || null, // Link to expense card
+            subcategory_id: transactionData.subcategory_id || null, // Link to subcategory
             date: transactionData.date || new Date().toISOString(),
         };
         return await insert(newTransaction);

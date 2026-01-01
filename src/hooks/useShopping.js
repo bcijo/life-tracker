@@ -3,9 +3,10 @@ import useSupabaseData from './useSupabaseData';
 function useShopping() {
     const { data: items, loading, error, insert, update, remove } = useSupabaseData('shopping_items');
 
-    const addItem = async (name) => {
+    const addItem = async (name, category = 'grocery') => {
         const newItem = {
             name,
+            category,
             is_bought: false,
             added_to_expenses: false,
         };

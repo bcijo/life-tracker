@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export const useProfile = () => {
-    const [profile, setProfile] = useState(null);
+    const [profile, setProfile] = useState(() => {
+        try {
+            const cached = localStorage.getItem('supa_cache_profile');
+            return cached ? JSON.parse(cached) : null;
+        } catch { return null; }
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -12,7 +17,6 @@ export const useProfile = () => {
     const fetchProfile = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-
             if (!user) {
                 setLoading(false);
                 return;
@@ -24,14 +28,22 @@ export const useProfile = () => {
                 .eq('id', user.id)
                 .single();
 
-            if (error && error.code !== 'PGRST116') { // Not found error
-                console.error('Error fetching profile:', error);
+            if (error && error.code === 'PGRST116') {
+                // Profile not found, create one
+                const newProfile = { id: user.id, display_name: user.email.split('@')[0], email: user.email };
+                const { data: created } = await supabase.from('profiles').insert([newProfile]).select().single();
+                if (created) {
+                    setProfile(created);
+                    localStorage.setItem('supa_cache_profile', JSON.stringify(created));
+                }
+            } else if (data) {
+                setProfile(data);
+                localStorage.setItem('supa_cache_profile', JSON.stringify(data));
             }
 
-            setProfile(data);
             setLoading(false);
         } catch (err) {
-            console.error('Error:', err);
+            console.error('Error fetching profile:', err);
             setLoading(false);
         }
     };
@@ -39,8 +51,13 @@ export const useProfile = () => {
     const updateProfile = async (updates) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-
             if (!user) return { error: 'Not authenticated' };
+
+            // Optimistic update
+            const oldProfile = profile;
+            const optimistic = { ...profile, ...updates };
+            setProfile(optimistic);
+            localStorage.setItem('supa_cache_profile', JSON.stringify(optimistic));
 
             const { data, error } = await supabase
                 .from('profiles')
@@ -48,12 +65,15 @@ export const useProfile = () => {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (error) {
+                setProfile(oldProfile); // Rollback
+                throw error;
+            }
 
             setProfile(data);
+            localStorage.setItem('supa_cache_profile', JSON.stringify(data));
             return { data, error: null };
         } catch (err) {
-            console.error('Error updating profile:', err);
             return { error: err.message };
         }
     };

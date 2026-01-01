@@ -100,3 +100,17 @@ button {
     background: rgba(0, 0, 0, 0.1);
     border-radius: 10px;
 }
+
+/* Form Elements Polish */
+input::placeholder,
+textarea::placeholder {
+    font-family: var(--font-family);
+    opacity: 0.5;
+    font-weight: 300;
+}
+
+input,
+select,
+textarea {
+    font-family: var(--font-family);
+}

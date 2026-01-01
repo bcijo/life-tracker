@@ -1,64 +1,240 @@
 import React, { useState } from 'react';
-import { ArrowRight, Trash2, Check, Plus } from 'lucide-react';
+import { ArrowRight, Trash2, Check, ChevronDown, ChevronUp, ShoppingBag, DollarSign, X } from 'lucide-react';
 import useShopping from '../hooks/useShopping';
-import useLocalStorage from '../hooks/useLocalStorage';
-
-const DEFAULT_SHOPPING_CATEGORIES = [
-    { id: 'grocery', name: 'Grocery', color: '#ff6b6b' },
-    { id: 'wants', name: 'Wants', color: '#4ecdc4' },
-    { id: 'gym', name: 'Gym', color: '#45b7d1' },
-    { id: 'other', name: 'Other', color: '#a55eea' },
-];
+import useExpenseCards from '../hooks/useExpenseCards';
+import useTransactions from '../hooks/useTransactions';
+import { format, parseISO } from 'date-fns';
 
 const Shopping = () => {
-    const { items, loading, addItem: addItemDb, toggleBought: toggleBoughtDb, deleteItem: deleteItemDb } = useShopping();
-    const [categories, setCategories] = useLocalStorage('shopping-categories', DEFAULT_SHOPPING_CATEGORIES);
+    const { items, loading, addItem: addItemDb, toggleBought: toggleBoughtDb, deleteItem: deleteItemDb, markAddedToExpenses } = useShopping();
+    const { cards: categories, loading: cardsLoading } = useExpenseCards();
+    const { addTransaction } = useTransactions();
 
     const [newItemName, setNewItemName] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('grocery');
-    const [showCategoryForm, setShowCategoryForm] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [showCompleted, setShowCompleted] = useState(false);
+
+    // Expense prompt state
+    const [expensePromptItem, setExpensePromptItem] = useState(null);
+    const [expenseAmount, setExpenseAmount] = useState('');
+
+    // Set default category once cards load
+    React.useEffect(() => {
+        if (categories.length > 0 && !selectedCategory) {
+            setSelectedCategory(categories[0].id);
+        }
+    }, [categories, selectedCategory]);
 
     const addItem = async (e) => {
         e.preventDefault();
         if (!newItemName.trim()) return;
 
-        await addItemDb(newItemName);
+        await addItemDb(newItemName, selectedCategory);
         setNewItemName('');
     };
 
-    const addCategory = (e) => {
-        e.preventDefault();
-        if (!newCategoryName.trim()) return;
+    const toggleItem = async (id) => {
+        const item = items.find(i => i.id === id);
+        if (!item) return;
 
-        const newCategory = {
-            id: Date.now().toString(),
-            name: newCategoryName,
-            color: `hsl(${Math.random() * 360}, 70%, 60%)`,
-        };
+        await toggleBoughtDb(id);
 
-        setCategories([...categories, newCategory]);
-        setNewCategoryName('');
-        setShowCategoryForm(false);
+        // If marking as bought, show expense prompt
+        if (!item.is_bought) {
+            setExpensePromptItem(item);
+            setExpenseAmount('');
+        }
     };
 
-    const toggleItem = async (id) => {
-        await toggleBoughtDb(id);
+    const handleAddExpense = async () => {
+        if (!expensePromptItem || !expenseAmount) return;
+
+        await addTransaction({
+            amount: parseFloat(expenseAmount),
+            description: expensePromptItem.name,
+            type: 'expense',
+            category: expensePromptItem.category,
+            card_id: expensePromptItem.category,
+            date: new Date().toISOString(),
+        });
+
+        await markAddedToExpenses(expensePromptItem.id);
+        setExpensePromptItem(null);
+        setExpenseAmount('');
+    };
+
+    const handleSkipExpense = () => {
+        setExpensePromptItem(null);
+        setExpenseAmount('');
     };
 
     const deleteItem = async (id) => {
         await deleteItemDb(id);
     };
 
-    const activeItems = items.filter(i => !i.isBought);
-    const boughtItems = items.filter(i => i.isBought);
+    // Grouping Logic
+    const activeItems = items.filter(i => !i.is_bought);
+    const boughtItems = items.filter(i => i.is_bought).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Group bought items by month
+    const boughtByMonth = boughtItems.reduce((acc, item) => {
+        const date = item.created_at ? parseISO(item.created_at) : new Date();
+        const monthKey = format(date, 'MMMM yyyy');
+        if (!acc[monthKey]) acc[monthKey] = [];
+        acc[monthKey].push(item);
+        return acc;
+    }, {});
+
+    const getCategoryDisplay = (categoryId) => {
+        const cat = categories.find(c => c.id === categoryId);
+        return cat ? { name: cat.name, color: cat.color, icon: cat.icon } : { name: 'Other', color: '#ccc', icon: '📦' };
+    };
+
+    const renderItem = (item, isBought) => {
+        const category = getCategoryDisplay(item.category);
+
+        return (
+            <div
+                key={item.id}
+                className="glass-card"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '16px',
+                    gap: '12px',
+                    opacity: isBought ? 0.6 : 1,
+                    background: isBought ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.6)',
+                }}
+            >
+                <button
+                    onClick={() => toggleItem(item.id)}
+                    style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        border: isBought ? 'none' : '2px solid var(--text-secondary)',
+                        background: isBought ? '#48bb78' : 'transparent',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        flexShrink: 0,
+                        cursor: 'pointer'
+                    }}
+                >
+                    {isBought && <Check size={16} />}
+                </button>
+                <div style={{ flex: 1 }}>
+                    <span style={{
+                        fontSize: '16px',
+                        display: 'block',
+                        textDecoration: isBought ? 'line-through' : 'none',
+                        color: isBought ? 'var(--text-secondary)' : 'var(--text-primary)'
+                    }}>
+                        {item.name}
+                    </span>
+                    <span style={{ fontSize: '12px', color: category.color, fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>{category.icon}</span> {category.name}
+                    </span>
+                </div>
+                <button
+                    onClick={() => deleteItem(item.id)}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                        opacity: 0.5,
+                        padding: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <Trash2 size={18} />
+                </button>
+            </div>
+        );
+    };
+
+    if (cardsLoading) {
+        return <div className="page-container" style={{ paddingBottom: '90px' }}>Loading...</div>;
+    }
 
     return (
-        <div className="page-container">
+        <div className="page-container" style={{ paddingBottom: '90px' }}>
             <header style={{ marginBottom: '24px' }}>
                 <h1>Shopping List</h1>
                 <p style={{ opacity: 0.7 }}>{activeItems.length} items to buy</p>
             </header>
+
+            {/* Expense Prompt Modal */}
+            {expensePromptItem && (
+                <div className="glass-card" style={{
+                    padding: '16px',
+                    marginBottom: '16px',
+                    background: 'linear-gradient(135deg, rgba(72, 187, 120, 0.15) 0%, rgba(72, 187, 120, 0.05) 100%)',
+                    border: '1px solid rgba(72, 187, 120, 0.3)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                        <DollarSign size={18} color="#48bb78" />
+                        <span style={{ fontWeight: '600', fontSize: '14px' }}>
+                            Add "{expensePromptItem.name}" to expenses?
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ position: 'relative', flex: 1 }}>
+                            <span style={{
+                                position: 'absolute',
+                                left: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: '#666',
+                                fontWeight: '600'
+                            }}>₹</span>
+                            <input
+                                type="number"
+                                value={expenseAmount}
+                                onChange={(e) => setExpenseAmount(e.target.value)}
+                                placeholder="Price"
+                                autoFocus
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 10px 10px 28px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '8px',
+                                    fontSize: '16px'
+                                }}
+                            />
+                        </div>
+                        <button
+                            onClick={handleAddExpense}
+                            disabled={!expenseAmount}
+                            style={{
+                                padding: '10px 16px',
+                                background: expenseAmount ? '#48bb78' : '#ccc',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: '600',
+                                cursor: expenseAmount ? 'pointer' : 'not-allowed'
+                            }}
+                        >
+                            Add
+                        </button>
+                        <button
+                            onClick={handleSkipExpense}
+                            style={{
+                                padding: '10px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#666',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={addItem} style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -89,6 +265,7 @@ const Shopping = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            cursor: 'pointer'
                         }}
                     >
                         <ArrowRight size={24} />
@@ -111,180 +288,68 @@ const Shopping = () => {
                                 fontWeight: '500',
                                 whiteSpace: 'nowrap',
                                 transition: 'all 0.2s ease',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
                             }}
                         >
-                            {cat.name}
+                            <span>{cat.icon}</span> {cat.name}
                         </button>
                     ))}
-                    <button
-                        type="button"
-                        onClick={() => setShowCategoryForm(!showCategoryForm)}
-                        style={{
-                            padding: '8px 12px',
-                            borderRadius: '20px',
-                            border: '1px dashed var(--text-secondary)',
-                            background: 'transparent',
-                            color: 'var(--text-secondary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                        }}
-                    >
-                        <Plus size={14} /> New
-                    </button>
                 </div>
             </form>
 
-            {showCategoryForm && (
-                <form onSubmit={addCategory} className="glass-panel" style={{ padding: '16px', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                            type="text"
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder="New Category Name"
-                            style={{
-                                flex: 1,
-                                padding: '12px',
-                                border: '1px solid var(--glass-border)',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(255,255,255,0.5)',
-                            }}
-                            autoFocus
-                        />
-                        <button
-                            type="submit"
-                            style={{
-                                padding: '12px 24px',
-                                background: 'var(--text-primary)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 'var(--radius-sm)',
-                                fontWeight: '600',
-                            }}
-                        >
-                            Add
-                        </button>
-                    </div>
-                </form>
-            )}
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {activeItems.map(item => {
-                    const category = categories.find(c => c.id === item.category);
-                    return (
-                        <div
-                            key={item.id}
-                            className="glass-card"
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '16px',
-                                gap: '12px',
-                            }}
-                        >
-                            <button
-                                onClick={() => toggleItem(item.id)}
-                                style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '6px',
-                                    border: '2px solid var(--text-secondary)',
-                                    background: 'transparent',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: 0,
-                                    flexShrink: 0,
-                                }}
-                            >
-                            </button>
-                            <div style={{ flex: 1 }}>
-                                <span style={{ fontSize: '16px', display: 'block' }}>{item.name}</span>
-                                {category && (
-                                    <span style={{ fontSize: '12px', color: category.color, fontWeight: '500' }}>
-                                        {category.name}
-                                    </span>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => deleteItem(item.id)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'var(--text-secondary)',
-                                    opacity: 0.5,
-                                    padding: '4px',
-                                }}
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    );
-                })}
+                {activeItems.map(item => renderItem(item, false))}
 
-                {boughtItems.length > 0 && (
-                    <>
-                        <h3 style={{ marginTop: '24px', opacity: 0.6, fontSize: '14px' }}>Bought</h3>
-                        {boughtItems.map(item => {
-                            const category = categories.find(c => c.id === item.category);
-                            return (
-                                <div
-                                    key={item.id}
-                                    className="glass-card"
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        padding: '16px',
-                                        gap: '12px',
-                                        opacity: 0.5,
-                                        background: 'rgba(0,0,0,0.02)',
-                                    }}
-                                >
-                                    <button
-                                        onClick={() => toggleItem(item.id)}
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            borderRadius: '6px',
-                                            border: 'none',
-                                            background: 'var(--accent-color)',
-                                            color: '#fff',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            padding: 0,
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        <Check size={16} />
-                                    </button>
-                                    <div style={{ flex: 1 }}>
-                                        <span style={{ fontSize: '16px', textDecoration: 'line-through', display: 'block' }}>{item.name}</span>
-                                        {category && (
-                                            <span style={{ fontSize: '12px', color: category.color, fontWeight: '500' }}>
-                                                {category.name}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => deleteItem(item.id)}
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'var(--text-secondary)',
-                                            opacity: 0.5,
-                                            padding: '4px',
-                                        }}
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </>
+                {activeItems.length === 0 && boughtItems.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
+                        <ShoppingBag size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                        <p>Your shopping list is empty.</p>
+                    </div>
                 )}
             </div>
+
+            {/* Completed Items Section */}
+            {boughtItems.length > 0 && (
+                <div style={{ marginTop: '32px' }}>
+                    <button
+                        onClick={() => setShowCompleted(!showCompleted)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-secondary)',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            padding: '8px 0',
+                            width: '100%'
+                        }}
+                    >
+                        {showCompleted ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        Completed ({boughtItems.length})
+                    </button>
+
+                    {showCompleted && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '16px' }}>
+                            {Object.entries(boughtByMonth).map(([month, items]) => (
+                                <div key={month}>
+                                    <h4 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '12px', letterSpacing: '1px' }}>
+                                        {month}
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {items.map(item => renderItem(item, true))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

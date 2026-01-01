@@ -2,43 +2,39 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 /**
- * Convert snake_case object keys to camelCase
- * @param {Object} obj - Object with snake_case keys
- * @returns {Object} Object with camelCase keys
- */
-const camelizeKeys = (obj) => {
-    if (Array.isArray(obj)) {
-        return obj.map(item => camelizeKeys(item));
-    }
-
-    if (obj === null || typeof obj !== 'object') {
-        return obj;
-    }
-
-    return Object.keys(obj).reduce((acc, key) => {
-        // Convert snake_case to camelCase
-        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-        acc[camelKey] = camelizeKeys(obj[key]);
-        return acc;
-    }, {});
-};
-
-/**
- * Generic hook for real-time Supabase data synchronization
+ * Generic hook for real-time Supabase data synchronization with LocalStorage caching
  * @param {string} table - The name of the Supabase table
  * @param {string} orderBy - Column to order by (default: 'created_at')
  * @param {boolean} ascending - Sort order (default: false for descending)
  */
 function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
-    const [data, setData] = useState([]);
+    const [data, setData] = useState(() => {
+        // Initial state from localStorage
+        try {
+            const cached = localStorage.getItem(`supa_cache_${table}`);
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            console.warn(`Error parsing cache for ${table}`, e);
+            return [];
+        }
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Update localStorage whenever data changes
+    useEffect(() => {
+        if (data.length > 0) {
+            localStorage.setItem(`supa_cache_${table}`, JSON.stringify(data));
+        }
+    }, [data, table]);
 
     useEffect(() => {
         // Fetch initial data
         const fetchData = async () => {
             try {
-                setLoading(true);
+                // Determine if we show loading state:
+                // If we have cached data, don't show full loading, just background refresh
+                if (data.length === 0) setLoading(true);
 
                 // Get current user
                 const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +46,9 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                     .order(orderBy, { ascending });
 
                 if (fetchError) throw fetchError;
-                setData(camelizeKeys(fetchedData) || []);
+
+                // Only update state if data is different (deep compare could be expensive, so we just set it)
+                setData(fetchedData || []);
                 setError(null);
             } catch (err) {
                 console.error(`Error fetching ${table}:`, err);
@@ -78,11 +76,15 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                     const userId = user?.id || '00000000-0000-0000-0000-000000000000';
 
                     if (payload.eventType === 'INSERT' && payload.new.user_id === userId) {
-                        setData((current) => [camelizeKeys(payload.new), ...current]);
+                        setData((current) => {
+                            // Prevent duplicates if already added by optimistic update
+                            if (current.some(item => item.id === payload.new.id)) return current;
+                            return [payload.new, ...current];
+                        });
                     } else if (payload.eventType === 'UPDATE' && payload.new.user_id === userId) {
                         setData((current) =>
                             current.map((item) =>
-                                item.id === payload.new.id ? camelizeKeys(payload.new) : item
+                                item.id === payload.new.id ? payload.new : item
                             )
                         );
                     } else if (payload.eventType === 'DELETE' && payload.old.user_id === userId) {
@@ -98,21 +100,38 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [table, orderBy, ascending]);
+    }, [table, orderBy, ascending]); // Keep dependencies stable
 
     // Generic CRUD operations
     const insert = async (newItem) => {
         try {
             // Get current user
             const { data: { user } } = await supabase.auth.getUser();
+            const payload = { ...newItem, user_id: user?.id, created_at: new Date().toISOString() };
+
+            // Optimistic update
+            const tempId = 'temp-' + Date.now();
+            const optimisticItem = { ...payload, id: tempId };
+
+            setData(current => [optimisticItem, ...current]);
 
             const { data: insertedData, error: insertError } = await supabase
                 .from(table)
-                .insert([{ ...newItem, user_id: user?.id }])
+                .insert([payload])
                 .select()
                 .single();
 
-            if (insertError) throw insertError;
+            if (insertError) {
+                // Rollback
+                setData(current => current.filter(item => item.id !== tempId));
+                throw insertError;
+            }
+
+            // Replace temp item with real item
+            if (insertedData) {
+                setData(current => current.map(item => item.id === tempId ? insertedData : item));
+            }
+
             return { data: insertedData, error: null };
         } catch (err) {
             console.error(`Error inserting into ${table}:`, err);
@@ -122,6 +141,12 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
 
     const update = async (id, updates) => {
         try {
+            // Optimistic update
+            const oldData = data.find(item => item.id === id);
+            setData(current =>
+                current.map(item => item.id === id ? { ...item, ...updates } : item)
+            );
+
             const { data: updatedData, error: updateError } = await supabase
                 .from(table)
                 .update(updates)
@@ -129,7 +154,16 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                 .select()
                 .single();
 
-            if (updateError) throw updateError;
+            if (updateError) {
+                // Rollback
+                if (oldData) {
+                    setData(current =>
+                        current.map(item => item.id === id ? oldData : item)
+                    );
+                }
+                throw updateError;
+            }
+
             return { data: updatedData, error: null };
         } catch (err) {
             console.error(`Error updating ${table}:`, err);
@@ -139,12 +173,23 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
 
     const remove = async (id) => {
         try {
+            // Optimistic update
+            const oldData = data.find(item => item.id === id);
+            setData(current => current.filter(item => item.id !== id));
+
             const { error: deleteError } = await supabase
                 .from(table)
                 .delete()
                 .eq('id', id);
 
-            if (deleteError) throw deleteError;
+            if (deleteError) {
+                // Rollback
+                if (oldData) {
+                    setData(current => [oldData, ...current]);
+                }
+                throw deleteError;
+            }
+
             return { error: null };
         } catch (err) {
             console.error(`Error deleting from ${table}:`, err);

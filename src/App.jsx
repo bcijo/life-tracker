@@ -11,6 +11,7 @@ import Todos from './pages/Todos'
 import Habits from './pages/Habits'
 import Shopping from './pages/Shopping'
 import Expenses from './pages/Expenses'
+import BankAccounts from './pages/BankAccounts'
 
 function App() {
     return (
@@ -30,6 +31,7 @@ function App() {
                         <Route path="habits" element={<Habits />} />
                         <Route path="shopping" element={<Shopping />} />
                         <Route path="expenses" element={<Expenses />} />
+                        <Route path="bank-accounts" element={<BankAccounts />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

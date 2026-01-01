@@ -3,10 +3,11 @@ import useSupabaseData from './useSupabaseData';
 function useTodos() {
     const { data: todos, loading, error, insert, update, remove } = useSupabaseData('todos');
 
-    const addTodo = async (text) => {
+    const addTodo = async (text, deadline = null) => {
         const newTodo = {
             text,
             completed: false,
+            deadline,
         };
         return await insert(newTodo);
     };
