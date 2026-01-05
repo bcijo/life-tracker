@@ -100,7 +100,7 @@ const Expenses = () => {
     };
 
     // Shopping suggestions logic
-    const shoppingSuggestions = shoppingItems.filter(item => item.isBought && !item.addedToExpenses);
+    const shoppingSuggestions = shoppingItems.filter(item => item.is_bought && !item.added_to_expenses);
     const addTransactionFromSuggestion = async (item, price) => {
         await addTransactionDb({
             amount: price,

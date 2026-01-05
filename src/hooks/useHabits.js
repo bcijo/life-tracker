@@ -92,6 +92,31 @@ function useHabits() {
         return await remove(id);
     };
 
+    // Mark habits as missed for yesterday if no status was set
+    const markMissedHabits = async () => {
+        if (!habits || habits.length === 0) return;
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+        for (const habit of habits) {
+            const status = getStatusForDate(habit, yesterdayStr);
+            if (status === null) {
+                // No entry for yesterday - mark as failed
+                let newHistory = (habit.history || []).map(h => {
+                    if (typeof h === 'string') {
+                        return { date: h.split('T')[0], status: 'completed' };
+                    }
+                    return h;
+                });
+                newHistory.unshift({ date: yesterdayStr, status: 'failed' });
+                newHistory.sort((a, b) => b.date.localeCompare(a.date));
+                await update(habit.id, { history: newHistory });
+            }
+        }
+    };
+
     return {
         habits,
         loading,
@@ -101,6 +126,7 @@ function useHabits() {
         cycleHabitStatus,
         getStatusForDate,
         deleteHabit,
+        markMissedHabits,
     };
 }
 

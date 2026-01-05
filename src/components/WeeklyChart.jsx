@@ -14,8 +14,8 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
     const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
     const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-    // Get expense categories
-    const expenseCategories = categories.filter(c => c.type === 'expense' || c.type === 'both');
+    // All categories passed are expense categories (from expense_cards)
+    const expenseCategories = categories;
 
     // Build chart data
     const chartData = daysOfWeek.map(day => {
@@ -27,11 +27,10 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
 
         expenseCategories.forEach(cat => {
             const categoryTotal = transactions
-                .filter(t =>
-                    t.type === 'expense' &&
-                    t.category === cat.id &&
-                    isSameDay(parseISO(t.date), day)
-                )
+                .filter(t => {
+                    if (t.type !== 'expense' || !isSameDay(parseISO(t.date), day)) return false;
+                    return t.card_id === cat.id || (cat.category_ids && cat.category_ids.includes(t.category));
+                })
                 .reduce((acc, t) => acc + parseFloat(t.amount), 0);
 
             dayData[cat.id] = categoryTotal;

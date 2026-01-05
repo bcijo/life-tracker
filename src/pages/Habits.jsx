@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Flame, Check, X, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import useHabits from '../hooks/useHabits';
 import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, isFuture, subDays } from 'date-fns';
@@ -10,12 +10,20 @@ const Habits = () => {
         addHabit: addHabitDb,
         cycleHabitStatus,
         getStatusForDate,
-        deleteHabit: deleteHabitDb
+        deleteHabit: deleteHabitDb,
+        markMissedHabits
     } = useHabits();
     const [showForm, setShowForm] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedHabit, setSelectedHabit] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    // Auto-mark missed habits on page load
+    useEffect(() => {
+        if (!loading && habits.length > 0) {
+            markMissedHabits();
+        }
+    }, [loading, habits.length]);
 
     const addHabit = async (e) => {
         e.preventDefault();

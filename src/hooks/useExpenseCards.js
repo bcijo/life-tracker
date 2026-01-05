@@ -44,10 +44,13 @@ function useExpenseCards() {
     };
 
     const getCardTransactions = (card, transactions) => {
-        if (!card.category_ids) return [];
-        return transactions.filter(t =>
-            t.type === 'expense' && card.category_ids.includes(t.category)
-        );
+        return transactions.filter(t => {
+            if (t.type !== 'expense') return false;
+            // Match by direct card_id link OR by category_ids
+            if (t.card_id === card.id) return true;
+            if (card.category_ids && card.category_ids.includes(t.category)) return true;
+            return false;
+        });
     };
 
     const getBudgetProgress = (card, transactions) => {
