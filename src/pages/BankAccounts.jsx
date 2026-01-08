@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Building2, Wallet, CreditCard, RefreshCw, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
+import CurrencyInput from '../components/CurrencyInput';
 import useBankAccounts from '../hooks/useBankAccounts';
 import useTransactions from '../hooks/useTransactions';
 import useExpenseCards from '../hooks/useExpenseCards';
@@ -220,17 +221,11 @@ const BankAccounts = () => {
                         ))}
                     </div>
 
-                    <input
-                        type="number"
-                        placeholder="Current Balance"
+                    <CurrencyInput
                         value={newAccount.balance}
-                        onChange={(e) => setNewAccount({ ...newAccount, balance: e.target.value })}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                        onChange={(val) => setNewAccount({ ...newAccount, balance: val })}
+                        placeholder="Current Balance"
+                        inputStyle={{
                             fontSize: '14px',
                         }}
                     />
@@ -268,20 +263,14 @@ const BankAccounts = () => {
                         Update current balance for <strong>{accountToUpdate?.name}</strong>.
                     </p>
 
-                    <input
-                        type="number"
-                        placeholder="Current Balance"
+                    <CurrencyInput
                         value={updateBalanceValue}
-                        onChange={(e) => setUpdateBalanceValue(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                        onChange={(val) => setUpdateBalanceValue(val)}
+                        placeholder="Current Balance"
+                        autoFocus={true}
+                        inputStyle={{
                             fontSize: '16px',
                         }}
-                        autoFocus
                     />
 
                     <button

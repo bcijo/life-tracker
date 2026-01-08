@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X, Calendar, Repeat, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
 import Modal from './Modal';
+import CurrencyInput from './CurrencyInput';
 
 const RecurringExpensesSection = ({
     recurringExpenses,
@@ -210,17 +211,11 @@ const RecurringExpensesSection = ({
                         autoFocus
                     />
 
-                    <input
-                        type="number"
-                        placeholder="Monthly Amount"
+                    <CurrencyInput
                         value={newExpense.amount}
-                        onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                        onChange={(val) => setNewExpense({ ...newExpense, amount: val })}
+                        placeholder="Monthly Amount"
+                        inputStyle={{
                             fontSize: '14px',
                         }}
                     />

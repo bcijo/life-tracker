@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Building2, Wallet, CreditCard, X, RefreshCw, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import Modal from './Modal';
+import CurrencyInput from './CurrencyInput';
 
 const ACCOUNT_TYPES = [
     { id: 'savings', label: 'Savings Account', icon: Building2, color: '#48bb78' },
@@ -234,17 +235,11 @@ const BankAccountsSection = ({
                         ))}
                     </div>
 
-                    <input
-                        type="number"
-                        placeholder="Current Balance"
+                    <CurrencyInput
                         value={newAccount.balance}
-                        onChange={(e) => setNewAccount({ ...newAccount, balance: e.target.value })}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                        onChange={(val) => setNewAccount({ ...newAccount, balance: val })}
+                        placeholder="Current Balance"
+                        inputStyle={{
                             fontSize: '14px',
                         }}
                     />
@@ -283,20 +278,14 @@ const BankAccountsSection = ({
                         We'll track the difference.
                     </p>
 
-                    <input
-                        type="number"
-                        placeholder="Current Balance"
+                    <CurrencyInput
                         value={updateBalance}
-                        onChange={(e) => setUpdateBalance(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                        onChange={(val) => setUpdateBalance(val)}
+                        placeholder="Current Balance"
+                        autoFocus={true}
+                        inputStyle={{
                             fontSize: '16px',
                         }}
-                        autoFocus
                     />
 
                     <button

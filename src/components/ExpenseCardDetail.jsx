@@ -2,8 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Calendar, FileText, Settings } from 'lucide-react';
 import useTransactions from '../hooks/useTransactions';
 import useExpenseCards from '../hooks/useExpenseCards';
+import CurrencyInput from './CurrencyInput';
 
 const EMOJI_LIST = ['🍽️', '🚗', '🛒', '💡', '🎬', '🏥', '📦', '🏠', '✈️', '🎮', '🎓', '🎁', '🔧', '💅', '🏋️', '📚', '🍕', '🍻', '👶', '🐾'];
+
+// Format number with Indian numbering system (1,00,000 format)
+const formatIndianNumber = (num) => {
+    if (!num && num !== 0) return '';
+    const numStr = num.toString();
+    const parts = numStr.split('.');
+    let intPart = parts[0];
+    const decPart = parts[1];
+
+    if (intPart.length > 3) {
+        let lastThree = intPart.slice(-3);
+        let remaining = intPart.slice(0, -3);
+        remaining = remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        intPart = remaining + ',' + lastThree;
+    }
+
+    return decPart !== undefined ? intPart + '.' + decPart : intPart;
+};
 
 const ExpenseCardDetail = ({ card, onClose }) => {
     const { addTransaction, deleteTransaction, transactions } = useTransactions();
@@ -189,20 +208,15 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                         <form onSubmit={handleAddTransaction} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {/* Amount Input */}
                             <div style={{ position: 'relative' }}>
-                                <span style={{
-                                    position: 'absolute',
-                                    left: '16px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    fontSize: '24px',
-                                    fontWeight: '600',
-                                    color: '#666'
-                                }}>₹</span>
                                 <input
-                                    type="number"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="0.00"
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={amount ? formatIndianNumber(amount) : ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/,/g, '');
+                                        if (/^\d*\.?\d*$/.test(val)) setAmount(val);
+                                    }}
+                                    placeholder="0"
                                     style={{
                                         width: '100%',
                                         padding: '16px 16px 16px 40px',
@@ -215,6 +229,16 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                     }}
                                     autoFocus
                                 />
+                                <span style={{
+                                    position: 'absolute',
+                                    left: '16px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    fontSize: '24px',
+                                    fontWeight: '600',
+                                    color: '#666',
+                                    pointerEvents: 'none'
+                                }}>₹</span>
                             </div>
 
                             {/* Subcategory Selection */}
@@ -492,19 +516,16 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                             {/* Budget */}
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
-                                    MONTHLY BUDGET (₹)
+                                    MONTHLY BUDGET
                                 </label>
-                                <input
-                                    type="number"
+                                <CurrencyInput
                                     value={editBudget}
-                                    onChange={(e) => setEditBudget(e.target.value)}
+                                    onChange={(val) => setEditBudget(val)}
                                     placeholder="No budget set"
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
+                                    inputStyle={{
+                                        fontSize: '16px',
                                         border: '1px solid #ddd',
                                         borderRadius: '8px',
-                                        fontSize: '16px'
                                     }}
                                 />
                             </div>

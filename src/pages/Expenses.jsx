@@ -7,6 +7,7 @@ import useExpenseCards from '../hooks/useExpenseCards';
 import useRecurringExpenses from '../hooks/useRecurringExpenses';
 import ExpenseCard from '../components/ExpenseCard';
 import WeeklyChart from '../components/WeeklyChart';
+import CurrencyInput from '../components/CurrencyInput';
 
 import RecurringExpensesSection from '../components/RecurringExpensesSection';
 import ExpenseCardDetail from '../components/ExpenseCardDetail';
@@ -152,12 +153,12 @@ const Expenses = () => {
                         {shoppingSuggestions.map(item => (
                             <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ flex: 1, fontSize: '14px' }}>{item.name}</span>
-                                <input
-                                    type="number"
-                                    placeholder="₹"
+                                <CurrencyInput
                                     value={suggestionAmounts[item.id] || ''}
-                                    onChange={(e) => setSuggestionAmounts({ ...suggestionAmounts, [item.id]: e.target.value })}
-                                    style={{ width: '80px', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                    onChange={(val) => setSuggestionAmounts({ ...suggestionAmounts, [item.id]: val })}
+                                    placeholder="Amount"
+                                    style={{ width: '100px' }}
+                                    inputStyle={{ padding: '6px', paddingLeft: '24px', fontSize: '13px' }}
                                 />
                                 <button
                                     onClick={() => {
@@ -352,17 +353,11 @@ const Expenses = () => {
                         ))}
                     </div>
 
-                    <input
-                        type="number"
-                        placeholder="Monthly Budget (₹)"
+                    <CurrencyInput
                         value={newCard.budget}
-                        onChange={(e) => setNewCard({ ...newCard, budget: e.target.value })}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                        onChange={(val) => setNewCard({ ...newCard, budget: val })}
+                        placeholder="Monthly Budget"
+                        inputStyle={{
                             fontSize: '16px',
                         }}
                     />

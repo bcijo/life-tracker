@@ -3,6 +3,7 @@ import { ArrowRight, Trash2, Check, ChevronDown, ChevronUp, ShoppingBag, DollarS
 import useShopping from '../hooks/useShopping';
 import useExpenseCards from '../hooks/useExpenseCards';
 import useTransactions from '../hooks/useTransactions';
+import CurrencyInput from '../components/CurrencyInput';
 import { format, parseISO } from 'date-fns';
 
 const Shopping = () => {
@@ -181,30 +182,17 @@ const Shopping = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
-                            <span style={{
-                                position: 'absolute',
-                                left: '12px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: '#666',
-                                fontWeight: '600'
-                            }}>₹</span>
-                            <input
-                                type="number"
-                                value={expenseAmount}
-                                onChange={(e) => setExpenseAmount(e.target.value)}
-                                placeholder="Price"
-                                autoFocus
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 10px 10px 28px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '8px',
-                                    fontSize: '16px'
-                                }}
-                            />
-                        </div>
+                        <CurrencyInput
+                            value={expenseAmount}
+                            onChange={(val) => setExpenseAmount(val)}
+                            placeholder="Price"
+                            autoFocus={true}
+                            style={{ flex: 1 }}
+                            inputStyle={{
+                                padding: '10px 10px 10px 28px',
+                                fontSize: '16px',
+                            }}
+                        />
                         <button
                             onClick={handleAddExpense}
                             disabled={!expenseAmount}
