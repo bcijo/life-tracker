@@ -117,6 +117,68 @@ function useHabits() {
         }
     };
 
+    // Calculate success rate since tracking started (or since last reset)
+    const calculateSuccessRate = (habit) => {
+        if (!habit.history || habit.history.length === 0) {
+            return { rate: null, completedDays: 0, totalDays: 0, startDate: null };
+        }
+
+        // Normalize history to get dates
+        const normalizedHistory = habit.history.map(h => {
+            if (typeof h === 'string') {
+                return { date: h.split('T')[0], status: 'completed' };
+            }
+            return h;
+        });
+
+        // Determine start date: either reset_date or the oldest entry in history
+        let startDateStr = habit.tracking_start_date;
+        if (!startDateStr) {
+            // Find the oldest date in history
+            const sortedDates = normalizedHistory.map(h => h.date).sort();
+            startDateStr = sortedDates[0];
+        }
+
+        if (!startDateStr) {
+            return { rate: null, completedDays: 0, totalDays: 0, startDate: null };
+        }
+
+        const startDate = new Date(startDateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+
+        // Calculate total days since start (inclusive)
+        const diffTime = today.getTime() - startDate.getTime();
+        const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        if (totalDays <= 0) {
+            return { rate: null, completedDays: 0, totalDays: 0, startDate: startDateStr };
+        }
+
+        // Count completed days
+        const completedDays = normalizedHistory.filter(h => h.status === 'completed').length;
+
+        // Calculate rate as percentage
+        const rate = Math.round((completedDays / totalDays) * 100);
+
+        return { rate, completedDays, totalDays, startDate: startDateStr };
+    };
+
+    // Reset habit stats - clears history and sets new tracking start date
+    const resetHabitStats = async (id) => {
+        const habit = habits.find(h => h.id === id);
+        if (!habit) return { error: 'Habit not found' };
+
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        return await update(id, {
+            history: [],
+            tracking_start_date: todayStr
+        });
+    };
+
     return {
         habits,
         loading,
@@ -127,6 +189,8 @@ function useHabits() {
         getStatusForDate,
         deleteHabit,
         markMissedHabits,
+        calculateSuccessRate,
+        resetHabitStats,
     };
 }
 

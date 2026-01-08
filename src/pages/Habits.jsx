@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Flame, Check, X, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
+import { Plus, Flame, Check, X, Calendar as CalendarIcon, Trash2, RotateCcw, BarChart2 } from 'lucide-react';
 import useHabits from '../hooks/useHabits';
+import HabitAnalytics from '../components/HabitAnalytics';
 import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, isFuture, subDays } from 'date-fns';
 
 const Habits = () => {
@@ -11,12 +12,15 @@ const Habits = () => {
         cycleHabitStatus,
         getStatusForDate,
         deleteHabit: deleteHabitDb,
-        markMissedHabits
+        markMissedHabits,
+        calculateSuccessRate,
+        resetHabitStats
     } = useHabits();
     const [showForm, setShowForm] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedHabit, setSelectedHabit] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [showAnalytics, setShowAnalytics] = useState(false);
 
     // Auto-mark missed habits on page load
     useEffect(() => {
@@ -45,6 +49,20 @@ const Habits = () => {
                 setSelectedHabit(null);
             }
         }
+    };
+
+    const handleResetStats = async (habitId) => {
+        if (window.confirm('Reset success tracking? This will clear all history and start fresh from today.')) {
+            await resetHabitStats(habitId);
+        }
+    };
+
+    // Get success rate color based on percentage
+    const getSuccessRateColor = (rate) => {
+        if (rate === null) return 'var(--text-secondary)';
+        if (rate >= 70) return '#48bb78';
+        if (rate >= 40) return '#ecc94b';
+        return '#f56565';
     };
 
     // Calculate streak from history (only counts consecutive 'completed' days)
@@ -143,23 +161,52 @@ const Habits = () => {
         <div className="page-container">
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h1>Habits</h1>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    style={{
-                        background: 'var(--text-primary)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '40px',
-                        height: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <Plus size={24} />
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => setShowAnalytics(true)}
+                        style={{
+                            background: 'rgba(72, 187, 120, 0.1)',
+                            color: '#48bb78',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                        }}
+                        title="View Analytics"
+                    >
+                        <BarChart2 size={20} />
+                    </button>
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        style={{
+                            background: 'var(--text-primary)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Plus size={24} />
+                    </button>
+                </div>
             </header>
+
+            {/* Analytics Modal */}
+            {showAnalytics && (
+                <HabitAnalytics
+                    habits={habits}
+                    getStatusForDate={getStatusForDate}
+                    onClose={() => setShowAnalytics(false)}
+                />
+            )}
 
             {showForm && (
                 <form onSubmit={addHabit} className="glass-panel" style={{ padding: '16px', marginBottom: '24px' }}>
@@ -200,15 +247,30 @@ const Habits = () => {
                     const todayStatus = getTodayStatus(habit);
                     const streak = calculateStreak(habit);
                     const tickStyle = getTickButtonStyle(todayStatus);
+                    const successStats = calculateSuccessRate(habit);
 
                     return (
                         <div key={habit.id} className="glass-card" style={{ padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                                 <div style={{ flex: 1 }}>
                                     <h3 style={{ marginBottom: '4px' }}>{habit.name}</h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: 0.7 }}>
-                                        <Flame size={14} color={streak > 0 ? '#ff6b6b' : 'currentColor'} />
-                                        <span>{streak} day streak</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', opacity: 0.7 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Flame size={14} color={streak > 0 ? '#ff6b6b' : 'currentColor'} />
+                                            <span>{streak} day streak</span>
+                                        </div>
+                                        {successStats.rate !== null && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                color: getSuccessRateColor(successStats.rate),
+                                                fontWeight: '500'
+                                            }}>
+                                                <span style={{ fontSize: '11px' }}>•</span>
+                                                <span>{successStats.rate}% success</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -283,6 +345,45 @@ const Habits = () => {
 
                             {selectedHabit === habit.id && (
                                 <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(255,255,255,0.3)', borderRadius: 'var(--radius-sm)' }}>
+                                    {/* Success Stats Header */}
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: '12px',
+                                        padding: '8px 10px',
+                                        background: 'rgba(0,0,0,0.03)',
+                                        borderRadius: '8px',
+                                    }}>
+                                        <div style={{ fontSize: '11px', opacity: 0.7 }}>
+                                            {successStats.startDate ? (
+                                                <span>Tracking since <strong>{format(new Date(successStats.startDate), 'MMM d, yyyy')}</strong></span>
+                                            ) : (
+                                                <span>No tracking data yet</span>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => handleResetStats(habit.id)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                padding: '4px 8px',
+                                                fontSize: '10px',
+                                                background: 'rgba(0,0,0,0.05)',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                opacity: 0.7,
+                                                transition: 'opacity 0.2s',
+                                            }}
+                                            title="Reset tracking and start fresh"
+                                        >
+                                            <RotateCcw size={10} />
+                                            Reset
+                                        </button>
+                                    </div>
+
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                         <button
                                             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
