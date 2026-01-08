@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowRight, Trash2, Check, ChevronDown, ChevronUp, ShoppingBag, DollarSign, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Trash2, Check, ChevronDown, ChevronUp, ShoppingBag, DollarSign, X, Plus } from 'lucide-react';
 import useShopping from '../hooks/useShopping';
 import useExpenseCards from '../hooks/useExpenseCards';
 import useTransactions from '../hooks/useTransactions';
@@ -8,7 +8,7 @@ import { format, parseISO } from 'date-fns';
 
 const Shopping = () => {
     const { items, loading, addItem: addItemDb, toggleBought: toggleBoughtDb, deleteItem: deleteItemDb, markAddedToExpenses } = useShopping();
-    const { cards: categories, loading: cardsLoading } = useExpenseCards();
+    const { cards: categories, loading: cardsLoading, fetchSubcategories, addSubcategory } = useExpenseCards();
     const { addTransaction } = useTransactions();
 
     const [newItemName, setNewItemName] = useState('');
@@ -18,6 +18,10 @@ const Shopping = () => {
     // Expense prompt state
     const [expensePromptItem, setExpensePromptItem] = useState(null);
     const [expenseAmount, setExpenseAmount] = useState('');
+    const [expenseSubcategories, setExpenseSubcategories] = useState([]);
+    const [selectedSubcategory, setSelectedSubcategory] = useState('');
+    const [showSubcategoryInput, setShowSubcategoryInput] = useState(false);
+    const [newSubcategoryName, setNewSubcategoryName] = useState('');
 
     // Set default category once cards load
     React.useEffect(() => {
@@ -40,10 +44,30 @@ const Shopping = () => {
 
         await toggleBoughtDb(id);
 
-        // If marking as bought, show expense prompt
+        // If marking as bought, show expense prompt and load subcategories
         if (!item.is_bought) {
             setExpensePromptItem(item);
             setExpenseAmount('');
+            setSelectedSubcategory('');
+            setShowSubcategoryInput(false);
+            setNewSubcategoryName('');
+
+            // Load subcategories for this item's category
+            if (item.category) {
+                const subs = await fetchSubcategories(item.category);
+                setExpenseSubcategories(subs || []);
+            }
+        }
+    };
+
+    const handleAddSubcategory = async () => {
+        if (!newSubcategoryName.trim() || !expensePromptItem) return;
+        const newSub = await addSubcategory(expensePromptItem.category, newSubcategoryName);
+        if (newSub) {
+            setExpenseSubcategories([...expenseSubcategories, newSub]);
+            setNewSubcategoryName('');
+            setShowSubcategoryInput(false);
+            setSelectedSubcategory(newSub.id);
         }
     };
 
@@ -56,17 +80,22 @@ const Shopping = () => {
             type: 'expense',
             category: expensePromptItem.category,
             card_id: expensePromptItem.category,
+            subcategory_id: selectedSubcategory || null,
             date: new Date().toISOString(),
         });
 
         await markAddedToExpenses(expensePromptItem.id);
         setExpensePromptItem(null);
         setExpenseAmount('');
+        setExpenseSubcategories([]);
+        setSelectedSubcategory('');
     };
 
     const handleSkipExpense = () => {
         setExpensePromptItem(null);
         setExpenseAmount('');
+        setExpenseSubcategories([]);
+        setSelectedSubcategory('');
     };
 
     const deleteItem = async (id) => {
@@ -181,12 +210,121 @@ const Shopping = () => {
                             Add "{expensePromptItem.name}" to expenses?
                         </span>
                     </div>
+
+                    {/* Subcategory Selection */}
+                    {expenseSubcategories.length > 0 || true ? (
+                        <div style={{ marginBottom: '12px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#666', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                Subcategory
+                            </label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {expenseSubcategories.map(sub => (
+                                    <button
+                                        key={sub.id}
+                                        type="button"
+                                        onClick={() => setSelectedSubcategory(selectedSubcategory === sub.id ? '' : sub.id)}
+                                        style={{
+                                            padding: '6px 10px',
+                                            borderRadius: '16px',
+                                            border: selectedSubcategory === sub.id ? '2px solid #48bb78' : '1px solid #ddd',
+                                            background: selectedSubcategory === sub.id ? 'rgba(72, 187, 120, 0.15)' : '#fff',
+                                            color: selectedSubcategory === sub.id ? '#48bb78' : '#666',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: '500',
+                                        }}
+                                    >
+                                        {sub.name}
+                                    </button>
+                                ))}
+
+                                {showSubcategoryInput ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <input
+                                            type="text"
+                                            value={newSubcategoryName}
+                                            onChange={(e) => setNewSubcategoryName(e.target.value)}
+                                            placeholder="New..."
+                                            style={{
+                                                padding: '6px 10px',
+                                                borderRadius: '16px',
+                                                border: '1px solid #ddd',
+                                                fontSize: '12px',
+                                                width: '80px'
+                                            }}
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddSubcategory();
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleAddSubcategory}
+                                            style={{
+                                                background: '#48bb78',
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                width: '22px',
+                                                height: '22px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowSubcategoryInput(false);
+                                                setNewSubcategoryName('');
+                                            }}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: '#999',
+                                                cursor: 'pointer',
+                                                padding: '2px'
+                                            }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSubcategoryInput(true)}
+                                        style={{
+                                            padding: '6px 10px',
+                                            borderRadius: '16px',
+                                            border: '1px dashed #bbb',
+                                            background: 'transparent',
+                                            color: '#888',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}
+                                    >
+                                        <Plus size={12} /> Add
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : null}
+
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <CurrencyInput
                             value={expenseAmount}
                             onChange={(val) => setExpenseAmount(val)}
                             placeholder="Price"
-                            autoFocus={true}
+                            autoFocus={!showSubcategoryInput}
                             style={{ flex: 1 }}
                             inputStyle={{
                                 padding: '10px 10px 10px 28px',

@@ -13,6 +13,23 @@ const ACCOUNT_TYPES = [
     { id: 'wallet', label: 'Digital Wallet', icon: Wallet, color: '#4ecdc4' },
 ];
 
+// Format number with Indian numbering system (1,00,000 format)
+const formatIndianNumber = (num) => {
+    if (!num && num !== 0) return '0';
+    const value = Math.round(parseFloat(num));
+    const isNegative = value < 0;
+    let intPart = Math.abs(value).toString();
+
+    if (intPart.length > 3) {
+        let lastThree = intPart.slice(-3);
+        let remaining = intPart.slice(0, -3);
+        remaining = remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        intPart = remaining + ',' + lastThree;
+    }
+
+    return isNegative ? '-' + intPart : intPart;
+};
+
 const BankAccounts = () => {
     const {
         bankAccounts,
@@ -62,7 +79,7 @@ const BankAccounts = () => {
                 <div>
                     <h1>Money</h1>
                     <p style={{ fontSize: '14px', opacity: 0.7 }}>
-                        Total Balance: <span style={{ fontWeight: '600', color: '#48bb78' }}>₹{getTotalBalance().toFixed(0)}</span>
+                        Total Balance: <span style={{ fontWeight: '600', color: '#48bb78' }}>₹{formatIndianNumber(getTotalBalance())}</span>
                     </p>
                 </div>
                 <button
@@ -124,7 +141,7 @@ const BankAccounts = () => {
                                 fontSize: '16px',
                                 color: parseFloat(account.current_balance) >= 0 ? '#48bb78' : '#f56565',
                             }}>
-                                ₹{parseFloat(account.current_balance).toFixed(0)}
+                                ₹{formatIndianNumber(account.current_balance)}
                             </span>
                             <button
                                 onClick={() => {
