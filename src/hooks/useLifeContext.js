@@ -4,6 +4,7 @@ import useHabits from './useHabits';
 import useTodos from './useTodos';
 import useBankAccounts from './useBankAccounts';
 import useRecurringExpenses from './useRecurringExpenses';
+import useJournal from './useJournal';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
 /**
@@ -16,6 +17,7 @@ function useLifeContext() {
     const { todos } = useTodos();
     const { bankAccounts, getTotalBalance } = useBankAccounts();
     const { recurringExpenses, monthlyTotal: fixedExpensesTotal } = useRecurringExpenses();
+    const { weekEntries: journalEntries } = useJournal();
 
     // 2. Process Data for AI Context
     const contextData = useMemo(() => {
@@ -49,6 +51,15 @@ function useLifeContext() {
             .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
             .slice(0, 5);
 
+        // --- Journal Entries ---
+        const journalSummary = journalEntries.map(entry => ({
+            date: entry.date,
+            moodScore: entry.mood_score,
+            thoughts: entry.on_your_mind,
+            reflection: entry.how_was_today,
+            changeForTomorrow: entry.change_for_tomorrow
+        }));
+
         // --- Context String Construction ---
         return {
             financial: {
@@ -62,11 +73,12 @@ function useLifeContext() {
                 pendingCount: pendingTasks.length,
                 topPriority: upcomingDeadlines.map(t => `${t.text} (Due: ${t.deadline})`),
             },
+            journal: journalSummary,
             meta: {
                 currentDate: format(today, 'yyyy-MM-dd'),
             }
         };
-    }, [transactions, habits, todos, bankAccounts, recurringExpenses]);
+    }, [transactions, habits, todos, bankAccounts, recurringExpenses, journalEntries]);
 
     return contextData;
 }

@@ -10,6 +10,7 @@ import useSupabaseData from '../hooks/useSupabaseData';
 import useLifeContext from '../hooks/useLifeContext';
 import { generateReport } from '../lib/groq';
 import AIReportCard from '../components/AIReportCard';
+import JournalCard from '../components/JournalCard';
 import { supabase } from '../lib/supabase';
 
 const Dashboard = () => {
@@ -127,6 +128,9 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Daily Journal */}
+            <JournalCard />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <Link to="/expenses" style={{ textDecoration: 'none', color: 'inherit' }}>

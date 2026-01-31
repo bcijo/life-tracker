@@ -64,6 +64,7 @@ const AIReportCard = ({ report, loading }) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', color: '#4a5568' }}>
                         <p><strong>Spending:</strong> {report.spendingAnalysis}</p>
                         <p><strong>Habits:</strong> {report.habitAnalysis}</p>
+                        {report.journalInsight && <p><strong>Mindset:</strong> {report.journalInsight}</p>}
                     </div>
                 </div>
             </div>

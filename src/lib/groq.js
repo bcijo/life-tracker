@@ -71,10 +71,12 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
         "highlights": ["3 SHORT bullet points - 5-8 words each"],
         "spendingAnalysis": "1 sentence - spending pattern",
         "habitAnalysis": "1 sentence - habit consistency",
+        "journalInsight": "1 sentence - mood/mindset trend from journal entries",
         "suggestion": "1 actionable tip - under 10 words",
         "score": 85
     }
     
+    If journal entries exist, analyze mood patterns and key reflections.
     Be extremely concise. No fluff.`;
 
     const messages = [{ role: 'user', content: `Generate the ${type} report.` }];
