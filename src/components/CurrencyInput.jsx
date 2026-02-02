@@ -134,7 +134,6 @@ const CurrencyInput = ({
                 className={className}
                 style={{
                     width: '100%',
-                    paddingLeft: '28px',
                     padding: '12px',
                     paddingLeft: '28px',
                     border: '1px solid var(--glass-border)',

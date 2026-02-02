@@ -1,14 +1,47 @@
 import useSupabaseData from './useSupabaseData';
 
+// Default active days: all days of the week (Sunday=0 to Saturday=6)
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
 function useHabits() {
     const { data: habits, loading, error, insert, update, remove } = useSupabaseData('habits');
 
-    const addHabit = async (name) => {
+    // Helper to get local date string in YYYY-MM-DD format
+    const getLocalDateStr = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Check if a given date's day-of-week is in the habit's active days
+    const isActiveDay = (habit, dateStr) => {
+        const activeDays = habit.active_days || ALL_DAYS;
+        const date = new Date(dateStr);
+        const dayOfWeek = date.getDay(); // 0=Sunday, 6=Saturday
+        return activeDays.includes(dayOfWeek);
+    };
+
+    // Check if today is an active day for the habit
+    const isTodayActive = (habit) => {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const activeDays = habit.active_days || ALL_DAYS;
+        return activeDays.includes(dayOfWeek);
+    };
+
+    const addHabit = async (name, activeDays = ALL_DAYS) => {
         const newHabit = {
             name,
             history: [], // Will store { date: 'YYYY-MM-DD', status: 'completed' | 'failed' }
+            active_days: activeDays,
         };
         return await insert(newHabit);
+    };
+
+    // Update habit's active days
+    const updateHabitDays = async (id, activeDays) => {
+        return await update(id, { active_days: activeDays });
     };
 
     // Get the status for a specific date: 'completed', 'failed', or null (neutral)
@@ -28,18 +61,49 @@ function useHabits() {
         return entry.status;
     };
 
+    // Get weekly status for the current week (Sunday to Saturday)
+    const getWeeklyStatus = (habit) => {
+        const today = new Date();
+        const currentDayOfWeek = today.getDay(); // 0=Sunday, 6=Saturday
+
+        // Get the start of the current week (Sunday)
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - currentDayOfWeek);
+        weekStart.setHours(0, 0, 0, 0);
+
+        const activeDays = habit.active_days || ALL_DAYS;
+        const weeklyStatus = [];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(weekStart);
+            date.setDate(weekStart.getDate() + i);
+            const dateStr = getLocalDateStr(date);
+            const isActive = activeDays.includes(i);
+            const isFuture = date > today;
+            const isToday = i === currentDayOfWeek;
+
+            let status = null;
+            if (isActive && !isFuture) {
+                status = getStatusForDate(habit, dateStr);
+            }
+
+            weeklyStatus.push({
+                dayIndex: i,
+                date: dateStr,
+                isActive,
+                isFuture,
+                isToday,
+                status, // 'completed', 'failed', or null
+            });
+        }
+
+        return weeklyStatus;
+    };
+
     // Cycle through states: null -> completed -> failed -> null
     const cycleHabitStatus = async (id, dateStr = null) => {
         const habit = habits.find(h => h.id === id);
         if (!habit) return { error: 'Habit not found' };
-
-        // Use local date format (YYYY-MM-DD) to avoid timezone issues
-        const getLocalDateStr = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
 
         const targetDate = dateStr || getLocalDateStr(new Date());
 
@@ -92,15 +156,23 @@ function useHabits() {
         return await remove(id);
     };
 
-    // Mark habits as missed for yesterday if no status was set
+    // Mark habits as missed for yesterday if no status was set (only for active days)
     const markMissedHabits = async () => {
         if (!habits || habits.length === 0) return;
 
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+        const yesterdayStr = getLocalDateStr(yesterday);
+        const yesterdayDayOfWeek = yesterday.getDay();
 
         for (const habit of habits) {
+            const activeDays = habit.active_days || ALL_DAYS;
+
+            // Only mark as missed if yesterday was an active day for this habit
+            if (!activeDays.includes(yesterdayDayOfWeek)) {
+                continue; // Skip - yesterday was a rest day
+            }
+
             const status = getStatusForDate(habit, yesterdayStr);
             if (status === null) {
                 // No entry for yesterday - mark as failed
@@ -117,11 +189,13 @@ function useHabits() {
         }
     };
 
-    // Calculate success rate since tracking started (or since last reset)
+    // Calculate success rate since tracking started (only counting active days)
     const calculateSuccessRate = (habit) => {
         if (!habit.history || habit.history.length === 0) {
             return { rate: null, completedDays: 0, totalDays: 0, startDate: null };
         }
+
+        const activeDays = habit.active_days || ALL_DAYS;
 
         // Normalize history to get dates
         const normalizedHistory = habit.history.map(h => {
@@ -148,21 +222,33 @@ function useHabits() {
         today.setHours(0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
 
-        // Calculate total days since start (inclusive)
-        const diffTime = today.getTime() - startDate.getTime();
-        const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        // Count active days from start to today
+        let totalActiveDays = 0;
+        let currentDate = new Date(startDate);
+        while (currentDate <= today) {
+            const dayOfWeek = currentDate.getDay();
+            if (activeDays.includes(dayOfWeek)) {
+                totalActiveDays++;
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
 
-        if (totalDays <= 0) {
+        if (totalActiveDays <= 0) {
             return { rate: null, completedDays: 0, totalDays: 0, startDate: startDateStr };
         }
 
-        // Count completed days
-        const completedDays = normalizedHistory.filter(h => h.status === 'completed').length;
+        // Count completed days (only on active days)
+        const completedDays = normalizedHistory.filter(h => {
+            if (h.status !== 'completed') return false;
+            const date = new Date(h.date);
+            const dayOfWeek = date.getDay();
+            return activeDays.includes(dayOfWeek);
+        }).length;
 
         // Calculate rate as percentage
-        const rate = Math.round((completedDays / totalDays) * 100);
+        const rate = Math.round((completedDays / totalActiveDays) * 100);
 
-        return { rate, completedDays, totalDays, startDate: startDateStr };
+        return { rate, completedDays, totalDays: totalActiveDays, startDate: startDateStr };
     };
 
     // Reset habit stats - clears history and sets new tracking start date
@@ -171,7 +257,7 @@ function useHabits() {
         if (!habit) return { error: 'Habit not found' };
 
         const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayStr = getLocalDateStr(today);
 
         return await update(id, {
             history: [],
@@ -184,9 +270,13 @@ function useHabits() {
         loading,
         error,
         addHabit,
+        updateHabitDays,
         toggleHabit,
         cycleHabitStatus,
         getStatusForDate,
+        getWeeklyStatus,
+        isActiveDay,
+        isTodayActive,
         deleteHabit,
         markMissedHabits,
         calculateSuccessRate,

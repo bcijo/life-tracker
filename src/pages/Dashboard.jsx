@@ -84,7 +84,16 @@ const Dashboard = () => {
     // Stats
     const activeTodos = todos.filter(t => !t.completed).length;
 
-    const habitsDoneToday = habits.filter(h => {
+    const todayDayOfWeek = new Date().getDay(); // 0=Sunday, 6=Saturday
+    const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+    // Filter habits that are active today
+    const habitsActiveToday = habits.filter(h => {
+        const activeDays = h.active_days || ALL_DAYS;
+        return activeDays.includes(todayDayOfWeek);
+    });
+
+    const habitsDoneToday = habitsActiveToday.filter(h => {
         if (!h.history || !h.history.length) return false;
         const firstEntry = h.history[0];
 
@@ -119,7 +128,7 @@ const Dashboard = () => {
                 <h3>Daily Overview</h3>
                 <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                     <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{habitsDoneToday}/{habits.length}</span>
+                        <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
                         <p style={{ fontSize: '12px', opacity: 0.7 }}>Habits Done</p>
                     </div>
                     <div style={{ flex: 1 }}>

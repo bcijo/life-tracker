@@ -1,5 +1,6 @@
 import useSupabaseData from './useSupabaseData';
 import { supabase } from '../lib/supabase';
+import { startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
 
 function useExpenseCards() {
     const { data: cards, loading, error, insert, update, remove } = useSupabaseData('expense_cards', 'sort_order', true);
@@ -36,16 +37,31 @@ function useExpenseCards() {
         );
     };
 
+    // Helper to check if a transaction is in the current month
+    const isCurrentMonth = (dateStr) => {
+        try {
+            const date = parseISO(dateStr);
+            const now = new Date();
+            const monthStart = startOfMonth(now);
+            const monthEnd = endOfMonth(now);
+            return isWithinInterval(date, { start: monthStart, end: monthEnd });
+        } catch {
+            return false;
+        }
+    };
+
     const getCardTotal = (card, transactions) => {
         if (!card.category_ids) return 0;
         return transactions
-            .filter(t => t.type === 'expense' && card.category_ids.includes(t.category))
+            .filter(t => t.type === 'expense' && card.category_ids.includes(t.category) && isCurrentMonth(t.date))
             .reduce((acc, t) => acc + parseFloat(t.amount), 0);
     };
 
     const getCardTransactions = (card, transactions) => {
         return transactions.filter(t => {
             if (t.type !== 'expense') return false;
+            // Only include transactions from current month
+            if (!isCurrentMonth(t.date)) return false;
             // Match by direct card_id link OR by category_ids
             if (t.card_id === card.id) return true;
             if (card.category_ids && card.category_ids.includes(t.category)) return true;
