@@ -30,11 +30,12 @@ function useHabits() {
         return activeDays.includes(dayOfWeek);
     };
 
-    const addHabit = async (name, activeDays = ALL_DAYS) => {
+    const addHabit = async (name, activeDays = ALL_DAYS, timeOfDay = 'morning') => {
         const newHabit = {
             name,
             history: [], // Will store { date: 'YYYY-MM-DD', status: 'completed' | 'failed' }
             active_days: activeDays,
+            time_of_day: timeOfDay, // 'morning' or 'evening'
         };
         return await insert(newHabit);
     };
@@ -42,6 +43,22 @@ function useHabits() {
     // Update habit's active days
     const updateHabitDays = async (id, activeDays) => {
         return await update(id, { active_days: activeDays });
+    };
+
+    // Update habit's time of day
+    const updateHabitTimeOfDay = async (id, timeOfDay) => {
+        return await update(id, { time_of_day: timeOfDay });
+    };
+
+    // Sort habits: morning first, then evening
+    const getSortedHabits = () => {
+        if (!habits || !Array.isArray(habits)) return [];
+        return [...habits].sort((a, b) => {
+            const timeA = a.time_of_day || 'morning';
+            const timeB = b.time_of_day || 'morning';
+            if (timeA === timeB) return 0;
+            return timeA === 'morning' ? -1 : 1;
+        });
     };
 
     // Get the status for a specific date: 'completed', 'failed', or null (neutral)
@@ -266,11 +283,12 @@ function useHabits() {
     };
 
     return {
-        habits,
+        habits: getSortedHabits(),
         loading,
         error,
         addHabit,
         updateHabitDays,
+        updateHabitTimeOfDay,
         toggleHabit,
         cycleHabitStatus,
         getStatusForDate,

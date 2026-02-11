@@ -14,6 +14,7 @@ const Habits = () => {
         loading,
         addHabit: addHabitDb,
         updateHabitDays,
+        updateHabitTimeOfDay,
         cycleHabitStatus,
         getStatusForDate,
         getWeeklyStatus,
@@ -26,6 +27,7 @@ const Habits = () => {
     const [showForm, setShowForm] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedDays, setSelectedDays] = useState(ALL_DAYS);
+    const [newHabitTimeOfDay, setNewHabitTimeOfDay] = useState('morning');
     const [selectedHabit, setSelectedHabit] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showAnalytics, setShowAnalytics] = useState(false);
@@ -63,9 +65,10 @@ const Habits = () => {
             return;
         }
 
-        await addHabitDb(newHabitName, selectedDays);
+        await addHabitDb(newHabitName, selectedDays, newHabitTimeOfDay);
         setNewHabitName('');
         setSelectedDays(ALL_DAYS);
+        setNewHabitTimeOfDay('morning');
         setShowForm(false);
     };
 
@@ -89,8 +92,18 @@ const Habits = () => {
     };
 
     const startEditDays = (habit) => {
+        // Toggle collapse if clicking the same habit's edit button
+        if (editingDaysFor === habit.id) {
+            setEditingDaysFor(null);
+            setEditDays([]);
+            return;
+        }
         setEditingDaysFor(habit.id);
         setEditDays(habit.active_days || ALL_DAYS);
+    };
+
+    const handleTimeOfDayChange = async (habitId, newTimeOfDay) => {
+        await updateHabitTimeOfDay(habitId, newTimeOfDay);
     };
 
     const saveEditDays = async () => {
@@ -351,6 +364,55 @@ const Habits = () => {
                         autoFocus
                     />
 
+                    {/* Time of Day Selector */}
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', opacity: 0.8 }}>
+                            Time of Day
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                                type="button"
+                                onClick={() => setNewHabitTimeOfDay('morning')}
+                                style={{
+                                    padding: '8px 20px',
+                                    borderRadius: '20px',
+                                    border: 'none',
+                                    background: newHabitTimeOfDay === 'morning' ? '#f6ad55' : 'rgba(0,0,0,0.05)',
+                                    color: newHabitTimeOfDay === 'morning' ? '#fff' : 'var(--text-secondary)',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                }}
+                            >
+                                ☀️ Morning
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNewHabitTimeOfDay('evening')}
+                                style={{
+                                    padding: '8px 20px',
+                                    borderRadius: '20px',
+                                    border: 'none',
+                                    background: newHabitTimeOfDay === 'evening' ? '#805ad5' : 'rgba(0,0,0,0.05)',
+                                    color: newHabitTimeOfDay === 'evening' ? '#fff' : 'var(--text-secondary)',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                }}
+                            >
+                                🌙 Evening
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Day Selector */}
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', opacity: 0.8 }}>
@@ -397,7 +459,36 @@ const Habits = () => {
                         <div key={habit.id} className="glass-card" style={{ padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                                 <div style={{ flex: 1 }}>
-                                    <h3 style={{ marginBottom: '4px' }}>{habit.name}</h3>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                        <h3 style={{ margin: 0 }}>{habit.name}</h3>
+                                        {/* Time of Day Pill - Clickable to toggle */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newTime = (habit.time_of_day || 'morning') === 'morning' ? 'evening' : 'morning';
+                                                handleTimeOfDayChange(habit.id, newTime);
+                                            }}
+                                            style={{
+                                                padding: '2px 8px',
+                                                borderRadius: '12px',
+                                                fontSize: '10px',
+                                                fontWeight: '600',
+                                                background: (habit.time_of_day || 'morning') === 'morning' ? 'rgba(246, 173, 85, 0.2)' : 'rgba(128, 90, 213, 0.2)',
+                                                color: (habit.time_of_day || 'morning') === 'morning' ? '#c05621' : '#6b46c1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease',
+                                            }}
+                                            title={`Click to switch to ${(habit.time_of_day || 'morning') === 'morning' ? 'evening' : 'morning'}`}
+                                        >
+                                            {(habit.time_of_day || 'morning') === 'morning' ? '☀️' : '🌙'}
+                                            {(habit.time_of_day || 'morning') === 'morning' ? 'Morning' : 'Evening'}
+                                        </button>
+                                    </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', opacity: 0.7 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <Flame size={14} color={streak > 0 ? '#ff6b6b' : 'currentColor'} />
@@ -517,6 +608,55 @@ const Habits = () => {
                                     background: 'rgba(0,0,0,0.03)',
                                     borderRadius: 'var(--radius-sm)'
                                 }}>
+                                    {/* Time of Day Toggle */}
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500' }}>
+                                            Time of Day
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTimeOfDayChange(habit.id, 'morning')}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    borderRadius: '16px',
+                                                    border: 'none',
+                                                    background: (habit.time_of_day || 'morning') === 'morning' ? '#f6ad55' : 'rgba(0,0,0,0.05)',
+                                                    color: (habit.time_of_day || 'morning') === 'morning' ? '#fff' : 'var(--text-secondary)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                }}
+                                            >
+                                                ☀️ Morning
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTimeOfDayChange(habit.id, 'evening')}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    borderRadius: '16px',
+                                                    border: 'none',
+                                                    background: (habit.time_of_day || 'morning') === 'evening' ? '#805ad5' : 'rgba(0,0,0,0.05)',
+                                                    color: (habit.time_of_day || 'morning') === 'evening' ? '#fff' : 'var(--text-secondary)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                }}
+                                            >
+                                                🌙 Evening
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500' }}>
                                         Edit Active Days
                                     </label>
