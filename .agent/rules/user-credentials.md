@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: This rule is to be used when testing the app. This helps in signing in.
 ---
 

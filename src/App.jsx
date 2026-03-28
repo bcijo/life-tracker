@@ -12,6 +12,7 @@ import Habits from './pages/Habits'
 import Shopping from './pages/Shopping'
 import Expenses from './pages/Expenses'
 import BankAccounts from './pages/BankAccounts'
+import BillSplitter from './pages/BillSplitter'
 
 function App() {
     return (
@@ -32,6 +33,7 @@ function App() {
                         <Route path="shopping" element={<Shopping />} />
                         <Route path="expenses" element={<Expenses />} />
                         <Route path="bank-accounts" element={<BankAccounts />} />
+                        <Route path="split-bill" element={<BillSplitter />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

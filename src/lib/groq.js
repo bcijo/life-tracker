@@ -3,6 +3,7 @@
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_NAME = 'openai/gpt-oss-120b';
+const VISION_MODEL_NAME = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 async function callGroq(messages, systemPrompt, jsonMode = false) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
@@ -90,3 +91,95 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
     }
 }
 
+// 3. Bill Splitting — Direct Vision Parser (Groq Llama 4 Scout)
+// Returns: { items: [...], charges: [...], discounts: [...] }
+export async function parseBillImage(base64ImageDataUrl) {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) throw new Error('VITE_GROQ_API_KEY is missing');
+
+    const payload = {
+        model: VISION_MODEL_NAME,
+        messages: [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'text',
+                        text: `You are a restaurant receipt parser. Carefully read this receipt image and extract all data into structured JSON.
+
+Return a JSON object with exactly these 3 keys: "items", "charges", "discounts".
+
+1. "items" — Individual food/drink ordered:
+   - "name": item name (clean it up if needed)
+   - "quantity": number of units (integer, default 1 if not shown)
+   - "unit_price": price per single unit (number, in INR)
+   - "total_price": quantity × unit_price (number, in INR)
+   Example: 2x Butter Naan at ₹40 each → { "name": "Butter Naan", "quantity": 2, "unit_price": 40, "total_price": 80 }
+
+2. "charges" — Additional charges added to the bill:
+   - Include: service charge, service tax, GST, CGST, SGST, packing charge, delivery fee, etc.
+   - "name": charge name
+   - "amount": charge amount (number, in INR)
+   - If the charge is a percentage and you can compute it, put the computed rupee amount.
+
+3. "discounts" — Any discounts or deductions:
+   - Include: discount, offer, coupon, promo, membership discount, etc.
+   - "name": discount name
+   - "amount": discount amount as a POSITIVE number (even though it reduces the bill)
+
+Return only valid JSON, no markdown fences, no extra text. Example structure:
+{
+  "items": [
+    { "name": "Paneer Tikka", "quantity": 1, "unit_price": 280, "total_price": 280 },
+    { "name": "Butter Naan", "quantity": 2, "unit_price": 40, "total_price": 80 }
+  ],
+  "charges": [
+    { "name": "GST (5%)", "amount": 18 },
+    { "name": "Service Charge", "amount": 36 }
+  ],
+  "discounts": [
+    { "name": "10% Membership Discount", "amount": 36 }
+  ]
+}`
+                    },
+                    {
+                        type: 'image_url',
+                        image_url: { url: base64ImageDataUrl }
+                    }
+                ]
+            }
+        ],
+        temperature: 0.1,
+        max_tokens: 2048,
+        response_format: { type: 'json_object' }
+    };
+
+    const response = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Groq Vision API error: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    const jsonStr = data.choices[0]?.message?.content;
+
+    try {
+        const parsed = JSON.parse(jsonStr);
+        return {
+            items: parsed.items || [],
+            charges: parsed.charges || [],
+            discounts: parsed.discounts || [],
+        };
+    } catch (e) {
+        console.error('Failed to parse bill vision response:', e, jsonStr);
+        return { items: [], charges: [], discounts: [] };
+    }
+}

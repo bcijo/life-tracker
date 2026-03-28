@@ -155,6 +155,20 @@ const Dashboard = () => {
                     </div>
                 </Link>
             </div>
+
+            <div style={{ marginTop: '16px' }}>
+                <Link to="/split-bill" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)', border: '1px solid rgba(102,126,234,0.2)' }}>
+                        <div>
+                            <span style={{ fontSize: '16px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Split a Bill</span>
+                            <span style={{ fontSize: '12px', opacity: 0.7 }}>Upload receipt and calculate shares</span>
+                        </div>
+                        <div style={{ background: 'var(--primary)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '18px' }}>+</span>
+                        </div>
+                    </div>
+                </Link>
+            </div>
         </div>
     );
 };
