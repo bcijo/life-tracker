@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown } from 'lucide-react';
+import { User, LogOut, ChevronDown, RefreshCw, Check } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +28,34 @@ const ProfileMenu = () => {
     const handleLogout = async () => {
         await signOut();
         navigate('/login');
+    };
+
+    const [updating, setUpdating] = useState(false);
+    const [updated, setUpdated] = useState(false);
+
+    const handleUpdate = async () => {
+        setUpdating(true);
+        try {
+            // Clear all Cache Storage (service worker caches)
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            // Unregister any service workers so they re-install fresh
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+            }
+            setUpdated(true);
+            // Short delay so the user sees the tick, then hard-reload
+            setTimeout(() => {
+                window.location.href = window.location.href.split('?')[0]
+                    + '?_bust=' + Date.now();
+            }, 800);
+        } catch (err) {
+            console.error('Update error:', err);
+            window.location.reload(true);
+        }
     };
 
     if (!user) return null;
@@ -102,6 +130,38 @@ const ProfileMenu = () => {
                         </p>
                     </div>
 
+                    {/* ── Check for Updates ── */}
+                    <button
+                        onClick={handleUpdate}
+                        disabled={updating}
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: updated ? '#27ae60' : 'var(--text-primary)',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            cursor: updating ? 'default' : 'pointer',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s',
+                            opacity: updating ? 0.7 : 1,
+                            marginBottom: '2px',
+                        }}
+                        onMouseOver={(e) => { if (!updating) e.currentTarget.style.background = 'rgba(102,126,234,0.08)'; }}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                        {updated
+                            ? <Check size={16} />
+                            : <RefreshCw size={16} style={{ animation: updating ? 'spin 1s linear infinite' : 'none' }} />}
+                        {updated ? 'Refreshing…' : updating ? 'Clearing cache…' : 'Check for Updates'}
+                    </button>
+
+                    <div style={{ height: '1px', background: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
+
                     <button
                         onClick={handleLogout}
                         style={{
@@ -131,6 +191,10 @@ const ProfileMenu = () => {
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(-10px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
             `}</style>
         </div>
