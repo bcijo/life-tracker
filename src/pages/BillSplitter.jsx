@@ -22,7 +22,8 @@ const BillSplitter = () => {
     const [copied, setCopied] = useState(false);
     const [summaryExpanded, setSummaryExpanded] = useState({});
 
-    const fileInputRef = useRef(null);
+    const fileInputRef = useRef(null);   // gallery / files
+    const cameraInputRef = useRef(null);  // direct camera
     const summaryRef = useRef(null);
 
     // ── Image upload & extraction ──────────────────────────────────────────
@@ -231,34 +232,53 @@ const BillSplitter = () => {
                 )}
             </header>
 
-            {/* ── Upload ── */}
+            {/* ── Upload: two buttons ── */}
             {!imagePreview && (
-                <div
-                    onClick={() => fileInputRef.current.click()}
-                    style={{
-                        padding: '40px 24px',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        marginBottom: '24px',
-                        border: '2px dashed rgba(102,126,234,0.35)',
-                        borderRadius: '20px',
-                        background: 'linear-gradient(135deg, rgba(102,126,234,0.06) 0%, rgba(118,75,162,0.06) 100%)',
-                        transition: 'border-color 0.2s',
-                    }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginBottom: '14px' }}>
-                        <Camera size={34} style={{ color: 'var(--primary)', opacity: 0.9 }} />
-                        <Upload size={34} style={{ opacity: 0.35 }} />
-                    </div>
-                    <h3 style={{ marginBottom: '6px', color: 'var(--primary)', fontWeight: 700 }}>Upload or take a photo</h3>
-                    <p style={{ fontSize: '13px', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>
-                        AI reads the bill directly — no manual entry needed.<br />
-                        Works with skewed, blurry or thermal-printed bills.
+                <div style={{
+                    marginBottom: '24px',
+                    border: '2px dashed rgba(102,126,234,0.35)',
+                    borderRadius: '20px',
+                    background: 'linear-gradient(135deg, rgba(102,126,234,0.06) 0%, rgba(118,75,162,0.06) 100%)',
+                    padding: '28px 20px',
+                    textAlign: 'center',
+                }}>
+                    <Receipt size={36} style={{ color: 'var(--primary)', opacity: 0.7, marginBottom: '10px' }} />
+                    <h3 style={{ margin: '0 0 6px', color: 'var(--primary)', fontWeight: 700 }}>Scan your receipt</h3>
+                    <p style={{ fontSize: '13px', opacity: 0.6, margin: '0 0 20px', lineHeight: 1.5 }}>
+                        AI reads items, prices, charges &amp; discounts automatically.
                     </p>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                        <button
+                            onClick={() => cameraInputRef.current.click()}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '11px 20px', borderRadius: '12px', border: 'none',
+                                background: 'var(--primary)', color: 'white',
+                                fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                            }}
+                        >
+                            <Camera size={18} /> Take Photo
+                        </button>
+                        <button
+                            onClick={() => fileInputRef.current.click()}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '11px 20px', borderRadius: '12px',
+                                border: '1.5px solid rgba(102,126,234,0.4)',
+                                background: 'rgba(255,255,255,0.5)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                            }}
+                        >
+                            <Upload size={18} /> Upload
+                        </button>
+                    </div>
                 </div>
             )}
 
-            <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" capture="environment" style={{ display: 'none' }} />
+            {/* Hidden file inputs: camera (with capture) and gallery (without capture) */}
+            <input type="file" ref={cameraInputRef} onChange={handleImageUpload} accept="image/*" capture="environment" style={{ display: 'none' }} />
+            <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
 
             {/* ── Image preview ── */}
             {imagePreview && (
