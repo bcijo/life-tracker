@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { X, TrendingUp, ChevronLeft, ChevronRight, Target, Flame, ArrowUp, ArrowDown } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, subWeeks, addWeeks, subDays, isToday } from 'date-fns';
 
 const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
     const [weekOffset, setWeekOffset] = useState(0);
+    const panelRef = useRef(null);
+
+    // Lock body scroll when modal is open (prevents iOS opening mid-page)
+    useEffect(() => {
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        if (panelRef.current) panelRef.current.scrollTop = 0;
+        return () => {
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            window.scrollTo(0, scrollY);
+        };
+    }, []);
 
     const currentDate = new Date();
     const targetDate = weekOffset === 0 ? currentDate :
@@ -141,7 +157,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
             zIndex: 1000,
             padding: '16px',
         }}>
-            <div className="glass-panel" style={{
+            <div ref={panelRef} className="glass-panel" style={{
                 width: '100%',
                 maxWidth: '500px',
                 maxHeight: '90vh',
