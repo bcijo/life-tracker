@@ -17,6 +17,7 @@ const BillSplitter = () => {
     const [items, setItems] = useState([]);
     const [charges, setCharges] = useState([]);
     const [discounts, setDiscounts] = useState([]);
+    const [restaurantName, setRestaurantName] = useState('');
     const [participants, setParticipants] = useState(['Me']);
     const [newParticipant, setNewParticipant] = useState('');
     const [copied, setCopied] = useState(false);
@@ -42,6 +43,7 @@ const BillSplitter = () => {
                 if (!result.items.length) {
                     setError('No items found. Try a clearer photo or add items manually.');
                 }
+                setRestaurantName(result.restaurant_name || '');
                 setItems(result.items.map(it => ({
                     id: uid(),
                     name: it.name,
@@ -169,7 +171,8 @@ const BillSplitter = () => {
     // ── Copy formatted text ────────────────────────────────────────────────
     const buildText = () => {
         const { totals, grandTotal, personItems, chargePerPerson, discountPerPerson } = calculate();
-        let text = `🍽️ *Bill Summary*\n${'-'.repeat(30)}\n`;
+        const header = restaurantName ? `🍽️ *${restaurantName} — Bill Summary*` : `🍽️ *Bill Summary*`;
+        let text = `${header}\n${'-'.repeat(30)}\n`;
 
         participants.forEach(p => {
             const items_ = personItems[p];
@@ -205,6 +208,7 @@ const BillSplitter = () => {
         setItems([]);
         setCharges([]);
         setDiscounts([]);
+        setRestaurantName('');
         setParticipants(['Me']);
         setError(null);
     };
@@ -223,7 +227,12 @@ const BillSplitter = () => {
                 </Link>
                 <div style={{ flex: 1 }}>
                     <h1 style={{ margin: 0, fontSize: '22px' }}>Split a Bill</h1>
-                    <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>AI-powered receipt scanner · Llama 4 Scout</p>
+                    <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>
+                        {restaurantName
+                            ? <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{restaurantName}</span>
+                            : 'AI-powered receipt scanner · Llama 4 Scout'
+                        }
+                    </p>
                 </div>
                 {isReady && (
                     <button onClick={reset} style={{ background: 'none', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', fontSize: '13px', opacity: 0.7 }}>
@@ -286,7 +295,9 @@ const BillSplitter = () => {
                     <img src={imagePreview} alt="Bill" style={{ width: '100%', maxHeight: '220px', objectFit: 'contain', background: '#f8f8f8', display: 'block' }} />
                     <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', backdropFilter: 'blur(8px)' }}>
                         <span style={{ fontSize: '13px', opacity: 0.65 }}>
-                            {loadingState === 'processing' ? '🤖 Reading with AI…' : `${items.length} items · ${charges.length} charges · ${discounts.length} discounts`}
+                            {loadingState === 'processing'
+                                ? '🤖 Reading with AI…'
+                                : <>{restaurantName && <strong>{restaurantName} · </strong>}{items.length} items · {charges.length} charges · {discounts.length} discounts</>}
                         </span>
                         <button onClick={() => fileInputRef.current.click()} style={{ background: 'none', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', fontSize: '12px' }}>
                             Retake
@@ -407,7 +418,9 @@ const BillSplitter = () => {
                         background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%)',
                         marginBottom: '16px',
                     }}>
-                        <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>💰 Summary</h3>
+                        <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>
+                            💰 {restaurantName ? `${restaurantName} — Summary` : 'Summary'}
+                        </h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
                             {participants.map(p => {

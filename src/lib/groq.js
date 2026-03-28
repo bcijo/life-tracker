@@ -92,7 +92,7 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
 }
 
 // 3. Bill Splitting — Direct Vision Parser (Groq Llama 4 Scout)
-// Returns: { items: [...], charges: [...], discounts: [...] }
+// Returns: { restaurant_name, items, charges, discounts }
 export async function parseBillImage(base64ImageDataUrl) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error('VITE_GROQ_API_KEY is missing');
@@ -107,7 +107,9 @@ export async function parseBillImage(base64ImageDataUrl) {
                         type: 'text',
                         text: `You are a restaurant receipt parser. Carefully read this receipt image and extract all data into structured JSON.
 
-Return a JSON object with exactly these 3 keys: "items", "charges", "discounts".
+Return a JSON object with exactly these 4 keys: "restaurant_name", "items", "charges", "discounts".
+
+0. "restaurant_name" — The name of the restaurant, cafe, shop or establishment printed on the receipt. If not visible, return null.
 
 1. "items" — Individual food/drink ordered:
    - "name": item name (clean it up if needed)
@@ -129,6 +131,7 @@ Return a JSON object with exactly these 3 keys: "items", "charges", "discounts".
 
 Return only valid JSON, no markdown fences, no extra text. Example structure:
 {
+  "restaurant_name": "The Spice Garden",
   "items": [
     { "name": "Paneer Tikka", "quantity": 1, "unit_price": 280, "total_price": 280 },
     { "name": "Butter Naan", "quantity": 2, "unit_price": 40, "total_price": 80 }
@@ -174,12 +177,13 @@ Return only valid JSON, no markdown fences, no extra text. Example structure:
     try {
         const parsed = JSON.parse(jsonStr);
         return {
+            restaurant_name: parsed.restaurant_name || null,
             items: parsed.items || [],
             charges: parsed.charges || [],
             discounts: parsed.discounts || [],
         };
     } catch (e) {
         console.error('Failed to parse bill vision response:', e, jsonStr);
-        return { items: [], charges: [], discounts: [] };
+        return { restaurant_name: null, items: [], charges: [], discounts: [] };
     }
 }
