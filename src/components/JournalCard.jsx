@@ -63,7 +63,7 @@ const JournalCard = () => {
             style={{
                 marginBottom: '20px',
                 overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 100%)'
+                background: 'var(--glass-card-bg)',
             }}
         >
             {/* Header - Always Visible */}
@@ -75,11 +75,11 @@ const JournalCard = () => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     cursor: 'pointer',
-                    borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.3)' : 'none'
+                    borderBottom: isExpanded ? '1px solid var(--glass-card-border)' : 'none',
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <BookOpen size={20} color="#667eea" />
+                    <BookOpen size={20} style={{ color: 'var(--accent-primary)' }} />
                     <div>
                         <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Daily Journal</h3>
                         <p style={{ fontSize: '12px', opacity: 0.6, margin: 0 }}>
@@ -97,7 +97,7 @@ const JournalCard = () => {
             {isExpanded && (
                 <div style={{ padding: '20px' }}>
                     {loading ? (
-                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-primary)' }}>
                             <Loader2 className="spin" size={24} />
                         </div>
                     ) : (
@@ -109,7 +109,7 @@ const JournalCard = () => {
                                     fontWeight: '500',
                                     marginBottom: '10px',
                                     display: 'block',
-                                    color: '#4a5568'
+                                    color: 'var(--text-secondary)',
                                 }}>
                                     How was today?
                                 </label>
@@ -125,22 +125,22 @@ const JournalCard = () => {
                                             style={{
                                                 flex: 1,
                                                 padding: '12px 8px',
-                                                border: 'none',
+                                                border: localEntry.mood_score === mood.value ? 'none' : '1px solid var(--glass-card-border)',
                                                 borderRadius: '12px',
                                                 background: localEntry.mood_score === mood.value
-                                                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                                                    : 'rgba(255,255,255,0.5)',
+                                                    ? 'var(--accent-gradient)'
+                                                    : 'var(--glass-card-bg)',
                                                 cursor: 'pointer',
                                                 transition: 'all 0.2s ease',
-                                                transform: localEntry.mood_score === mood.value ? 'scale(1.05)' : 'scale(1)'
+                                                transform: localEntry.mood_score === mood.value ? 'scale(1.05)' : 'scale(1)',
                                             }}
                                         >
                                             <div style={{ fontSize: '24px' }}>{mood.emoji}</div>
                                             <div style={{
                                                 fontSize: '10px',
                                                 marginTop: '4px',
-                                                color: localEntry.mood_score === mood.value ? '#fff' : '#4a5568',
-                                                fontWeight: '500'
+                                                color: localEntry.mood_score === mood.value ? '#fff' : 'var(--text-secondary)',
+                                                fontWeight: '500',
                                             }}>
                                                 {mood.label}
                                             </div>
@@ -158,13 +158,14 @@ const JournalCard = () => {
                                     style={{
                                         width: '100%',
                                         padding: '12px',
-                                        border: '1px solid rgba(255,255,255,0.5)',
+                                        border: '1px solid var(--surface-input-border)',
                                         borderRadius: '12px',
-                                        background: 'rgba(255,255,255,0.4)',
+                                        background: 'var(--surface-input)',
+                                        color: 'var(--text-primary)',
                                         resize: 'none',
                                         minHeight: '60px',
                                         fontSize: '14px',
-                                        outline: 'none'
+                                        outline: 'none',
                                     }}
                                 />
                             </div>
@@ -216,13 +217,14 @@ const JournalCard = () => {
                                     style={{
                                         width: '100%',
                                         padding: '12px',
-                                        border: '1px solid rgba(255,255,255,0.5)',
+                                        border: '1px solid var(--surface-input-border)',
                                         borderRadius: '12px',
-                                        background: 'rgba(255,255,255,0.4)',
+                                        background: 'var(--surface-input)',
+                                        color: 'var(--text-primary)',
                                         resize: 'none',
                                         minHeight: '60px',
                                         fontSize: '14px',
-                                        outline: 'none'
+                                        outline: 'none',
                                     }}
                                 />
                             </div>

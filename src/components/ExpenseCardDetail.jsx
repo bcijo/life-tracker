@@ -120,26 +120,28 @@ const ExpenseCardDetail = ({ card, onClose }) => {
     const tabStyle = (tab) => ({
         flex: 1,
         padding: '14px 8px',
-        background: activeTab === tab ? '#fff' : '#f9f9f9',
+        background: activeTab === tab ? 'var(--surface-elevated)' : 'var(--glass-card-bg)',
         border: 'none',
         borderBottom: activeTab === tab ? `3px solid ${card.color}` : '3px solid transparent',
         fontWeight: '600',
-        color: activeTab === tab ? card.color : '#666',
+        color: activeTab === tab ? card.color : 'var(--text-secondary)',
         cursor: 'pointer',
-        fontSize: '13px'
+        fontSize: '13px',
+        transition: 'all 0.2s ease',
     });
 
     return (
         <div style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.6)',
+            background: 'var(--overlay-bg)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
             padding: '16px',
-            backdropFilter: 'blur(4px)'
         }}>
             <div className="glass-panel" style={{
                 width: '100%',
@@ -148,9 +150,10 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
-                background: '#fff',
+                background: 'var(--surface-elevated)',
                 padding: 0,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                border: '1px solid var(--glass-border)',
             }}>
                 {/* Header */}
                 <div style={{
@@ -193,7 +196,7 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                 </div>
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #eee', flexShrink: 0 }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, background: 'var(--glass-card-bg)' }}>
                     <button onClick={() => setActiveTab('add')} style={tabStyle('add')}>+ Add</button>
                     <button onClick={() => setActiveTab('history')} style={tabStyle('history')}>History</button>
                     <button onClick={() => setActiveTab('settings')} style={tabStyle('settings')}>
@@ -223,9 +226,10 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                         fontSize: '32px',
                                         fontWeight: '700',
                                         border: 'none',
-                                        borderBottom: '2px solid #eee',
+                                        borderBottom: '2px solid var(--border-subtle)',
                                         outline: 'none',
-                                        color: '#333'
+                                        background: 'transparent',
+                                        color: 'var(--text-primary)',
                                     }}
                                     autoFocus
                                 />
@@ -236,8 +240,8 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                     transform: 'translateY(-50%)',
                                     fontSize: '24px',
                                     fontWeight: '600',
-                                    color: '#666',
-                                    pointerEvents: 'none'
+                                    color: 'var(--text-muted)',
+                                    pointerEvents: 'none',
                                 }}>₹</span>
                             </div>
 
@@ -254,9 +258,9 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                             style={{
                                                 padding: '8px 12px',
                                                 borderRadius: '20px',
-                                                border: selectedSubcategory === sub.id ? `2px solid ${card.color}` : '1px solid #ddd',
-                                                background: selectedSubcategory === sub.id ? `${card.color}15` : '#fff',
-                                                color: selectedSubcategory === sub.id ? card.color : '#666',
+                                                border: selectedSubcategory === sub.id ? `2px solid ${card.color}` : '1px solid var(--glass-card-border)',
+                                                background: selectedSubcategory === sub.id ? `${card.color}18` : 'var(--glass-card-bg)',
+                                                color: selectedSubcategory === sub.id ? card.color : 'var(--text-secondary)',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 fontWeight: '500',
@@ -283,8 +287,10 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                                 style={{
                                                     padding: '8px',
                                                     borderRadius: '20px',
-                                                    border: '1px solid #ddd',
+                                                    border: '1px solid var(--glass-card-border)',
+                                                    background: 'var(--surface-input)',
                                                     fontSize: '13px',
+                                                    color: 'var(--text-primary)',
                                                     width: '100px'
                                                 }}
                                                 autoFocus
@@ -319,9 +325,9 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                             style={{
                                                 padding: '8px 12px',
                                                 borderRadius: '20px',
-                                                border: '1px dashed #bbb',
+                                                border: '1px dashed var(--glass-card-border)',
                                                 background: 'transparent',
-                                                color: '#666',
+                                                color: 'var(--text-secondary)',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 display: 'flex', alignItems: 'center', gap: '4px'
@@ -336,7 +342,7 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                             {/* Details */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                                         DATE
                                     </label>
                                     <div style={{
@@ -344,21 +350,21 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                         alignItems: 'center',
                                         gap: '8px',
                                         padding: '12px',
-                                        background: '#f5f5f5',
+                                        background: 'var(--surface-input)',
                                         borderRadius: '8px',
-                                        border: '1px solid #eee'
+                                        border: '1px solid var(--surface-input-border)',
                                     }}>
-                                        <Calendar size={16} color="#666" />
+                                        <Calendar size={16} style={{ color: 'var(--text-secondary)' }} />
                                         <input
                                             type="date"
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px' }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px', color: 'var(--text-primary)' }}
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                                         DESCRIPTION
                                     </label>
                                     <div style={{
@@ -366,17 +372,17 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                         alignItems: 'center',
                                         gap: '8px',
                                         padding: '12px',
-                                        background: '#f5f5f5',
+                                        background: 'var(--surface-input)',
                                         borderRadius: '8px',
-                                        border: '1px solid #eee'
+                                        border: '1px solid var(--surface-input-border)',
                                     }}>
-                                        <FileText size={16} color="#666" />
+                                        <FileText size={16} style={{ color: 'var(--text-secondary)' }} />
                                         <input
                                             type="text"
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
                                             placeholder="Optional"
-                                            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px' }}
+                                            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px', color: 'var(--text-primary)' }}
                                         />
                                     </div>
                                 </div>
@@ -420,20 +426,22 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
                                                 padding: '12px',
-                                                borderBottom: '1px solid #f0f0f0'
+                                                borderBottom: '1px solid var(--border-subtle)'
                                             }}
                                         >
                                             <div>
-                                                <p style={{ fontWeight: '600', fontSize: '15px', color: '#333', margin: '0 0 4px 0' }}>
+                                                <p style={{ fontWeight: '600', fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
                                                     {t.description || (sub ? sub.name : 'Expense')}
                                                 </p>
-                                                <p style={{ fontSize: '12px', color: '#888', margin: 0 }}>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
                                                     {new Date(t.date).toLocaleDateString()}
                                                     {sub && <span style={{
                                                         marginLeft: '8px',
-                                                        background: '#f0f0f0',
+                                                        background: 'var(--glass-card-bg)',
+                                                        border: '1px solid var(--glass-card-border)',
                                                         padding: '2px 6px',
-                                                        borderRadius: '4px'
+                                                        borderRadius: '4px',
+                                                        color: 'var(--text-secondary)',
                                                     }}>{sub.name}</span>}
                                                 </p>
                                             </div>
@@ -443,7 +451,7 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                                 </span>
                                                 <button
                                                     onClick={() => deleteTransaction(t.id)}
-                                                    style={{ border: 'none', background: 'transparent', color: '#ff6b6b', cursor: 'pointer', opacity: 0.6 }}
+                                                    style={{ border: 'none', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -469,9 +477,11 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                     style={{
                                         width: '100%',
                                         padding: '12px',
-                                        border: '1px solid #ddd',
+                                        border: '1px solid var(--surface-input-border)',
                                         borderRadius: '8px',
-                                        fontSize: '16px'
+                                        fontSize: '16px',
+                                        background: 'var(--surface-input)',
+                                        color: 'var(--text-primary)',
                                     }}
                                 />
                             </div>
@@ -486,10 +496,11 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                     gridTemplateColumns: 'repeat(5, 1fr)',
                                     gap: '8px',
                                     padding: '12px',
-                                    background: '#f9f9f9',
+                                    background: 'var(--glass-card-bg)',
+                                    border: '1px solid var(--glass-card-border)',
                                     borderRadius: '8px',
                                     maxHeight: '120px',
-                                    overflowY: 'auto'
+                                    overflowY: 'auto',
                                 }}>
                                     {EMOJI_LIST.map(emoji => (
                                         <button
@@ -542,8 +553,9 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             padding: '10px 12px',
-                                            background: '#f9f9f9',
-                                            borderRadius: '8px'
+                                            background: 'var(--glass-card-bg)',
+                                            border: '1px solid var(--glass-card-border)',
+                                            borderRadius: '8px',
                                         }}>
                                             <span style={{ fontSize: '14px' }}>{sub.name}</span>
                                             <button
@@ -551,9 +563,9 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                                 style={{
                                                     border: 'none',
                                                     background: 'transparent',
-                                                    color: '#ff6b6b',
+                                                    color: 'var(--danger)',
                                                     cursor: 'pointer',
-                                                    padding: '4px'
+                                                    padding: '4px',
                                                 }}
                                             >
                                                 <Trash2 size={16} />
@@ -569,9 +581,11 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                             style={{
                                                 flex: 1,
                                                 padding: '10px 12px',
-                                                border: '1px dashed #ccc',
+                                                border: '1px dashed var(--glass-card-border)',
                                                 borderRadius: '8px',
-                                                fontSize: '14px'
+                                                fontSize: '14px',
+                                                background: 'var(--surface-input)',
+                                                color: 'var(--text-primary)',
                                             }}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
@@ -606,12 +620,12 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                                     style={{
                                         flex: 1,
                                         padding: '14px',
-                                        background: '#fff',
-                                        color: '#ff6b6b',
-                                        border: '1px solid #ff6b6b',
+                                        background: 'var(--danger-bg)',
+                                        color: 'var(--danger)',
+                                        border: '1px solid var(--danger)',
                                         borderRadius: '12px',
                                         fontWeight: '600',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
                                     }}
                                 >
                                     Delete Category

@@ -104,11 +104,10 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
     return (
         <div style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.6)',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'var(--overlay-bg)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -130,8 +129,8 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
                         position: 'absolute',
                         top: '12px',
                         right: '12px',
-                        background: 'rgba(0,0,0,0.1)',
-                        border: 'none',
+                        background: 'var(--glass-card-bg)',
+                        border: '1px solid var(--glass-card-border)',
                         borderRadius: '50%',
                         width: '32px',
                         height: '32px',
@@ -139,6 +138,7 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
+                        color: 'var(--text-primary)',
                     }}
                 >
                     <X size={18} />
@@ -147,7 +147,7 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
                 {/* Header */}
                 <div style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <TrendingUp size={20} color="#4ecdc4" />
+                        <TrendingUp size={20} color="var(--accent-primary)" />
                         <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Weekly Spending</h2>
                     </div>
 
@@ -161,11 +161,12 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
                         <button
                             onClick={() => setWeekOffset(weekOffset - 1)}
                             style={{
-                                background: 'rgba(0,0,0,0.05)',
-                                border: 'none',
+                                background: 'var(--glass-card-bg)',
+                                border: '1px solid var(--glass-card-border)',
                                 borderRadius: '8px',
                                 padding: '8px',
                                 cursor: 'pointer',
+                                color: 'var(--text-primary)',
                             }}
                         >
                             <ChevronLeft size={18} />
@@ -184,12 +185,13 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
                             onClick={() => setWeekOffset(weekOffset + 1)}
                             disabled={weekOffset >= 0}
                             style={{
-                                background: weekOffset >= 0 ? 'rgba(0,0,0,0.02)' : 'rgba(0,0,0,0.05)',
-                                border: 'none',
+                                background: 'var(--glass-card-bg)',
+                                border: '1px solid var(--glass-card-border)',
                                 borderRadius: '8px',
                                 padding: '8px',
                                 cursor: weekOffset >= 0 ? 'not-allowed' : 'pointer',
                                 opacity: weekOffset >= 0 ? 0.3 : 1,
+                                color: 'var(--text-primary)',
                             }}
                         >
                             <ChevronRight size={18} />
@@ -201,12 +203,13 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
                 <div style={{
                     textAlign: 'center',
                     padding: '16px',
-                    background: 'linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(78, 205, 196, 0.02) 100%)',
+                    background: 'var(--glass-card-bg)',
+                    border: '1px solid var(--glass-card-border)',
                     borderRadius: 'var(--radius-md)',
                     marginBottom: '20px',
                 }}>
-                    <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>Total Spent</p>
-                    <p style={{ fontSize: '28px', fontWeight: '700', color: '#4ecdc4' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Spent</p>
+                    <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--accent-primary)' }}>
                         ₹{weekTotal.toFixed(0)}
                     </p>
                 </div>

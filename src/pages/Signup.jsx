@@ -36,7 +36,6 @@ const Signup = () => {
             setError(signUpError.message);
             setLoading(false);
         } else if (data.user) {
-            // Create user profile with display name
             const { error: profileError } = await supabase
                 .from('profiles')
                 .insert([{ id: data.user.id, display_name: name.trim() }]);
@@ -63,13 +62,26 @@ const Signup = () => {
 
     const getPasswordStrength = () => {
         if (!password) return null;
-        if (password.length < 6) return { text: 'Too short', color: '#f56565' };
-        if (password.length < 8) return { text: 'Weak', color: '#ed8936' };
-        if (password.length < 12) return { text: 'Good', color: '#48bb78' };
-        return { text: 'Strong', color: '#38a169' };
+        if (password.length < 6) return { text: 'Too short', color: 'var(--danger)' };
+        if (password.length < 8) return { text: 'Weak', color: 'var(--warning)' };
+        if (password.length < 12) return { text: 'Good', color: 'var(--success)' };
+        return { text: 'Strong', color: 'var(--success)' };
     };
 
     const strength = getPasswordStrength();
+
+    const inputStyle = {
+        width: '100%',
+        padding: '12px 12px 12px 40px',
+        border: '1px solid var(--glass-card-border)',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--surface-input)',
+        color: 'var(--text-primary)',
+        fontSize: '16px',
+        outline: 'none',
+        transition: 'border-color 0.2s ease',
+        fontFamily: 'inherit',
+    };
 
     return (
         <div style={{
@@ -77,29 +89,36 @@ const Signup = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--login-gradient)',
             padding: '20px',
         }}>
-            <div className="glass-card" style={{
+            <div style={{
                 width: '100%',
                 maxWidth: '400px',
                 padding: '32px',
+                background: 'var(--login-card-bg)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid var(--glass-card-border)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
             }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <div style={{
                         width: '60px',
                         height: '60px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: 'var(--accent-gradient)',
                         borderRadius: '16px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         margin: '0 auto 16px',
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
                     }}>
                         <UserPlus size={32} color="#fff" />
                     </div>
-                    <h1 style={{ marginBottom: '8px' }}>Create Account</h1>
-                    <p style={{ opacity: 0.7, fontSize: '14px' }}>Start tracking your life</p>
+                    <h1 style={{ marginBottom: '8px', color: 'var(--text-primary)' }}>Create Account</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Start tracking your life</p>
                 </div>
 
                 {error && (
@@ -108,11 +127,11 @@ const Signup = () => {
                         alignItems: 'center',
                         gap: '8px',
                         padding: '12px',
-                        background: 'rgba(245, 101, 101, 0.1)',
-                        border: '1px solid rgba(245, 101, 101, 0.3)',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger)',
                         borderRadius: 'var(--radius-md)',
                         marginBottom: '20px',
-                        color: '#f56565',
+                        color: 'var(--danger)',
                         fontSize: '14px',
                     }}>
                         <AlertCircle size={18} />
@@ -121,111 +140,70 @@ const Signup = () => {
                 )}
 
                 <form onSubmit={handleSubmit}>
+                    {/* Name */}
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
                             Your Name
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <User size={18} style={{
-                                position: 'absolute',
-                                left: '12px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                opacity: 0.5,
-                            }} />
+                            <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Abhin"
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '12px 12px 12px 40px',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'rgba(255,255,255,0.7)',
-                                    fontSize: '16px',
-                                }}
+                                style={inputStyle}
+                                onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--glass-card-border)'}
                             />
                         </div>
                     </div>
 
+                    {/* Email */}
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
                             Email
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <Mail size={18} style={{
-                                position: 'absolute',
-                                left: '12px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                opacity: 0.5,
-                            }} />
+                            <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@example.com"
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '12px 12px 12px 40px',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'rgba(255,255,255,0.7)',
-                                    fontSize: '16px',
-                                }}
+                                style={inputStyle}
+                                onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--glass-card-border)'}
                             />
                         </div>
                     </div>
 
+                    {/* Password */}
                     <div style={{ marginBottom: '8px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
                             Password
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <Lock size={18} style={{
-                                position: 'absolute',
-                                left: '12px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                opacity: 0.5,
-                            }} />
+                            <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '12px 12px 12px 40px',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'rgba(255,255,255,0.7)',
-                                    fontSize: '16px',
-                                }}
+                                style={inputStyle}
+                                onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--glass-card-border)'}
                             />
                         </div>
                     </div>
 
                     {strength && (
                         <div style={{ marginBottom: '24px' }}>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                fontSize: '12px',
-                            }}>
-                                <div style={{
-                                    flex: 1,
-                                    height: '4px',
-                                    background: 'rgba(0,0,0,0.1)',
-                                    borderRadius: '2px',
-                                    overflow: 'hidden',
-                                }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                <div style={{ flex: 1, height: '4px', background: 'var(--border-subtle)', borderRadius: '2px', overflow: 'hidden' }}>
                                     <div style={{
                                         width: `${(password.length / 12) * 100}%`,
                                         height: '100%',
@@ -233,9 +211,7 @@ const Signup = () => {
                                         transition: 'all 0.3s ease',
                                     }}></div>
                                 </div>
-                                <span style={{ color: strength.color, fontWeight: '500' }}>
-                                    {strength.text}
-                                </span>
+                                <span style={{ color: strength.color, fontWeight: '500' }}>{strength.text}</span>
                             </div>
                         </div>
                     )}
@@ -246,7 +222,7 @@ const Signup = () => {
                         style={{
                             width: '100%',
                             padding: '14px',
-                            background: loading ? '#999' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: loading ? 'var(--border-subtle)' : 'var(--accent-gradient)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-md)',
@@ -254,20 +230,16 @@ const Signup = () => {
                             fontWeight: '600',
                             cursor: loading ? 'not-allowed' : 'pointer',
                             marginBottom: '16px',
+                            transition: 'opacity 0.2s ease',
                         }}
                     >
                         {loading ? 'Creating account...' : 'Create Account'}
                     </button>
 
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        marginBottom: '16px',
-                    }}>
-                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }}></div>
-                        <span style={{ fontSize: '12px', opacity: 0.6 }}>OR</span>
-                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-card-border)' }}></div>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>OR</span>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-card-border)' }}></div>
                     </div>
 
                     <button
@@ -277,9 +249,9 @@ const Signup = () => {
                         style={{
                             width: '100%',
                             padding: '14px',
-                            background: '#fff',
-                            color: '#333',
-                            border: '1px solid var(--glass-border)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--glass-card-border)',
                             borderRadius: 'var(--radius-md)',
                             fontSize: '16px',
                             fontWeight: '600',
@@ -300,9 +272,9 @@ const Signup = () => {
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', opacity: 0.7 }}>
+                <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--text-secondary)' }}>
                     Already have an account?{' '}
-                    <Link to="/login" style={{ color: '#667eea', fontWeight: '600', textDecoration: 'none' }}>
+                    <Link to="/login" style={{ color: 'var(--accent-primary)', fontWeight: '600', textDecoration: 'none' }}>
                         Sign in
                     </Link>
                 </p>

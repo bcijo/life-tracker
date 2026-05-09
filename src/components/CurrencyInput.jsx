@@ -136,10 +136,12 @@ const CurrencyInput = ({
                     width: '100%',
                     padding: '12px',
                     paddingLeft: '28px',
-                    border: '1px solid var(--glass-border)',
+                    border: '1px solid var(--surface-input-border)',
                     borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(255,255,255,0.5)',
+                    background: 'var(--surface-input)',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
                     ...props.inputStyle,
                 }}
                 {...props}

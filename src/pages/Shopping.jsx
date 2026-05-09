@@ -133,7 +133,7 @@ const Shopping = () => {
                     padding: '16px',
                     gap: '12px',
                     opacity: isBought ? 0.6 : 1,
-                    background: isBought ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.6)',
+                    background: isBought ? 'var(--border-subtle)' : 'var(--glass-card-bg)',
                 }}
             >
                 <button
@@ -143,7 +143,7 @@ const Shopping = () => {
                         height: '24px',
                         borderRadius: '6px',
                         border: isBought ? 'none' : '2px solid var(--text-secondary)',
-                        background: isBought ? '#48bb78' : 'transparent',
+                        background: isBought ? 'var(--success)' : 'transparent',
                         color: '#fff',
                         display: 'flex',
                         alignItems: 'center',
@@ -201,11 +201,11 @@ const Shopping = () => {
                 <div className="glass-card" style={{
                     padding: '16px',
                     marginBottom: '16px',
-                    background: 'linear-gradient(135deg, rgba(72, 187, 120, 0.15) 0%, rgba(72, 187, 120, 0.05) 100%)',
-                    border: '1px solid rgba(72, 187, 120, 0.3)'
+                    background: 'var(--success-bg)',
+                    border: '1px solid var(--success)',
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <DollarSign size={18} color="#48bb78" />
+                        <DollarSign size={18} style={{ color: 'var(--success)' }} />
                         <span style={{ fontWeight: '600', fontSize: '14px' }}>
                             Add "{expensePromptItem.name}" to expenses?
                         </span>
@@ -214,7 +214,7 @@ const Shopping = () => {
                     {/* Subcategory Selection */}
                     {expenseSubcategories.length > 0 || true ? (
                         <div style={{ marginBottom: '12px' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#666', marginBottom: '6px', textTransform: 'uppercase' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
                                 Subcategory
                             </label>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -226,9 +226,9 @@ const Shopping = () => {
                                         style={{
                                             padding: '6px 10px',
                                             borderRadius: '16px',
-                                            border: selectedSubcategory === sub.id ? '2px solid #48bb78' : '1px solid #ddd',
-                                            background: selectedSubcategory === sub.id ? 'rgba(72, 187, 120, 0.15)' : '#fff',
-                                            color: selectedSubcategory === sub.id ? '#48bb78' : '#666',
+                                            border: selectedSubcategory === sub.id ? '2px solid var(--success)' : '1px solid var(--glass-card-border)',
+                                            background: selectedSubcategory === sub.id ? 'var(--success-bg)' : 'var(--glass-card-bg)',
+                                            color: selectedSubcategory === sub.id ? 'var(--success)' : 'var(--text-secondary)',
                                             cursor: 'pointer',
                                             fontSize: '12px',
                                             fontWeight: '500',
@@ -248,9 +248,11 @@ const Shopping = () => {
                                             style={{
                                                 padding: '6px 10px',
                                                 borderRadius: '16px',
-                                                border: '1px solid #ddd',
+                                                border: '1px solid var(--glass-card-border)',
                                                 fontSize: '12px',
-                                                width: '80px'
+                                                width: '80px',
+                                                background: 'var(--surface-input)',
+                                                color: 'var(--text-primary)',
                                             }}
                                             autoFocus
                                             onKeyDown={(e) => {
@@ -264,7 +266,7 @@ const Shopping = () => {
                                             type="button"
                                             onClick={handleAddSubcategory}
                                             style={{
-                                                background: '#48bb78',
+                                                background: 'var(--success)',
                                                 color: '#fff',
                                                 border: 'none',
                                                 borderRadius: '50%',
@@ -273,7 +275,7 @@ const Shopping = () => {
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center'
+                                                justifyContent: 'center',
                                             }}
                                         >
                                             <Plus size={12} />
@@ -287,9 +289,9 @@ const Shopping = () => {
                                             style={{
                                                 background: 'transparent',
                                                 border: 'none',
-                                                color: '#999',
+                                                color: 'var(--text-muted)',
                                                 cursor: 'pointer',
-                                                padding: '2px'
+                                                padding: '2px',
                                             }}
                                         >
                                             <X size={14} />
@@ -302,14 +304,14 @@ const Shopping = () => {
                                         style={{
                                             padding: '6px 10px',
                                             borderRadius: '16px',
-                                            border: '1px dashed #bbb',
+                                            border: '1px dashed var(--glass-card-border)',
                                             background: 'transparent',
-                                            color: '#888',
+                                            color: 'var(--text-secondary)',
                                             cursor: 'pointer',
                                             fontSize: '12px',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px'
+                                            gap: '4px',
                                         }}
                                     >
                                         <Plus size={12} /> Add
@@ -336,12 +338,12 @@ const Shopping = () => {
                             disabled={!expenseAmount}
                             style={{
                                 padding: '10px 16px',
-                                background: expenseAmount ? '#48bb78' : '#ccc',
+                                background: expenseAmount ? 'var(--success)' : 'var(--border-subtle)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: '8px',
                                 fontWeight: '600',
-                                cursor: expenseAmount ? 'pointer' : 'not-allowed'
+                                cursor: expenseAmount ? 'pointer' : 'not-allowed',
                             }}
                         >
                             Add
@@ -352,8 +354,8 @@ const Shopping = () => {
                                 padding: '10px',
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#666',
-                                cursor: 'pointer'
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
                             }}
                         >
                             <X size={20} />
@@ -383,7 +385,7 @@ const Shopping = () => {
                     <button
                         type="submit"
                         style={{
-                            background: 'var(--text-primary)',
+                            background: 'var(--accent-gradient)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-lg)',
@@ -391,7 +393,7 @@ const Shopping = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
                         }}
                     >
                         <ArrowRight size={24} />

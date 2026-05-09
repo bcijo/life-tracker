@@ -117,23 +117,23 @@ const Dashboard = () => {
     return (
         <div className="page-container" style={{ paddingBottom: '90px' }}>
             <header style={{ marginBottom: '24px' }}>
-                <p style={{ fontSize: '14px', opacity: 0.8, marginBottom: '4px' }}>{date}</p>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{date}</p>
                 <h1>Hello, {profile?.display_name || 'there'}</h1>
             </header>
 
             {/* AI Report Card (Only shows if loading or if report exists) */}
             {(report || reportLoading) && <AIReportCard report={report} loading={reportLoading} />}
 
-            <div className="glass-card" style={{ padding: '20px', marginBottom: '20px', background: 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%)' }}>
+            <div className="glass-card" style={{ padding: '20px', marginBottom: '20px' }}>
                 <h3>Daily Overview</h3>
                 <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                     <div style={{ flex: 1 }}>
                         <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
-                        <p style={{ fontSize: '12px', opacity: 0.7 }}>Habits Done</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Habits Done</p>
                     </div>
                     <div style={{ flex: 1 }}>
                         <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{activeTodos}</span>
-                        <p style={{ fontSize: '12px', opacity: 0.7 }}>Tasks Left</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tasks Left</p>
                     </div>
                 </div>
             </div>
@@ -145,25 +145,25 @@ const Dashboard = () => {
                 <Link to="/expenses" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="glass-card" style={{ padding: '16px', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <span style={{ fontSize: '20px', fontWeight: 'bold' }}>₹{todayExpense.toFixed(0)}</span>
-                        <p style={{ fontSize: '12px', opacity: 0.7 }}>Spent Today</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Spent Today</p>
                     </div>
                 </Link>
                 <Link to="/shopping" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="glass-card" style={{ padding: '16px', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{shoppingCount}</span>
-                        <p style={{ fontSize: '12px', opacity: 0.7 }}>To Buy</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>To Buy</p>
                     </div>
                 </Link>
             </div>
 
             <div style={{ marginTop: '16px' }}>
                 <Link to="/split-bill" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)', border: '1px solid rgba(102,126,234,0.2)' }}>
+                    <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '3px solid var(--accent-primary)' }}>
                         <div>
                             <span style={{ fontSize: '16px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Split a Bill</span>
-                            <span style={{ fontSize: '12px', opacity: 0.7 }}>Upload receipt and calculate shares</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload receipt and calculate shares</span>
                         </div>
-                        <div style={{ background: 'var(--primary)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ background: 'var(--accent-gradient)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <span style={{ fontSize: '18px' }}>+</span>
                         </div>
                     </div>

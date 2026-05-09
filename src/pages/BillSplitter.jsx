@@ -229,13 +229,13 @@ const BillSplitter = () => {
                     <h1 style={{ margin: 0, fontSize: '22px' }}>Split a Bill</h1>
                     <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>
                         {restaurantName
-                            ? <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{restaurantName}</span>
+                            ? <span style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>{restaurantName}</span>
                             : 'AI-powered receipt scanner · Llama 4 Scout'
                         }
                     </p>
                 </div>
                 {isReady && (
-                    <button onClick={reset} style={{ background: 'none', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', fontSize: '13px', opacity: 0.7 }}>
+                    <button onClick={reset} style={{ background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
                         Reset
                     </button>
                 )}
@@ -245,14 +245,14 @@ const BillSplitter = () => {
             {!imagePreview && (
                 <div style={{
                     marginBottom: '24px',
-                    border: '2px dashed rgba(102,126,234,0.35)',
+                    border: '2px dashed var(--accent-primary)',
                     borderRadius: '20px',
-                    background: 'linear-gradient(135deg, rgba(102,126,234,0.06) 0%, rgba(118,75,162,0.06) 100%)',
+                    background: 'var(--glass-card-bg)',
                     padding: '28px 20px',
                     textAlign: 'center',
                 }}>
-                    <Receipt size={36} style={{ color: 'var(--primary)', opacity: 0.7, marginBottom: '10px' }} />
-                    <h3 style={{ margin: '0 0 6px', color: 'var(--primary)', fontWeight: 700 }}>Scan your receipt</h3>
+                    <Receipt size={36} style={{ color: 'var(--accent-primary)', opacity: 0.7, marginBottom: '10px' }} />
+                    <h3 style={{ margin: '0 0 6px', color: 'var(--accent-primary)', fontWeight: 700 }}>Scan your receipt</h3>
                     <p style={{ fontSize: '13px', opacity: 0.6, margin: '0 0 20px', lineHeight: 1.5 }}>
                         AI reads items, prices, charges &amp; discounts automatically.
                     </p>
@@ -262,7 +262,7 @@ const BillSplitter = () => {
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '8px',
                                 padding: '11px 20px', borderRadius: '12px', border: 'none',
-                                background: 'var(--primary)', color: 'white',
+                                background: 'var(--accent-gradient)', color: 'white',
                                 fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                             }}
                         >
@@ -273,8 +273,8 @@ const BillSplitter = () => {
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '8px',
                                 padding: '11px 20px', borderRadius: '12px',
-                                border: '1.5px solid rgba(102,126,234,0.4)',
-                                background: 'rgba(255,255,255,0.5)',
+                                border: '1.5px solid var(--glass-card-border)',
+                                background: 'var(--glass-card-bg)',
                                 color: 'var(--text-primary)',
                                 fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                             }}
@@ -291,7 +291,7 @@ const BillSplitter = () => {
 
             {/* ── Image preview ── */}
             {imagePreview && (
-                <div style={{ marginBottom: '20px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                <div style={{ marginBottom: '20px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--glass-card-border)' }}>
                     <img src={imagePreview} alt="Bill" style={{ width: '100%', maxHeight: '220px', objectFit: 'contain', background: '#f8f8f8', display: 'block' }} />
                     <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', backdropFilter: 'blur(8px)' }}>
                         <span style={{ fontSize: '13px', opacity: 0.65 }}>
@@ -317,7 +317,7 @@ const BillSplitter = () => {
 
             {/* ── Error ── */}
             {error && (
-                <div style={{ padding: '12px 16px', background: 'rgba(255,77,79,0.1)', border: '1px solid rgba(255,77,79,0.3)', borderRadius: '12px', marginBottom: '18px', fontSize: '13px', color: '#ff4d4f' }}>
+                <div style={{ padding: '12px 16px', background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: '12px', marginBottom: '18px', fontSize: '13px', color: 'var(--danger)' }}>
                     ⚠️ {error}
                 </div>
             )}
@@ -346,7 +346,7 @@ const BillSplitter = () => {
                     {/* ╚══════════════════════════╝ */}
                     <Section
                         title="🍴 Items"
-                        action={<button onClick={manualAddItem} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
+                        action={<button onClick={manualAddItem} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
                         style={{ marginBottom: '16px' }}
                     >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -370,7 +370,7 @@ const BillSplitter = () => {
                     <Section
                         title="➕ Extra Charges"
                         subtitle="Split equally among everyone"
-                        action={<button onClick={addCharge} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
+                        action={<button onClick={addCharge} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
                         style={{ marginBottom: '16px' }}
                     >
                         {charges.length === 0 ? (
@@ -393,7 +393,7 @@ const BillSplitter = () => {
                     <Section
                         title="🏷️ Discounts"
                         subtitle="Deducted equally from everyone"
-                        action={<button onClick={addDiscount} style={{ background: 'none', border: 'none', color: '#27ae60', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
+                        action={<button onClick={addDiscount} style={{ background: 'none', border: 'none', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
                         style={{ marginBottom: '24px' }}
                     >
                         {discounts.length === 0 ? (
@@ -415,7 +415,8 @@ const BillSplitter = () => {
                     {/* ╚══════════════════════════╝ */}
                     <div ref={summaryRef} className="glass-card" style={{
                         padding: '22px',
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%)',
+                        background: 'var(--glass-card-bg)',
+                        backdropFilter: 'blur(16px)',
                         marginBottom: '16px',
                     }}>
                         <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>
@@ -427,7 +428,7 @@ const BillSplitter = () => {
                                 const expanded = summaryExpanded[p];
                                 const pItems = personItems[p] || [];
                                 return (
-                                    <div key={p} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(102,126,234,0.18)' }}>
+                                    <div key={p} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-card-border)' }}>
                                         {/* Person header row */}
                                         <div
                                             onClick={() => setSummaryExpanded(s => ({ ...s, [p]: !s[p] }))}
@@ -436,7 +437,7 @@ const BillSplitter = () => {
                                                 alignItems: 'center',
                                                 padding: '12px 14px',
                                                 cursor: 'pointer',
-                                                background: 'rgba(255,255,255,0.7)',
+                                                background: 'var(--glass-card-bg)',
                                                 gap: '8px',
                                             }}
                                         >
@@ -448,13 +449,13 @@ const BillSplitter = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <span style={{ fontWeight: 700, fontSize: '17px', color: 'var(--primary)' }}>{fmt(totals[p])}</span>
+                                            <span style={{ fontWeight: 700, fontSize: '17px', color: 'var(--accent-primary)' }}>{fmt(totals[p])}</span>
                                             {expanded ? <ChevronUp size={16} style={{ opacity: 0.5 }} /> : <ChevronDown size={16} style={{ opacity: 0.5 }} />}
                                         </div>
 
                                         {/* Expanded breakdown */}
                                         {expanded && (
-                                            <div style={{ padding: '10px 14px 14px', background: 'rgba(102,126,234,0.04)', borderTop: '1px solid rgba(102,126,234,0.1)' }}>
+                                            <div style={{ padding: '10px 14px 14px', background: 'var(--glass-card-bg)', borderTop: '1px solid var(--glass-card-border)' }}>
                                                 {pItems.map((i, idx) => (
                                                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.85 }}>
                                                         <span>• {i.name}</span>
@@ -462,13 +463,13 @@ const BillSplitter = () => {
                                                     </div>
                                                 ))}
                                                 {chargePerPerson > 0 && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: '#667eea' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: 'var(--accent-primary)' }}>
                                                         <span>➕ Extra charges</span>
                                                         <span>+{fmtShort(chargePerPerson)}</span>
                                                     </div>
                                                 )}
                                                 {discountPerPerson > 0 && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: '#27ae60' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: 'var(--success)' }}>
                                                         <span>🏷️ Discount</span>
                                                         <span>-{fmtShort(discountPerPerson)}</span>
                                                     </div>
@@ -485,9 +486,9 @@ const BillSplitter = () => {
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 padding: '14px',
-                                background: 'linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.15) 100%)',
+                                background: 'var(--accent-gradient)',
                                 borderRadius: '12px',
-                                border: '1px solid rgba(102,126,234,0.3)',
+                                border: '1px solid var(--glass-card-border)',
                                 marginTop: '4px',
                             }}>
                                 <div>
@@ -500,7 +501,7 @@ const BillSplitter = () => {
                                         </span>
                                     )}
                                 </div>
-                                <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--primary)' }}>{fmt(grandTotal)}</span>
+                                <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent-primary)' }}>{fmt(grandTotal)}</span>
                             </div>
                         </div>
 
@@ -523,9 +524,9 @@ const BillSplitter = () => {
                                     gap: '8px',
                                     padding: '13px 16px',
                                     borderRadius: '12px',
-                                    border: '1.5px solid var(--glass-border)',
-                                    background: copied ? 'rgba(39,174,96,0.1)' : 'rgba(255,255,255,0.7)',
-                                    color: copied ? '#27ae60' : 'var(--text-primary)',
+                                    border: '1.5px solid var(--glass-card-border)',
+                                    background: copied ? 'var(--success-bg)' : 'var(--glass-card-bg)',
+                                    color: copied ? 'var(--success)' : 'var(--text-primary)',
                                     fontSize: '14px',
                                     fontWeight: 600,
                                     cursor: 'pointer',
@@ -553,7 +554,7 @@ const BillSplitter = () => {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const Section = ({ title, subtitle, action, children, style = {} }) => (
-    <div style={{ borderRadius: '16px', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(12px)', padding: '18px', ...style }}>
+    <div style={{ borderRadius: '16px', background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', backdropFilter: 'blur(12px)', padding: '18px', ...style }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: subtitle ? '2px' : '14px' }}>
             <h3 style={{ margin: 0, flex: 1, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>{title}</h3>
             {action}
@@ -565,8 +566,8 @@ const Section = ({ title, subtitle, action, children, style = {} }) => (
 
 const PersonChip = ({ name, onRemove }) => (
     <div style={{
-        background: 'rgba(102,126,234,0.1)',
-        border: '1px solid rgba(102,126,234,0.25)',
+        background: 'var(--glass-card-bg)',
+        border: '1px solid var(--glass-card-border)',
         borderRadius: '20px',
         padding: '6px 13px',
         display: 'flex',
@@ -574,6 +575,7 @@ const PersonChip = ({ name, onRemove }) => (
         gap: '7px',
         fontSize: '13px',
         fontWeight: 500,
+        color: 'var(--text-primary)',
     }}>
         {name}
         {onRemove && <Trash2 size={12} style={{ cursor: 'pointer', opacity: 0.45 }} onClick={onRemove} />}
@@ -583,7 +585,7 @@ const PersonChip = ({ name, onRemove }) => (
 const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAll }) => {
     const isMulti = item.quantity > 1;
     return (
-        <div style={{ borderRadius: '14px', border: '1px solid var(--glass-border)', overflow: 'hidden', background: 'rgba(255,255,255,0.04)' }}>
+        <div style={{ borderRadius: '14px', border: '1px solid var(--glass-card-border)', overflow: 'hidden', background: 'var(--glass-card-bg)' }}>
             {/* ── Top strip: name + total ── */}
             <div style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
                 <input
@@ -593,8 +595,8 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                     style={{
                         flex: 1,
                         border: 'none',
-                        borderBottom: '1px solid var(--glass-border)',
-                        background: 'rgba(255,255,255,0.06)',
+                        borderBottom: '1px solid var(--glass-card-border)',
+                        background: 'var(--surface-input)',
                         padding: '11px 14px',
                         fontSize: '14px',
                         fontWeight: 500,
@@ -602,7 +604,7 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                         outline: 'none',
                     }}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.06)', borderLeft: '1px solid var(--glass-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--glass-card-border)', background: 'var(--glass-card-bg)', borderLeft: '1px solid var(--glass-card-border)' }}>
                     <span style={{ padding: '0 6px 0 12px', opacity: 0.5, fontSize: '14px', fontWeight: 'bold', lineHeight: 1 }}>₹</span>
                     <input
                         type="number"
@@ -620,7 +622,7 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                         }}
                     />
                 </div>
-                <button onClick={() => onDelete(item.id)} style={{ border: 'none', borderLeft: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,77,79,0.06)', color: '#ff4d4f', cursor: 'pointer', padding: '0 12px' }}>
+                <button onClick={() => onDelete(item.id)} style={{ border: 'none', borderLeft: '1px solid var(--glass-card-border)', borderBottom: '1px solid var(--glass-card-border)', background: 'var(--danger-bg)', color: 'var(--danger)', cursor: 'pointer', padding: '0 12px' }}>
                     <Trash2 size={15} />
                 </button>
             </div>
@@ -629,7 +631,7 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
             <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {/* Qty & unit_price */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(102,126,234,0.08)', borderRadius: '8px', padding: '5px 10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--glass-card-bg)', borderRadius: '8px', padding: '5px 10px' }}>
                         <span style={{ fontSize: '12px', opacity: 0.6 }}>Qty</span>
                         <input
                             type="number"
@@ -673,9 +675,9 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                                     alignItems: 'center',
                                     gap: '4px',
                                     transition: 'all 0.15s',
-                                    background: active ? 'var(--primary)' : 'transparent',
+                                    background: active ? 'var(--accent-primary)' : 'transparent',
                                     color: active ? 'white' : 'var(--text-secondary)',
-                                    border: active ? '1px solid var(--primary)' : '1px solid var(--glass-border)',
+                                    border: active ? '1px solid var(--accent-primary)' : '1px solid var(--glass-card-border)',
                                     userSelect: 'none',
                                 }}
                             >
@@ -716,7 +718,7 @@ const ChargeRow = ({ item, onUpdate, onDelete, accentColor = 'rgba(102,126,234,0
             onChange={e => onUpdate(item.id, 'amount', parseFloat(e.target.value) || 0)}
             style={{ width: '60px', border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 600, textAlign: 'right', color: colorOverride || 'var(--text-primary)', outline: 'none' }}
         />
-        <button onClick={() => onDelete(item.id)} style={{ background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.6 }}>
+        <button onClick={() => onDelete(item.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.6 }}>
             <Trash2 size={14} />
         </button>
     </div>

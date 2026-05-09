@@ -111,11 +111,11 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
 
     // Get bar color based on completion rate
     const getBarColor = (rate, isFuture) => {
-        if (isFuture) return 'rgba(0,0,0,0.1)';
-        if (rate >= 80) return '#48bb78';
-        if (rate >= 50) return '#ecc94b';
-        if (rate > 0) return '#f6ad55';
-        return 'rgba(0,0,0,0.15)';
+        if (isFuture) return 'var(--border-subtle)';
+        if (rate >= 80) return 'var(--success)';
+        if (rate >= 50) return 'var(--warning)';
+        if (rate > 0) return 'var(--accent-primary)';
+        return 'var(--border-subtle)';
     };
 
     const CustomTooltip = ({ active, payload }) => {
@@ -141,7 +141,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
 
     // Today's progress indicator
     const progressPercent = todayStats.rate;
-    const progressColor = progressPercent >= 80 ? '#48bb78' : progressPercent >= 50 ? '#ecc94b' : '#f6ad55';
+    const progressColor = progressPercent >= 80 ? 'var(--success)' : progressPercent >= 50 ? 'var(--warning)' : 'var(--accent-primary)';
 
     return (
         <div style={{
@@ -150,7 +150,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0,0,0,0.6)',
+            background: 'var(--overlay-bg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -172,7 +172,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                         position: 'absolute',
                         top: '12px',
                         right: '12px',
-                        background: 'rgba(0,0,0,0.1)',
+                        background: 'var(--glass-card-bg)',
                         border: 'none',
                         borderRadius: '50%',
                         width: '32px',
@@ -181,6 +181,8 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
+                        color: 'var(--text-primary)',
+                        transition: 'all 0.2s ease',
                     }}
                 >
                     <X size={18} />
@@ -189,7 +191,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                 {/* Header */}
                 <div style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <TrendingUp size={20} color="#48bb78" />
+                        <TrendingUp size={20} style={{ color: 'var(--success)' }} />
                         <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Habit Analytics</h2>
                     </div>
 
@@ -203,11 +205,13 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                         <button
                             onClick={() => setWeekOffset(weekOffset - 1)}
                             style={{
-                                background: 'rgba(0,0,0,0.05)',
-                                border: 'none',
+                                background: 'var(--glass-card-bg)',
+                                border: '1px solid var(--glass-card-border)',
                                 borderRadius: '8px',
                                 padding: '8px',
                                 cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                transition: 'all 0.2s ease',
                             }}
                         >
                             <ChevronLeft size={18} />
@@ -226,12 +230,14 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                             onClick={() => setWeekOffset(weekOffset + 1)}
                             disabled={weekOffset >= 0}
                             style={{
-                                background: weekOffset >= 0 ? 'rgba(0,0,0,0.02)' : 'rgba(0,0,0,0.05)',
-                                border: 'none',
+                                background: weekOffset >= 0 ? 'var(--border-subtle)' : 'var(--glass-card-bg)',
+                                border: weekOffset >= 0 ? 'none' : '1px solid var(--glass-card-border)',
                                 borderRadius: '8px',
                                 padding: '8px',
                                 cursor: weekOffset >= 0 ? 'not-allowed' : 'pointer',
                                 opacity: weekOffset >= 0 ? 0.3 : 1,
+                                color: 'var(--text-primary)',
+                                transition: 'all 0.2s ease',
                             }}
                         >
                             <ChevronRight size={18} />
@@ -323,7 +329,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                     {/* Today vs Yesterday */}
                     <div style={{
                         padding: '12px',
-                        background: 'rgba(0,0,0,0.03)',
+                        background: 'var(--glass-card-bg)',
                         borderRadius: 'var(--radius-sm)',
                     }}>
                         <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>vs Yesterday</div>
@@ -333,7 +339,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                             gap: '4px',
                             fontSize: '16px',
                             fontWeight: '600',
-                            color: todayVsYesterday > 0 ? '#48bb78' : todayVsYesterday < 0 ? '#f56565' : 'var(--text-secondary)',
+                            color: todayVsYesterday > 0 ? 'var(--success)' : todayVsYesterday < 0 ? 'var(--danger)' : 'var(--text-secondary)',
                         }}>
                             {todayVsYesterday > 0 && <ArrowUp size={16} />}
                             {todayVsYesterday < 0 && <ArrowDown size={16} />}
@@ -344,7 +350,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                     {/* Week Average */}
                     <div style={{
                         padding: '12px',
-                        background: 'rgba(0,0,0,0.03)',
+                        background: 'var(--glass-card-bg)',
                         borderRadius: 'var(--radius-sm)',
                     }}>
                         <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>Week Avg</div>
@@ -364,7 +370,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                     {/* Best Day */}
                     <div style={{
                         padding: '12px',
-                        background: 'rgba(0,0,0,0.03)',
+                        background: 'var(--glass-card-bg)',
                         borderRadius: 'var(--radius-sm)',
                     }}>
                         <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>Best Day</div>
@@ -379,7 +385,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                     {/* Best Current Streak */}
                     <div style={{
                         padding: '12px',
-                        background: 'rgba(0,0,0,0.03)',
+                        background: 'var(--glass-card-bg)',
                         borderRadius: 'var(--radius-sm)',
                     }}>
                         <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>Best Streak</div>
@@ -389,7 +395,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                             gap: '4px',
                             fontSize: '16px',
                             fontWeight: '600',
-                            color: bestStreak > 0 ? '#ff6b6b' : 'var(--text-secondary)',
+                            color: bestStreak > 0 ? 'var(--danger)' : 'var(--text-secondary)',
                         }}>
                             <Flame size={16} />
                             {bestStreak} day{bestStreak !== 1 ? 's' : ''}

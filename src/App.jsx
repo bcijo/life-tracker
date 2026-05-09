@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
 import MigrationBanner from './components/MigrationBanner'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -16,6 +17,7 @@ import BillSplitter from './pages/BillSplitter'
 
 function App() {
     return (
+        <ThemeProvider>
         <AuthProvider>
             <MigrationBanner />
             <Router>
@@ -39,6 +41,7 @@ function App() {
                 </Routes>
             </Router>
         </AuthProvider>
+        </ThemeProvider>
     )
 }
 

@@ -67,7 +67,7 @@ const Todos = () => {
                 style={{
                     background: 'transparent',
                     border: 'none',
-                    color: todo.completed ? '#48bb78' : 'var(--text-secondary)',
+                    color: todo.completed ? 'var(--success)' : 'var(--text-secondary)',
                     padding: 0,
                     display: 'flex',
                     cursor: 'pointer'
@@ -87,7 +87,7 @@ const Todos = () => {
                     {todo.text}
                 </span>
                 {todo.deadline && (
-                    <span style={{ fontSize: '12px', color: isPast(parseISO(todo.deadline)) && !isToday(parseISO(todo.deadline)) && !todo.completed ? '#f56565' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '12px', color: isPast(parseISO(todo.deadline)) && !isToday(parseISO(todo.deadline)) && !todo.completed ? 'var(--danger)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Calendar size={12} />
                         {isToday(parseISO(todo.deadline)) ? 'Today' : format(parseISO(todo.deadline), 'MMM d, yyyy')}
                     </span>
@@ -141,19 +141,19 @@ const Todos = () => {
                             onChange={(e) => setDeadline(e.target.value)}
                             style={{
                                 border: 'none',
-                                background: 'rgba(0,0,0,0.05)',
+                                background: 'var(--glass-card-bg)',
                                 padding: '6px 12px',
                                 borderRadius: '8px',
                                 fontSize: '12px',
                                 color: 'var(--text-secondary)',
                                 cursor: 'pointer',
-                                fontFamily: 'inherit'
+                                fontFamily: 'inherit',
                             }}
                         />
                         <button
                             type="submit"
                             style={{
-                                background: 'var(--text-primary)',
+                                background: 'var(--accent-gradient)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: '50%',
@@ -162,7 +162,7 @@ const Todos = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
                             }}
                         >
                             <ArrowRight size={20} />
@@ -175,7 +175,7 @@ const Todos = () => {
                 {/* TODAY Section */}
                 {todayTodos.length > 0 && (
                     <section>
-                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#f56565', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--danger)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                             Due Today & Overdue
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -125,9 +125,9 @@ const Expenses = () => {
                 <button
                     onClick={() => setShowGraph(!showGraph)}
                     style={{
-                        background: showGraph ? 'var(--text-primary)' : 'rgba(255,255,255,0.5)',
+                        background: showGraph ? 'var(--accent-gradient)' : 'var(--glass-card-bg)',
                         color: showGraph ? '#fff' : 'var(--text-primary)',
-                        border: 'none',
+                        border: showGraph ? 'none' : '1px solid var(--glass-card-border)',
                         borderRadius: '12px',
                         width: '40px',
                         height: '40px',
@@ -136,7 +136,6 @@ const Expenses = () => {
                         justifyContent: 'center',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        boxShadow: showGraph ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
                     }}
                 >
                     <BarChart2 size={20} />
@@ -145,7 +144,7 @@ const Expenses = () => {
 
             {/* Shopping Suggestions */}
             {shoppingSuggestions.length > 0 && (
-                <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', background: 'linear-gradient(135deg, rgba(69, 183, 209, 0.15) 0%, rgba(69, 183, 209, 0.05) 100%)' }}>
+                <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', borderLeft: '3px solid var(--accent-primary)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                         <ShoppingBag size={18} /> Add recent purchases?
                     </h3>
@@ -168,7 +167,7 @@ const Expenses = () => {
                                         }
                                     }}
                                     disabled={!suggestionAmounts[item.id]}
-                                    style={{ padding: '6px 12px', background: '#45b7d1', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                    style={{ padding: '6px 12px', background: 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                                 >
                                     Add
                                 </button>
@@ -208,29 +207,29 @@ const Expenses = () => {
             {/* EXPENSE CARDS GRID */}
             <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#2d3748', margin: 0 }}>Categories</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Categories</h3>
                     <button
                         onClick={() => setShowAddCardModal(true)}
                         style={{
                             width: '28px',
                             height: '28px',
                             borderRadius: '50%',
-                            background: '#edf2f7',
-                            border: 'none',
+                            background: 'var(--glass-card-bg)',
+                            border: '1px solid var(--glass-card-border)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            color: '#718096',
-                            transition: 'all 0.2s ease'
+                            color: 'var(--text-secondary)',
+                            transition: 'all 0.2s ease',
                         }}
                         onMouseOver={(e) => {
                             e.currentTarget.style.transform = 'scale(1.1)';
-                            e.currentTarget.style.background = '#e2e8f0';
+                            e.currentTarget.style.background = 'var(--surface-input)';
                         }}
                         onMouseOut={(e) => {
                             e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.background = '#edf2f7';
+                            e.currentTarget.style.background = 'var(--glass-card-bg)';
                         }}
                     >
                         <Plus size={18} />
@@ -281,9 +280,10 @@ const Expenses = () => {
                         style={{
                             width: '100%',
                             padding: '12px',
-                            border: '1px solid var(--glass-border)',
+                            border: '1px solid var(--glass-card-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
                             fontSize: '16px',
                         }}
                         autoFocus
@@ -314,8 +314,9 @@ const Expenses = () => {
                             color: 'var(--text-secondary)',
                             border: '1px solid var(--glass-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.3)',
-                            fontStyle: 'italic'
+                            background: 'var(--glass-card-bg)',
+                            fontStyle: 'italic',
+                            color: 'var(--text-secondary)',
                         }}>
                             Color will be auto-generated
                         </div>
@@ -327,10 +328,11 @@ const Expenses = () => {
                         gridTemplateColumns: 'repeat(5, 1fr)',
                         gap: '8px',
                         padding: '12px',
-                        background: 'rgba(255,255,255,0.3)',
+                        background: 'var(--glass-card-bg)',
+                        border: '1px solid var(--glass-card-border)',
                         borderRadius: 'var(--radius-sm)',
                         maxHeight: '150px',
-                        overflowY: 'auto'
+                        overflowY: 'auto',
                     }}>
                         {EMOJI_LIST.map(emoji => (
                             <button
@@ -338,7 +340,7 @@ const Expenses = () => {
                                 onClick={() => setNewCard({ ...newCard, icon: emoji })}
                                 style={{
                                     border: 'none',
-                                    background: newCard.icon === emoji ? 'rgba(255,255,255,0.8)' : 'transparent',
+                                    background: newCard.icon === emoji ? 'var(--surface-elevated)' : 'transparent',
                                     borderRadius: '8px',
                                     fontSize: '20px',
                                     padding: '8px',
@@ -368,14 +370,14 @@ const Expenses = () => {
                         style={{
                             width: '100%',
                             padding: '14px',
-                            background: newCard.name ? 'var(--text-primary)' : 'rgba(0,0,0,0.1)',
+                            background: newCard.name ? 'var(--accent-gradient)' : 'var(--border-subtle)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
                             fontWeight: '600',
                             fontSize: '16px',
                             cursor: newCard.name ? 'pointer' : 'not-allowed',
-                            marginTop: '8px'
+                            marginTop: '8px',
                         }}
                     >
                         Create Category

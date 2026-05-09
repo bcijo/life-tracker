@@ -124,9 +124,9 @@ const Habits = () => {
     // Get success rate color based on percentage
     const getSuccessRateColor = (rate) => {
         if (rate === null) return 'var(--text-secondary)';
-        if (rate >= 70) return '#48bb78';
-        if (rate >= 40) return '#ecc94b';
-        return '#f56565';
+        if (rate >= 70) return 'var(--success)';
+        if (rate >= 40) return 'var(--warning)';
+        return 'var(--danger)';
     };
 
     // Calculate streak from history (only counts consecutive 'completed' days on active days)
@@ -177,42 +177,42 @@ const Habits = () => {
     const getTickButtonStyle = (status) => {
         if (status === 'completed') {
             return {
-                background: '#48bb78',
+                background: 'var(--success)',
                 border: 'none',
                 color: '#fff',
             };
         } else if (status === 'failed') {
             return {
-                background: '#f56565',
+                background: 'var(--danger)',
                 border: 'none',
                 color: '#fff',
             };
         }
         return {
-            background: 'rgba(255,255,255,0.3)',
-            border: '2px solid rgba(0,0,0,0.1)',
+            background: 'var(--glass-card-bg)',
+            border: '1px solid var(--glass-card-border)',
             color: 'var(--text-secondary)',
         };
     };
 
     const getCalendarDayStyle = (status, isCurrentDay, isFutureDay, isActive) => {
-        let bg = 'rgba(0,0,0,0.05)';
+        let bg = 'var(--glass-card-bg)';
         let color = 'var(--text-primary)';
 
         if (!isActive) {
-            bg = 'rgba(0,0,0,0.02)';
-            color = 'rgba(0,0,0,0.25)';
+            bg = 'var(--border-subtle)';
+            color = 'var(--text-muted)';
         } else if (status === 'completed') {
-            bg = '#48bb78';
+            bg = 'var(--success)';
             color = '#fff';
         } else if (status === 'failed') {
-            bg = '#f56565';
+            bg = 'var(--danger)';
             color = '#fff';
         }
 
         if (isFutureDay) {
-            bg = 'rgba(0,0,0,0.02)';
-            color = 'rgba(0,0,0,0.3)';
+            bg = 'var(--border-subtle)';
+            color = 'var(--text-muted)';
         }
 
         return {
@@ -225,7 +225,7 @@ const Habits = () => {
             background: bg,
             color: color,
             fontWeight: isCurrentDay ? 'bold' : 'normal',
-            border: isCurrentDay ? '2px solid var(--text-primary)' : 'none',
+            border: isCurrentDay ? '2px solid var(--accent-primary)' : 'none',
             cursor: isFutureDay || !isActive ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s ease',
         };
@@ -235,18 +235,18 @@ const Habits = () => {
     const getWeekBoxStyle = (dayStatus) => {
         const { isActive, isFuture, isToday: isCurrentDay, status } = dayStatus;
 
-        let bg = 'rgba(0,0,0,0.08)'; // Pending
-        let borderColor = 'transparent';
+        let bg = 'var(--glass-card-bg)';
+        let borderColor = 'var(--glass-card-border)';
 
         if (!isActive) {
-            bg = 'rgba(0,0,0,0.03)';
-            borderColor = 'rgba(0,0,0,0.05)';
+            bg = 'var(--border-subtle)';
+            borderColor = 'transparent';
         } else if (status === 'completed') {
-            bg = '#48bb78';
+            bg = 'var(--success)';
         } else if (status === 'failed') {
-            bg = '#f56565';
+            bg = 'var(--danger)';
         } else if (isFuture) {
-            bg = 'rgba(0,0,0,0.04)';
+            bg = 'var(--border-subtle)';
         }
 
         return {
@@ -257,9 +257,9 @@ const Habits = () => {
             alignItems: 'center',
             justifyContent: 'center',
             background: bg,
-            border: isCurrentDay ? '2px solid var(--text-primary)' : `1px solid ${borderColor}`,
+            border: isCurrentDay ? '2px solid var(--accent-primary)' : `1px solid ${borderColor}`,
             fontSize: '10px',
-            color: status === 'completed' || status === 'failed' ? '#fff' : 'rgba(0,0,0,0.4)',
+            color: status === 'completed' || status === 'failed' ? '#fff' : 'var(--text-muted)',
         };
     };
 
@@ -279,8 +279,8 @@ const Habits = () => {
                             width: buttonSize,
                             height: buttonSize,
                             borderRadius: '8px',
-                            border: selectedDays.includes(idx) ? 'none' : '2px solid rgba(0,0,0,0.1)',
-                            background: selectedDays.includes(idx) ? '#48bb78' : 'rgba(255,255,255,0.5)',
+                            border: selectedDays.includes(idx) ? 'none' : '1px solid var(--glass-card-border)',
+                            background: selectedDays.includes(idx) ? 'var(--success)' : 'var(--glass-card-bg)',
                             color: selectedDays.includes(idx) ? '#fff' : 'var(--text-secondary)',
                             fontSize: fontSize,
                             fontWeight: '600',
@@ -303,8 +303,8 @@ const Habits = () => {
                     <button
                         onClick={() => setShowAnalytics(true)}
                         style={{
-                            background: 'rgba(72, 187, 120, 0.1)',
-                            color: '#48bb78',
+                            background: 'var(--success-bg)',
+                            color: 'var(--success)',
                             border: 'none',
                             borderRadius: '50%',
                             width: '40px',
@@ -321,7 +321,7 @@ const Habits = () => {
                     <button
                         onClick={() => setShowForm(!showForm)}
                         style={{
-                            background: 'var(--text-primary)',
+                            background: 'var(--accent-gradient)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: '50%',
@@ -357,9 +357,11 @@ const Habits = () => {
                             width: '100%',
                             padding: '12px',
                             marginBottom: '12px',
-                            border: '1px solid var(--glass-border)',
+                            border: '1px solid var(--glass-card-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
+                            outline: 'none',
                         }}
                         autoFocus
                     />
@@ -377,7 +379,7 @@ const Habits = () => {
                                     padding: '8px 20px',
                                     borderRadius: '20px',
                                     border: 'none',
-                                    background: newHabitTimeOfDay === 'morning' ? '#f6ad55' : 'rgba(0,0,0,0.05)',
+                                    background: newHabitTimeOfDay === 'morning' ? 'var(--warning)' : 'var(--glass-card-bg)',
                                     color: newHabitTimeOfDay === 'morning' ? '#fff' : 'var(--text-secondary)',
                                     fontSize: '13px',
                                     fontWeight: '600',
@@ -397,7 +399,7 @@ const Habits = () => {
                                     padding: '8px 20px',
                                     borderRadius: '20px',
                                     border: 'none',
-                                    background: newHabitTimeOfDay === 'evening' ? '#805ad5' : 'rgba(0,0,0,0.05)',
+                                    background: newHabitTimeOfDay === 'evening' ? 'var(--accent-primary)' : 'var(--glass-card-bg)',
                                     color: newHabitTimeOfDay === 'evening' ? '#fff' : 'var(--text-secondary)',
                                     fontSize: '13px',
                                     fontWeight: '600',
@@ -432,7 +434,7 @@ const Habits = () => {
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: 'var(--text-primary)',
+                            background: 'var(--accent-gradient)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
@@ -474,8 +476,8 @@ const Habits = () => {
                                                 borderRadius: '12px',
                                                 fontSize: '10px',
                                                 fontWeight: '600',
-                                                background: (habit.time_of_day || 'morning') === 'morning' ? 'rgba(246, 173, 85, 0.2)' : 'rgba(128, 90, 213, 0.2)',
-                                                color: (habit.time_of_day || 'morning') === 'morning' ? '#c05621' : '#6b46c1',
+                                                background: (habit.time_of_day || 'morning') === 'morning' ? 'var(--warning-bg)' : 'var(--glass-card-bg)',
+                                                color: (habit.time_of_day || 'morning') === 'morning' ? 'var(--warning)' : 'var(--accent-primary)',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '3px',
@@ -517,7 +519,7 @@ const Habits = () => {
                                         height: '36px',
                                         borderRadius: '10px',
                                         border: 'none',
-                                        background: 'rgba(0, 0, 0, 0.05)',
+                                        background: 'var(--glass-card-bg)',
                                         color: 'var(--text-secondary)',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -538,8 +540,8 @@ const Habits = () => {
                                         height: '36px',
                                         borderRadius: '10px',
                                         border: 'none',
-                                        background: 'rgba(245, 101, 101, 0.1)',
-                                        color: '#f56565',
+                                        background: 'var(--danger-bg)',
+                                        color: 'var(--danger)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -586,8 +588,8 @@ const Habits = () => {
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            background: 'rgba(0,0,0,0.03)',
-                                            border: '2px dashed rgba(0,0,0,0.1)',
+                                            background: 'var(--border-subtle)',
+                                            border: '2px dashed var(--glass-card-border)',
                                             fontSize: '9px',
                                             color: 'var(--text-secondary)',
                                             textAlign: 'center',
@@ -621,7 +623,7 @@ const Habits = () => {
                                                     padding: '6px 14px',
                                                     borderRadius: '16px',
                                                     border: 'none',
-                                                    background: (habit.time_of_day || 'morning') === 'morning' ? '#f6ad55' : 'rgba(0,0,0,0.05)',
+                                                    background: (habit.time_of_day || 'morning') === 'morning' ? 'var(--warning)' : 'var(--glass-card-bg)',
                                                     color: (habit.time_of_day || 'morning') === 'morning' ? '#fff' : 'var(--text-secondary)',
                                                     fontSize: '11px',
                                                     fontWeight: '600',
@@ -641,7 +643,7 @@ const Habits = () => {
                                                     padding: '6px 14px',
                                                     borderRadius: '16px',
                                                     border: 'none',
-                                                    background: (habit.time_of_day || 'morning') === 'evening' ? '#805ad5' : 'rgba(0,0,0,0.05)',
+                                                    background: (habit.time_of_day || 'morning') === 'evening' ? 'var(--accent-primary)' : 'var(--glass-card-bg)',
                                                     color: (habit.time_of_day || 'morning') === 'evening' ? '#fff' : 'var(--text-secondary)',
                                                     fontSize: '11px',
                                                     fontWeight: '600',
@@ -666,10 +668,11 @@ const Habits = () => {
                                             onClick={cancelEditDays}
                                             style={{
                                                 padding: '6px 16px',
-                                                background: 'rgba(0,0,0,0.05)',
-                                                border: 'none',
+                                                background: 'var(--glass-card-bg)',
+                                                border: '1px solid var(--glass-card-border)',
                                                 borderRadius: '6px',
                                                 fontSize: '12px',
+                                                color: 'var(--text-secondary)',
                                                 cursor: 'pointer',
                                             }}
                                         >
@@ -679,7 +682,7 @@ const Habits = () => {
                                             onClick={saveEditDays}
                                             style={{
                                                 padding: '6px 16px',
-                                                background: '#48bb78',
+                                                background: 'var(--success)',
                                                 color: '#fff',
                                                 border: 'none',
                                                 borderRadius: '6px',
@@ -737,8 +740,8 @@ const Habits = () => {
                                 style={{
                                     width: '100%',
                                     padding: '8px',
-                                    background: 'rgba(0,0,0,0.05)',
-                                    border: 'none',
+                                    background: 'var(--glass-card-bg)',
+                                    border: '1px solid var(--glass-card-border)',
                                     borderRadius: 'var(--radius-sm)',
                                     fontSize: '12px',
                                     display: 'flex',
@@ -754,7 +757,7 @@ const Habits = () => {
                             </button>
 
                             {selectedHabit === habit.id && (
-                                <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(255,255,255,0.3)', borderRadius: 'var(--radius-sm)' }}>
+                                <div style={{ marginTop: '16px', padding: '12px', background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', borderRadius: 'var(--radius-sm)' }}>
                                     {/* Success Stats Header */}
                                     <div style={{
                                         display: 'flex',
@@ -762,7 +765,7 @@ const Habits = () => {
                                         alignItems: 'center',
                                         marginBottom: '12px',
                                         padding: '8px 10px',
-                                        background: 'rgba(0,0,0,0.03)',
+                                        background: 'var(--glass-card-bg)',
                                         borderRadius: '8px',
                                     }}>
                                         <div style={{ fontSize: '11px', opacity: 0.7 }}>
@@ -780,8 +783,8 @@ const Habits = () => {
                                                 gap: '4px',
                                                 padding: '4px 8px',
                                                 fontSize: '10px',
-                                                background: 'rgba(0,0,0,0.05)',
-                                                border: 'none',
+                                                background: 'var(--glass-card-bg)',
+                                                border: '1px solid var(--glass-card-border)',
                                                 borderRadius: '4px',
                                                 cursor: 'pointer',
                                                 opacity: 0.7,
@@ -832,19 +835,19 @@ const Habits = () => {
                                         opacity: 0.8,
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#48bb78' }} />
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--success)' }} />
                                             <span>Done</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#f56565' }} />
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--danger)' }} />
                                             <span>Missed</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'rgba(0,0,0,0.1)' }} />
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--border-subtle)' }} />
                                             <span>Pending</span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(0,0,0,0.2)' }} />
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--glass-card-bg)', border: '1px dashed var(--glass-card-border)' }} />
                                             <span>Rest</span>
                                         </div>
                                     </div>

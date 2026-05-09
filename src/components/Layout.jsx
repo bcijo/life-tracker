@@ -89,18 +89,17 @@ const Layout = () => {
         alignItems: 'center',
         padding: '12px 20px',
         borderBottom: '1px solid var(--glass-border)',
-        background: 'rgba(255,255,255,0.8)',
-        backdropFilter: 'blur(10px)',
+        background: 'var(--header-bg)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
+        transition: 'background 0.3s ease',
       }}>
-        <div style={{
+        <div className="accent-gradient-text" style={{
           fontWeight: '700',
           fontSize: '20px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
           letterSpacing: '-0.5px'
         }}>
           LifeTracker

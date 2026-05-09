@@ -79,7 +79,7 @@ const BankAccounts = () => {
                 <div>
                     <h1>Money</h1>
                     <p style={{ fontSize: '14px', opacity: 0.7 }}>
-                        Total Balance: <span style={{ fontWeight: '600', color: '#48bb78' }}>₹{formatIndianNumber(getTotalBalance())}</span>
+                        Total Balance: <span style={{ fontWeight: '600', color: 'var(--success)' }}>₹{formatIndianNumber(getTotalBalance())}</span>
                     </p>
                 </div>
                 <button
@@ -139,7 +139,7 @@ const BankAccounts = () => {
                             <span style={{
                                 fontWeight: '700',
                                 fontSize: '16px',
-                                color: parseFloat(account.current_balance) >= 0 ? '#48bb78' : '#f56565',
+                                color: parseFloat(account.current_balance) >= 0 ? 'var(--success)' : 'var(--danger)',
                             }}>
                                 ₹{formatIndianNumber(account.current_balance)}
                             </span>
@@ -149,8 +149,8 @@ const BankAccounts = () => {
                                     setUpdateBalanceValue(account.current_balance?.toString() || '');
                                 }}
                                 style={{
-                                    background: 'rgba(0,0,0,0.05)',
-                                    border: 'none',
+                                    background: 'var(--glass-card-bg)',
+                                    border: '1px solid var(--glass-card-border)',
                                     borderRadius: '8px',
                                     padding: '8px',
                                     cursor: 'pointer',
@@ -166,12 +166,12 @@ const BankAccounts = () => {
                                     }
                                 }}
                                 style={{
-                                    background: 'rgba(255, 0, 0, 0.1)',
+                                    background: 'var(--danger-bg)',
                                     border: 'none',
                                     borderRadius: '8px',
                                     padding: '8px',
                                     cursor: 'pointer',
-                                    color: '#f56565',
+                                    color: 'var(--danger)',
                                 }}
                             >
                                 <Trash2 size={16} />
@@ -202,9 +202,10 @@ const BankAccounts = () => {
                         style={{
                             width: '100%',
                             padding: '12px',
-                            border: '1px solid var(--glass-border)',
+                            border: '1px solid var(--glass-card-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
                             fontSize: '14px',
                         }}
                         autoFocus
@@ -220,16 +221,17 @@ const BankAccounts = () => {
                                     padding: '10px 8px',
                                     border: newAccount.type === type.id
                                         ? `2px solid ${type.color}`
-                                        : '1px solid var(--glass-border)',
+                                        : '1px solid var(--glass-card-border)',
                                     borderRadius: 'var(--radius-sm)',
                                     background: newAccount.type === type.id
-                                        ? `${type.color}15`
-                                        : 'rgba(255,255,255,0.5)',
+                                        ? `${type.color}18`
+                                        : 'var(--surface-input)',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     gap: '4px',
+                                    color: 'var(--text-primary)',
                                 }}
                             >
                                 <type.icon size={18} color={type.color} />
@@ -254,8 +256,8 @@ const BankAccounts = () => {
                             width: '100%',
                             padding: '12px',
                             background: newAccount.name && newAccount.balance
-                                ? '#48bb78'
-                                : 'rgba(0,0,0,0.1)',
+                                ? 'var(--success)'
+                                : 'var(--border-subtle)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
@@ -296,7 +298,7 @@ const BankAccounts = () => {
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: updateBalanceValue ? '#48bb78' : 'rgba(0,0,0,0.1)',
+                            background: updateBalanceValue ? 'var(--success)' : 'var(--border-subtle)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',

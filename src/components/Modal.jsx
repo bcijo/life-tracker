@@ -17,34 +17,38 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
 
     return createPortal(
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px',
-            animation: 'fadeIn 0.2s ease-out'
-        }}
+        <div
+            style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: 'var(--overlay-bg)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999,
+                padding: '20px',
+                animation: 'modalFadeIn 0.2s ease-out',
+            }}
             onClick={onClose}
         >
             <div
-                className="glass-panel"
                 style={{
-                    background: '#fff',
+                    background: 'var(--surface-elevated)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                     padding: '24px',
                     width: '100%',
                     maxWidth: '400px',
                     position: 'relative',
                     maxHeight: '90vh',
                     overflowY: 'auto',
-                    animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    animation: 'modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    color: 'var(--text-primary)',
                 }}
                 onClick={e => e.stopPropagation()}
             >
@@ -54,8 +58,8 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                         position: 'absolute',
                         top: '16px',
                         right: '16px',
-                        background: 'rgba(0,0,0,0.05)',
-                        border: 'none',
+                        background: 'var(--glass-card-bg)',
+                        border: '1px solid var(--glass-card-border)',
                         borderRadius: '50%',
                         width: '32px',
                         height: '32px',
@@ -63,23 +67,36 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        color: '#666'
+                        color: 'var(--text-secondary)',
+                        transition: 'background 0.2s ease',
                     }}
+                    onMouseOver={e => e.currentTarget.style.background = 'var(--surface-input)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'var(--glass-card-bg)'}
                 >
-                    <X size={18} />
+                    <X size={16} />
                 </button>
 
-                {title && <h3 style={{ marginBottom: '20px', fontSize: '20px', paddingRight: '20px' }}>{title}</h3>}
+                {title && (
+                    <h3 style={{
+                        marginBottom: '20px',
+                        fontSize: '18px',
+                        paddingRight: '28px',
+                        color: 'var(--text-primary)',
+                        fontWeight: '700',
+                    }}>
+                        {title}
+                    </h3>
+                )}
 
                 {children}
             </div>
             <style>{`
-                @keyframes fadeIn {
+                @keyframes modalFadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                @keyframes slideUp {
-                    from { transform: translateY(20px); opacity: 0; }
+                @keyframes modalSlideUp {
+                    from { transform: translateY(16px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
             `}</style>

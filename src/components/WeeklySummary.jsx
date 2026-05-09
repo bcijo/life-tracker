@@ -114,7 +114,7 @@ const WeeklySummary = ({ transactions, categories }) => {
         : 0;
 
     const TrendIcon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus;
-    const trendColor = change > 0 ? '#f56565' : change < 0 ? '#48bb78' : '#718096';
+    const trendColor = change > 0 ? 'var(--danger)' : change < 0 ? 'var(--success)' : 'var(--text-muted)';
 
     return (
         <div
@@ -122,8 +122,8 @@ const WeeklySummary = ({ transactions, categories }) => {
             style={{
                 padding: '16px',
                 marginBottom: '20px',
-                background: 'linear-gradient(135deg, rgba(128, 90, 213, 0.1) 0%, rgba(128, 90, 213, 0.02) 100%)',
-                borderLeft: '4px solid #805ad5',
+                background: 'var(--glass-card-bg)',
+                borderLeft: '4px solid var(--accent-primary)',
             }}
         >
             {/* Header */}
@@ -158,8 +158,8 @@ const WeeklySummary = ({ transactions, categories }) => {
                             setIsDismissed(true);
                         }}
                         style={{
-                            background: 'rgba(0,0,0,0.05)',
-                            border: 'none',
+                            background: 'var(--glass-card-bg)',
+                            border: '1px solid var(--glass-card-border)',
                             borderRadius: '6px',
                             padding: '4px',
                             cursor: 'pointer',
@@ -187,7 +187,7 @@ const WeeklySummary = ({ transactions, categories }) => {
                     }}>
                         <div style={{
                             padding: '12px',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--glass-card-bg)',
                             borderRadius: 'var(--radius-sm)',
                             textAlign: 'center',
                         }}>
@@ -198,7 +198,7 @@ const WeeklySummary = ({ transactions, categories }) => {
                         </div>
                         <div style={{
                             padding: '12px',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--glass-card-bg)',
                             borderRadius: 'var(--radius-sm)',
                             textAlign: 'center',
                         }}>
@@ -242,7 +242,8 @@ const WeeklySummary = ({ transactions, categories }) => {
                     {/* AI Insights */}
                     <div style={{
                         padding: '12px',
-                        background: 'rgba(128, 90, 213, 0.1)',
+                        background: 'var(--glass-card-bg)',
+                        border: '1px solid var(--glass-card-border)',
                         borderRadius: 'var(--radius-sm)',
                     }}>
                         <div style={{
@@ -253,7 +254,7 @@ const WeeklySummary = ({ transactions, categories }) => {
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Sparkles size={14} color="#805ad5" />
-                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#805ad5' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>
                                     AI Insights
                                 </span>
                             </div>
@@ -261,8 +262,8 @@ const WeeklySummary = ({ transactions, categories }) => {
                                 onClick={fetchInsights}
                                 disabled={loading}
                                 style={{
-                                    background: 'rgba(128, 90, 213, 0.2)',
-                                    border: 'none',
+                                    background: 'var(--surface-input)',
+                                    border: '1px solid var(--surface-input-border)',
                                     borderRadius: '6px',
                                     padding: '6px 10px',
                                     cursor: loading ? 'not-allowed' : 'pointer',
@@ -270,7 +271,7 @@ const WeeklySummary = ({ transactions, categories }) => {
                                     alignItems: 'center',
                                     gap: '4px',
                                     fontSize: '11px',
-                                    color: '#805ad5',
+                                    color: 'var(--accent-primary)',
                                     fontWeight: '500',
                                 }}
                             >

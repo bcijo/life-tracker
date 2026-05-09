@@ -60,8 +60,8 @@ const BankAccountsSection = ({
             style={{
                 padding: '16px',
                 marginBottom: '20px',
-                background: 'linear-gradient(135deg, rgba(72, 187, 120, 0.1) 0%, rgba(72, 187, 120, 0.02) 100%)',
-                borderLeft: '4px solid #48bb78',
+                background: 'var(--glass-card-bg)',
+                borderLeft: '4px solid var(--success)',
             }}
         >
             {/* Header */}
@@ -80,7 +80,7 @@ const BankAccountsSection = ({
                     <h3 style={{ fontSize: '16px', fontWeight: '600' }}>Bank Accounts</h3>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '18px', fontWeight: '700', color: '#48bb78' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--success)' }}>
                         ₹{totalBalance.toFixed(0)}
                     </span>
                     {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
@@ -99,7 +99,8 @@ const BankAccountsSection = ({
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
                                     padding: '12px',
-                                    background: 'rgba(255,255,255,0.6)',
+                                    background: 'var(--glass-card-bg)',
+                                    border: '1px solid var(--glass-card-border)',
                                     borderRadius: 'var(--radius-sm)',
                                 }}
                             >
@@ -127,7 +128,7 @@ const BankAccountsSection = ({
                                     <span style={{
                                         fontWeight: '600',
                                         fontSize: '15px',
-                                        color: parseFloat(account.current_balance) >= 0 ? '#48bb78' : '#f56565',
+                                        color: parseFloat(account.current_balance) >= 0 ? 'var(--success)' : 'var(--danger)',
                                     }}>
                                         ₹{parseFloat(account.current_balance).toFixed(0)}
                                     </span>
@@ -137,8 +138,8 @@ const BankAccountsSection = ({
                                             setUpdateBalance(account.current_balance?.toString() || '');
                                         }}
                                         style={{
-                                            background: 'rgba(0,0,0,0.05)',
-                                            border: 'none',
+                                            background: 'var(--glass-card-bg)',
+                                            border: '1px solid var(--glass-card-border)',
                                             borderRadius: '6px',
                                             padding: '6px',
                                             cursor: 'pointer',
@@ -165,10 +166,10 @@ const BankAccountsSection = ({
                         style={{
                             width: '100%',
                             padding: '10px',
-                            background: 'rgba(72, 187, 120, 0.15)',
-                            border: '1px dashed rgba(72, 187, 120, 0.4)',
+                            background: 'var(--success-bg)',
+                            border: '1px dashed var(--success)',
                             borderRadius: 'var(--radius-sm)',
-                            color: '#48bb78',
+                            color: 'var(--success)',
                             fontWeight: '500',
                             fontSize: '13px',
                             display: 'flex',
@@ -199,9 +200,10 @@ const BankAccountsSection = ({
                         style={{
                             width: '100%',
                             padding: '12px',
-                            border: '1px solid var(--glass-border)',
+                            border: '1px solid var(--surface-input-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
                             fontSize: '14px',
                         }}
                         autoFocus
@@ -217,16 +219,17 @@ const BankAccountsSection = ({
                                     padding: '10px 8px',
                                     border: newAccount.type === type.id
                                         ? `2px solid ${type.color}`
-                                        : '1px solid var(--glass-border)',
+                                        : '1px solid var(--glass-card-border)',
                                     borderRadius: 'var(--radius-sm)',
                                     background: newAccount.type === type.id
-                                        ? `${type.color}15`
-                                        : 'rgba(255,255,255,0.5)',
+                                        ? `${type.color}18`
+                                        : 'var(--surface-input)',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     gap: '4px',
+                                    color: 'var(--text-primary)',
                                 }}
                             >
                                 <type.icon size={18} color={type.color} />
@@ -251,14 +254,14 @@ const BankAccountsSection = ({
                             width: '100%',
                             padding: '12px',
                             background: newAccount.name && newAccount.balance
-                                ? '#48bb78'
-                                : 'rgba(0,0,0,0.1)',
+                                ? 'var(--success)'
+                                : 'var(--border-subtle)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
                             fontWeight: '600',
                             cursor: newAccount.name && newAccount.balance ? 'pointer' : 'not-allowed',
-                            marginTop: '8px'
+                            marginTop: '8px',
                         }}
                     >
                         Add Account
@@ -294,13 +297,13 @@ const BankAccountsSection = ({
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: updateBalance ? '#48bb78' : 'rgba(0,0,0,0.1)',
+                            background: updateBalance ? 'var(--success)' : 'var(--border-subtle)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
                             fontWeight: '600',
                             cursor: updateBalance ? 'pointer' : 'not-allowed',
-                            marginTop: '8px'
+                            marginTop: '8px',
                         }}
                     >
                         Update

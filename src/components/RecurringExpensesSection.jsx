@@ -37,8 +37,8 @@ const RecurringExpensesSection = ({
             style={{
                 padding: '16px',
                 marginBottom: '20px',
-                background: 'linear-gradient(135deg, rgba(237, 137, 54, 0.1) 0%, rgba(237, 137, 54, 0.02) 100%)',
-                borderLeft: '4px solid #ed8936',
+                background: 'var(--glass-card-bg)',
+                borderLeft: '4px solid var(--warning)',
             }}
         >
             {/* Header */}
@@ -57,7 +57,7 @@ const RecurringExpensesSection = ({
                     <h3 style={{ fontSize: '16px', fontWeight: '600' }}>Recurring Expenses</h3>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#ed8936' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--warning)' }}>
                         ₹{monthlyTotal.toFixed(0)}/mo
                     </span>
                     {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
@@ -70,7 +70,8 @@ const RecurringExpensesSection = ({
                     {upcomingExpenses.length > 0 && (
                         <div style={{
                             padding: '10px 12px',
-                            background: 'rgba(237, 137, 54, 0.15)',
+                            background: 'var(--warning-bg)',
+                            border: '1px solid var(--warning)',
                             borderRadius: 'var(--radius-sm)',
                             marginBottom: '12px',
                             fontSize: '13px',
@@ -98,7 +99,8 @@ const RecurringExpensesSection = ({
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         padding: '12px',
-                                        background: exp.is_active ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.03)',
+                                        background: exp.is_active ? 'var(--glass-card-bg)' : 'var(--border-subtle)',
+                                        border: '1px solid var(--glass-card-border)',
                                         borderRadius: 'var(--radius-sm)',
                                         opacity: exp.is_active ? 1 : 0.5,
                                     }}
@@ -134,7 +136,7 @@ const RecurringExpensesSection = ({
                                                 border: 'none',
                                                 padding: '4px',
                                                 cursor: 'pointer',
-                                                color: exp.is_active ? '#48bb78' : '#a0aec0',
+                                                color: exp.is_active ? 'var(--success)' : 'var(--text-muted)',
                                             }}
                                         >
                                             {exp.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
@@ -146,7 +148,7 @@ const RecurringExpensesSection = ({
                                                 border: 'none',
                                                 padding: '4px',
                                                 cursor: 'pointer',
-                                                color: '#a0aec0',
+                                                color: 'var(--text-muted)',
                                             }}
                                         >
                                             <Trash2 size={16} />
@@ -169,10 +171,10 @@ const RecurringExpensesSection = ({
                         style={{
                             width: '100%',
                             padding: '10px',
-                            background: 'rgba(237, 137, 54, 0.15)',
-                            border: '1px dashed rgba(237, 137, 54, 0.4)',
+                            background: 'var(--warning-bg)',
+                            border: '1px dashed var(--warning)',
                             borderRadius: 'var(--radius-sm)',
-                            color: '#ed8936',
+                            color: 'var(--warning)',
                             fontWeight: '500',
                             fontSize: '13px',
                             display: 'flex',
@@ -203,9 +205,10 @@ const RecurringExpensesSection = ({
                         style={{
                             width: '100%',
                             padding: '12px',
-                            border: '1px solid var(--glass-border)',
+                            border: '1px solid var(--surface-input-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
                             fontSize: '14px',
                         }}
                         autoFocus
@@ -226,9 +229,10 @@ const RecurringExpensesSection = ({
                         style={{
                             width: '100%',
                             padding: '12px',
-                            border: '1px solid var(--glass-border)',
+                            border: '1px solid var(--surface-input-border)',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255,255,255,0.5)',
+                            background: 'var(--surface-input)',
+                            color: 'var(--text-primary)',
                             fontSize: '14px',
                         }}
                     >
@@ -268,14 +272,14 @@ const RecurringExpensesSection = ({
                             width: '100%',
                             padding: '12px',
                             background: newExpense.name && newExpense.amount
-                                ? '#ed8936'
-                                : 'rgba(0,0,0,0.1)',
+                                ? 'var(--warning)'
+                                : 'var(--border-subtle)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 'var(--radius-sm)',
                             fontWeight: '600',
                             cursor: newExpense.name && newExpense.amount ? 'pointer' : 'not-allowed',
-                            marginTop: '8px'
+                            marginTop: '8px',
                         }}
                     >
                         Add Recurring Expense
