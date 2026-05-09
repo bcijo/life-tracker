@@ -75,8 +75,8 @@
    ============================================================ */
 .theme-dark {
     /* Backgrounds */
-    --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    --bg-solid: #1a1a2e;
+    --bg-gradient: linear-gradient(160deg, #060b14 0%, #0d0d1a 40%, #100a20 100%);
+    --bg-solid: #060b14;
 
     /* Glass Panel */
     --glass-bg: rgba(255, 255, 255, 0.05);
@@ -529,3 +529,75 @@ textarea {
 
 .primary-button:hover  { opacity: 0.9; }
 .primary-button:active { transform: scale(0.98); }
+
+/* ============================================================
+   FUNKY HABIT TRACKER — GRADIENT & GLOW UTILITIES
+   ============================================================ */
+
+/* Gradient text */
+.gradient-text-purple {
+    background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f97316 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.gradient-text-cyan {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Gradient border via pseudo-element */
+.gradient-border {
+    position: relative;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(168,85,247,0.5), rgba(236,72,153,0.3), rgba(6,182,212,0.3));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* Glow utilities */
+.glow-purple {
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.15), 0 0 80px rgba(168, 85, 247, 0.05);
+}
+
+.glow-cyan {
+    box-shadow: 0 0 40px rgba(6, 182, 212, 0.15), 0 0 80px rgba(6, 182, 212, 0.05);
+}
+
+.glow-green {
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.15), 0 0 80px rgba(34, 197, 94, 0.05);
+}
+
+.glow-pink {
+    box-shadow: 0 0 40px rgba(236, 72, 153, 0.15), 0 0 80px rgba(236, 72, 153, 0.05);
+}
+
+/* Habit card glass base (slightly different from app glass-card) */
+.habit-glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+}
+
+/* Ambient background orbs container */
+.habit-orbs-container {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}

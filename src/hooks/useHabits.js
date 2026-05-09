@@ -50,10 +50,14 @@ function useHabits() {
         return await update(id, { time_of_day: timeOfDay });
     };
 
-    // Sort habits: morning first, then evening
+    // Sort habits: by sort_order if set, otherwise morning before evening
     const getSortedHabits = () => {
         if (!habits || !Array.isArray(habits)) return [];
         return [...habits].sort((a, b) => {
+            const aOrder = a.sort_order ?? 9999;
+            const bOrder = b.sort_order ?? 9999;
+            if (aOrder !== bOrder) return aOrder - bOrder;
+            // Fallback: morning before evening
             const timeA = a.time_of_day || 'morning';
             const timeB = b.time_of_day || 'morning';
             if (timeA === timeB) return 0;
@@ -117,14 +121,17 @@ function useHabits() {
         return weeklyStatus;
     };
 
-    // Cycle through states: null -> completed -> failed -> null
-    const cycleHabitStatus = async (id, dateStr = null) => {
+    // Explicitly set status to 'completed' or 'failed'
+    const setHabitStatus = async (id, dateStr, status) => {
+        if (status !== 'completed' && status !== 'failed') {
+            return { error: 'Invalid status' };
+        }
+        
         const habit = habits.find(h => h.id === id);
         if (!habit) return { error: 'Habit not found' };
 
         const targetDate = dateStr || getLocalDateStr(new Date());
 
-        // Normalize history to new format if needed
         let newHistory = (habit.history || []).map(h => {
             if (typeof h === 'string') {
                 return { date: h.split('T')[0], status: 'completed' };
@@ -133,40 +140,66 @@ function useHabits() {
         });
 
         const existingIndex = newHistory.findIndex(h => h.date === targetDate);
-        const currentStatus = existingIndex >= 0 ? newHistory[existingIndex].status : null;
 
-        // Determine next status in cycle: null -> completed -> failed -> null
-        let nextStatus;
-        if (currentStatus === null) {
-            nextStatus = 'completed';
-        } else if (currentStatus === 'completed') {
-            nextStatus = 'failed';
+        if (existingIndex >= 0) {
+            newHistory[existingIndex].status = status;
         } else {
-            nextStatus = null; // Remove entry
+            newHistory.unshift({ date: targetDate, status });
         }
 
-        if (nextStatus === null) {
-            // Remove the entry
-            if (existingIndex >= 0) {
-                newHistory.splice(existingIndex, 1);
-            }
-        } else if (existingIndex >= 0) {
-            // Update existing entry
-            newHistory[existingIndex].status = nextStatus;
-        } else {
-            // Add new entry
-            newHistory.unshift({ date: targetDate, status: nextStatus });
-        }
-
-        // Sort by date descending
         newHistory.sort((a, b) => b.date.localeCompare(a.date));
 
         return await update(id, { history: newHistory });
     };
 
-    // Legacy toggle function - now uses cycle
+    // Calculate Habit Check-in Streak
+    const calculateCheckinStreak = () => {
+        if (!habits || habits.length === 0) return 0;
+        
+        // Get all unique dates where ANY habit was logged (completed or failed)
+        const checkinDates = new Set();
+        habits.forEach(habit => {
+            if (habit.history && Array.isArray(habit.history)) {
+                habit.history.forEach(h => {
+                    const date = typeof h === 'string' ? h.split('T')[0] : h.date;
+                    checkinDates.add(date);
+                });
+            }
+        });
+        
+        const sortedDates = Array.from(checkinDates).sort((a, b) => b.localeCompare(a));
+        if (sortedDates.length === 0) return 0;
+
+        let streak = 0;
+        const today = new Date();
+        const todayStr = getLocalDateStr(today);
+        
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = getLocalDateStr(yesterday);
+        
+        // If they haven't checked in today or yesterday, streak is broken
+        if (!checkinDates.has(todayStr) && !checkinDates.has(yesterdayStr)) {
+            return 0;
+        }
+
+        let currentDate = new Date(checkinDates.has(todayStr) ? today : yesterday);
+        
+        for (let i = 0; i < 365; i++) {
+            const dateStr = getLocalDateStr(currentDate);
+            if (checkinDates.has(dateStr)) {
+                streak++;
+                currentDate.setDate(currentDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    };
+
     const toggleHabit = async (id) => {
-        return await cycleHabitStatus(id);
+        return await setHabitStatus(id, null, 'completed');
     };
 
     const deleteHabit = async (id) => {
@@ -207,7 +240,8 @@ function useHabits() {
     };
 
     // Calculate success rate since tracking started (only counting active days)
-    const calculateSuccessRate = (habit) => {
+    // globalStartDate (YYYY-MM-DD) overrides per-habit tracking_start_date when provided
+    const calculateSuccessRate = (habit, globalStartDate = null) => {
         if (!habit.history || habit.history.length === 0) {
             return { rate: null, completedDays: 0, totalDays: 0, startDate: null };
         }
@@ -222,10 +256,9 @@ function useHabits() {
             return h;
         });
 
-        // Determine start date: either reset_date or the oldest entry in history
-        let startDateStr = habit.tracking_start_date;
+        // Global start date takes priority, then per-habit, then oldest entry
+        let startDateStr = globalStartDate || habit.tracking_start_date;
         if (!startDateStr) {
-            // Find the oldest date in history
             const sortedDates = normalizedHistory.map(h => h.date).sort();
             startDateStr = sortedDates[0];
         }
@@ -234,7 +267,7 @@ function useHabits() {
             return { rate: null, completedDays: 0, totalDays: 0, startDate: null };
         }
 
-        const startDate = new Date(startDateStr);
+        const startDate = new Date(startDateStr + 'T00:00:00');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
@@ -243,10 +276,7 @@ function useHabits() {
         let totalActiveDays = 0;
         let currentDate = new Date(startDate);
         while (currentDate <= today) {
-            const dayOfWeek = currentDate.getDay();
-            if (activeDays.includes(dayOfWeek)) {
-                totalActiveDays++;
-            }
+            if (activeDays.includes(currentDate.getDay())) totalActiveDays++;
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
@@ -254,17 +284,14 @@ function useHabits() {
             return { rate: null, completedDays: 0, totalDays: 0, startDate: startDateStr };
         }
 
-        // Count completed days (only on active days)
+        // Count completed days (only on active days, only from startDate onwards)
         const completedDays = normalizedHistory.filter(h => {
             if (h.status !== 'completed') return false;
-            const date = new Date(h.date);
-            const dayOfWeek = date.getDay();
-            return activeDays.includes(dayOfWeek);
+            if (h.date < startDateStr) return false;
+            return activeDays.includes(new Date(h.date + 'T00:00:00').getDay());
         }).length;
 
-        // Calculate rate as percentage
         const rate = Math.round((completedDays / totalActiveDays) * 100);
-
         return { rate, completedDays, totalDays: totalActiveDays, startDate: startDateStr };
     };
 
@@ -282,6 +309,15 @@ function useHabits() {
         });
     };
 
+    // Batch-update sort_order and time_of_day for all habits (used by reorder page)
+    const batchUpdateHabitOrders = async (orderedHabits) => {
+        // orderedHabits: array of { id, sort_order, time_of_day, ...rest }
+        const promises = orderedHabits.map(h =>
+            update(h.id, { sort_order: h.sort_order, time_of_day: h.time_of_day })
+        );
+        return await Promise.all(promises);
+    };
+
     return {
         habits: getSortedHabits(),
         loading,
@@ -290,7 +326,7 @@ function useHabits() {
         updateHabitDays,
         updateHabitTimeOfDay,
         toggleHabit,
-        cycleHabitStatus,
+        setHabitStatus,
         getStatusForDate,
         getWeeklyStatus,
         isActiveDay,
@@ -299,6 +335,8 @@ function useHabits() {
         markMissedHabits,
         calculateSuccessRate,
         resetHabitStats,
+        batchUpdateHabitOrders,
+        calculateCheckinStreak,
     };
 }
 

@@ -1,26 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { X, TrendingUp, ChevronLeft, ChevronRight, Target, Flame, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Target, Flame, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, subWeeks, addWeeks, subDays, isToday } from 'date-fns';
 
 const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
     const [weekOffset, setWeekOffset] = useState(0);
-    const panelRef = useRef(null);
-
-    // Lock body scroll when modal is open (prevents iOS opening mid-page)
-    useEffect(() => {
-        const scrollY = window.scrollY;
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.width = '100%';
-        if (panelRef.current) panelRef.current.scrollTop = 0;
-        return () => {
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.width = '';
-            window.scrollTo(0, scrollY);
-        };
-    }, []);
 
     const currentDate = new Date();
     const targetDate = weekOffset === 0 ? currentDate :
@@ -30,381 +15,289 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
     const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
     const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-    // Get completion stats for a specific date
     const getCompletionForDate = (dateStr) => {
         if (!habits || habits.length === 0) return { completed: 0, total: 0, rate: 0 };
-
         const total = habits.length;
-        const completed = habits.filter(habit => {
-            const status = getStatusForDate(habit, dateStr);
-            return status === 'completed';
-        }).length;
-
-        return {
-            completed,
-            total,
-            rate: total > 0 ? Math.round((completed / total) * 100) : 0
-        };
+        const completed = habits.filter(habit => getStatusForDate(habit, dateStr) === 'completed').length;
+        return { completed, total, rate: total > 0 ? Math.round((completed / total) * 100) : 0 };
     };
 
-    // Build chart data for the week
     const chartData = daysOfWeek.map(day => {
         const dateStr = format(day, 'yyyy-MM-dd');
         const stats = getCompletionForDate(dateStr);
-        const isFutureDay = day > currentDate;
-
         return {
             day: format(day, 'EEE'),
             date: format(day, 'MMM d'),
-            dateStr,
-            ...stats,
-            isFuture: isFutureDay,
+            dateStr, ...stats,
+            isFuture: day > currentDate,
             isCurrentDay: isToday(day),
         };
     });
 
-    // Today's stats
     const todayStr = format(currentDate, 'yyyy-MM-dd');
     const todayStats = getCompletionForDate(todayStr);
-
-    // Yesterday's stats for comparison
     const yesterdayStr = format(subDays(currentDate, 1), 'yyyy-MM-dd');
     const yesterdayStats = getCompletionForDate(yesterdayStr);
-
-    // Comparison
     const todayVsYesterday = todayStats.completed - yesterdayStats.completed;
 
-    // Week average (excluding future days)
     const pastDays = chartData.filter(d => !d.isFuture);
     const weekAverage = pastDays.length > 0
-        ? Math.round(pastDays.reduce((acc, d) => acc + d.rate, 0) / pastDays.length)
-        : 0;
+        ? Math.round(pastDays.reduce((acc, d) => acc + d.rate, 0) / pastDays.length) : 0;
 
-    // Best day this week
-    const bestDay = pastDays.reduce((best, day) =>
-        day.rate > (best?.rate || 0) ? day : best, null);
+    const bestDay = pastDays.reduce((best, day) => day.rate > (best?.rate || 0) ? day : best, null);
 
-    // Find best current streak across all habits
     const calculateBestStreak = () => {
         if (!habits || habits.length === 0) return 0;
-
         let bestStreak = 0;
         habits.forEach(habit => {
             let streak = 0;
             for (let i = 0; i <= 365; i++) {
-                const checkDate = subDays(currentDate, i);
-                const dateStr = format(checkDate, 'yyyy-MM-dd');
+                const dateStr = format(subDays(currentDate, i), 'yyyy-MM-dd');
                 const status = getStatusForDate(habit, dateStr);
-
-                if (status === 'completed') {
-                    streak++;
-                } else if (status === 'failed' || i > 0) {
-                    break;
-                }
+                if (status === 'completed') streak++;
+                else if (status === 'failed' || i > 0) break;
             }
             if (streak > bestStreak) bestStreak = streak;
         });
         return bestStreak;
     };
-
     const bestStreak = calculateBestStreak();
 
-    // Get bar color based on completion rate
     const getBarColor = (rate, isFuture) => {
-        if (isFuture) return 'var(--border-subtle)';
-        if (rate >= 80) return 'var(--success)';
-        if (rate >= 50) return 'var(--warning)';
-        if (rate > 0) return 'var(--accent-primary)';
-        return 'var(--border-subtle)';
+        if (isFuture) return 'rgba(255,255,255,0.06)';
+        if (rate >= 80) return '#22c55e';
+        if (rate >= 50) return '#f59e0b';
+        if (rate > 0) return '#a855f7';
+        return 'rgba(255,255,255,0.06)';
     };
+
+    const progressPercent = todayStats.rate;
+    const progressColor = progressPercent >= 80 ? '#22c55e' : progressPercent >= 50 ? '#f59e0b' : '#a855f7';
 
     const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             if (data.isFuture) return null;
-
             return (
-                <div className="glass-panel" style={{
-                    padding: '10px 14px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                <div style={{
+                    padding: '8px 12px', borderRadius: 12,
+                    background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(12px)',
                 }}>
-                    <p style={{ fontWeight: '600', marginBottom: '4px' }}>{data.date}</p>
-                    <p style={{ fontSize: '13px' }}>
-                        <span style={{ color: getBarColor(data.rate, false) }}>{data.completed}/{data.total}</span> habits completed
+                    <p style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 2 }}>{data.date}</p>
+                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                        <span style={{ color: getBarColor(data.rate, false) }}>{data.completed}/{data.total}</span> · {data.rate}%
                     </p>
-                    <p style={{ fontSize: '12px', opacity: 0.7 }}>{data.rate}% completion</p>
                 </div>
             );
         }
         return null;
     };
 
-    // Today's progress indicator
-    const progressPercent = todayStats.rate;
-    const progressColor = progressPercent >= 80 ? 'var(--success)' : progressPercent >= 50 ? 'var(--warning)' : 'var(--accent-primary)';
+    const statCard = (label, value, icon, color) => (
+        <div style={{
+            padding: '14px 12px', borderRadius: 18,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color }}>{icon}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>{value}</span>
+            </div>
+        </div>
+    );
+
+    // Per-habit breakdown for the current week
+    const habitBreakdown = habits.map(habit => {
+        const completed = pastDays.filter(d => getStatusForDate(habit, d.dateStr) === 'completed').length;
+        const rate = pastDays.length > 0 ? Math.round((completed / pastDays.length) * 100) : 0;
+        const timeOfDay = habit.time_of_day || 'morning';
+        const accentColor = timeOfDay === 'morning' ? '#f59e0b' : '#a855f7';
+        return { id: habit.id, name: habit.name, completed, total: pastDays.length, rate, accentColor, timeOfDay };
+    }).sort((a, b) => b.rate - a.rate);
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'var(--overlay-bg)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '16px',
-        }}>
-            <div ref={panelRef} className="glass-panel" style={{
-                width: '100%',
-                maxWidth: '500px',
-                maxHeight: '90vh',
-                overflow: 'auto',
-                padding: '20px',
-                position: 'relative',
+        <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+            style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 100, background: '#0b1120',
+                overflowY: 'auto', display: 'flex', flexDirection: 'column',
+            }}
+        >
+            {/* Header */}
+            <div style={{
+                padding: '20px 20px 0',
+                display: 'flex', alignItems: 'center', gap: 14,
             }}>
-                {/* Close Button */}
                 <button
                     onClick={onClose}
                     style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '12px',
-                        background: 'var(--glass-card-bg)',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        flexShrink: 0, width: 40, height: 40, borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.06)', border: 'none',
+                        color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer',
-                        color: 'var(--text-primary)',
-                        transition: 'all 0.2s ease',
                     }}
                 >
-                    <X size={18} />
+                    <ChevronLeft size={22} />
                 </button>
-
-                {/* Header */}
-                <div style={{ marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <TrendingUp size={20} style={{ color: 'var(--success)' }} />
-                        <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Habit Analytics</h2>
+                <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <TrendingUp size={18} color="#22c55e" />
+                        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>Analytics</h1>
                     </div>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+                        Weekly habit insights
+                    </p>
+                </div>
+            </div>
 
-                    {/* Week Navigator */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginTop: '12px',
-                    }}>
-                        <button
-                            onClick={() => setWeekOffset(weekOffset - 1)}
-                            style={{
-                                background: 'var(--glass-card-bg)',
-                                border: '1px solid var(--glass-card-border)',
-                                borderRadius: '8px',
-                                padding: '8px',
-                                cursor: 'pointer',
-                                color: 'var(--text-primary)',
-                                transition: 'all 0.2s ease',
-                            }}
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: '14px', fontWeight: '500' }}>
-                                {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
-                            </p>
-                            <p style={{ fontSize: '12px', opacity: 0.7 }}>
-                                {weekOffset === 0 ? 'This Week' :
-                                    weekOffset === -1 ? 'Last Week' :
-                                        `${Math.abs(weekOffset)} weeks ${weekOffset < 0 ? 'ago' : 'ahead'}`}
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => setWeekOffset(weekOffset + 1)}
-                            disabled={weekOffset >= 0}
-                            style={{
-                                background: weekOffset >= 0 ? 'var(--border-subtle)' : 'var(--glass-card-bg)',
-                                border: weekOffset >= 0 ? 'none' : '1px solid var(--glass-card-border)',
-                                borderRadius: '8px',
-                                padding: '8px',
-                                cursor: weekOffset >= 0 ? 'not-allowed' : 'pointer',
-                                opacity: weekOffset >= 0 ? 0.3 : 1,
-                                color: 'var(--text-primary)',
-                                transition: 'all 0.2s ease',
-                            }}
-                        >
-                            <ChevronRight size={18} />
-                        </button>
+            <div style={{ padding: '20px 20px 48px' }}>
+                {/* Week Navigator */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 14px', borderRadius: 16,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    marginBottom: 20,
+                }}>
+                    <button onClick={() => setWeekOffset(w => w - 1)} style={navBtn}>
+                        <ChevronLeft size={16} />
+                    </button>
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: 0 }}>
+                            {format(weekStart, 'MMM d')} – {format(weekEnd, 'MMM d, yyyy')}
+                        </p>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '2px 0 0' }}>
+                            {weekOffset === 0 ? 'This Week' : weekOffset === -1 ? 'Last Week' :
+                                `${Math.abs(weekOffset)} weeks ${weekOffset < 0 ? 'ago' : 'ahead'}`}
+                        </p>
                     </div>
+                    <button onClick={() => setWeekOffset(w => w + 1)} disabled={weekOffset >= 0}
+                        style={{ ...navBtn, opacity: weekOffset >= 0 ? 0.25 : 1, cursor: weekOffset >= 0 ? 'default' : 'pointer' }}>
+                        <ChevronRight size={16} />
+                    </button>
                 </div>
 
-                {/* Today's Progress */}
+                {/* Today's Progress Ring */}
                 <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    padding: '16px',
-                    background: `linear-gradient(135deg, ${progressColor}15 0%, ${progressColor}05 100%)`,
-                    borderRadius: 'var(--radius-md)',
-                    marginBottom: '20px',
+                    display: 'flex', alignItems: 'center', gap: 18,
+                    padding: '18px 16px', borderRadius: 22,
+                    background: `linear-gradient(135deg, ${progressColor}12, ${progressColor}04)`,
+                    border: `1px solid ${progressColor}20`,
+                    marginBottom: 20,
                 }}>
                     <div style={{
-                        width: '56px',
-                        height: '56px',
-                        borderRadius: '50%',
-                        background: `conic-gradient(${progressColor} ${progressPercent * 3.6}deg, rgba(0,0,0,0.1) 0deg)`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        width: 60, height: 60, borderRadius: '50%',
+                        background: `conic-gradient(${progressColor} ${progressPercent * 3.6}deg, rgba(255,255,255,0.06) 0deg)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
                         <div style={{
-                            width: '44px',
-                            height: '44px',
-                            borderRadius: '50%',
-                            background: 'var(--glass-bg)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            fontWeight: '700',
-                            color: progressColor,
+                            width: 46, height: 46, borderRadius: '50%', background: '#0b1120',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 14, fontWeight: 800, color: progressColor, fontFamily: 'monospace',
                         }}>
                             {progressPercent}%
                         </div>
                     </div>
                     <div>
-                        <p style={{ fontSize: '13px', opacity: 0.7 }}>Today's Progress</p>
-                        <p style={{ fontSize: '20px', fontWeight: '700' }}>
-                            {todayStats.completed} / {todayStats.total}
-                            <span style={{ fontSize: '14px', fontWeight: '400', marginLeft: '8px', opacity: 0.7 }}>habits</span>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', margin: '0 0 4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today's Progress</p>
+                        <p style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0, fontFamily: 'monospace' }}>
+                            {todayStats.completed}<span style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>/{todayStats.total}</span>
                         </p>
                     </div>
                 </div>
 
                 {/* Chart */}
-                <div style={{ height: '180px', marginBottom: '20px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <XAxis
-                                dataKey="day"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 12 }}
-                            />
-                            <YAxis
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 11 }}
-                                tickFormatter={(value) => `${value}%`}
-                                domain={[0, 100]}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
-                                {chartData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={getBarColor(entry.rate, entry.isFuture)}
-                                        stroke={entry.isCurrentDay ? 'var(--text-primary)' : 'none'}
-                                        strokeWidth={entry.isCurrentDay ? 2 : 0}
-                                    />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+                <div style={{
+                    padding: 16, borderRadius: 22,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    marginBottom: 20,
+                }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px' }}>Completion Rate</p>
+                    <div style={{ height: 180 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.35)' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.2)' }} tickFormatter={v => `${v}%`} domain={[0, 100]} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
+                                    {chartData.map((entry, i) => (
+                                        <Cell key={i} fill={getBarColor(entry.rate, entry.isFuture)}
+                                            stroke={entry.isCurrentDay ? '#fff' : 'none'} strokeWidth={entry.isCurrentDay ? 1.5 : 0} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                {/* Metrics Grid */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '12px',
-                }}>
-                    {/* Today vs Yesterday */}
-                    <div style={{
-                        padding: '12px',
-                        background: 'var(--glass-card-bg)',
-                        borderRadius: 'var(--radius-sm)',
-                    }}>
-                        <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>vs Yesterday</div>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: todayVsYesterday > 0 ? 'var(--success)' : todayVsYesterday < 0 ? 'var(--danger)' : 'var(--text-secondary)',
-                        }}>
-                            {todayVsYesterday > 0 && <ArrowUp size={16} />}
-                            {todayVsYesterday < 0 && <ArrowDown size={16} />}
-                            {todayVsYesterday === 0 ? 'Same' : `${Math.abs(todayVsYesterday)} habit${Math.abs(todayVsYesterday) !== 1 ? 's' : ''}`}
-                        </div>
-                    </div>
+                {/* Stats Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                    {statCard('vs Yesterday',
+                        todayVsYesterday === 0 ? 'Same' : `${todayVsYesterday > 0 ? '+' : ''}${todayVsYesterday}`,
+                        todayVsYesterday > 0 ? <ArrowUp size={16} /> : todayVsYesterday < 0 ? <ArrowDown size={16} /> : null,
+                        todayVsYesterday > 0 ? '#22c55e' : todayVsYesterday < 0 ? '#ef4444' : 'rgba(255,255,255,0.4)'
+                    )}
+                    {statCard('Week Avg', `${weekAverage}%`, <Target size={16} />, getBarColor(weekAverage, false))}
+                    {statCard('Best Day', bestDay ? `${bestDay.day}` : '–', null, '#f59e0b')}
+                    {statCard('Best Streak', `${bestStreak}d`, <Flame size={16} />, bestStreak > 0 ? '#ef4444' : 'rgba(255,255,255,0.4)')}
+                </div>
 
-                    {/* Week Average */}
-                    <div style={{
-                        padding: '12px',
-                        background: 'var(--glass-card-bg)',
-                        borderRadius: 'var(--radius-sm)',
-                    }}>
-                        <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>Week Avg</div>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: getBarColor(weekAverage, false),
-                        }}>
-                            <Target size={16} />
-                            {weekAverage}%
-                        </div>
-                    </div>
-
-                    {/* Best Day */}
-                    <div style={{
-                        padding: '12px',
-                        background: 'var(--glass-card-bg)',
-                        borderRadius: 'var(--radius-sm)',
-                    }}>
-                        <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>Best Day</div>
-                        <div style={{
-                            fontSize: '16px',
-                            fontWeight: '600',
-                        }}>
-                            {bestDay ? `${bestDay.day} (${bestDay.rate}%)` : '-'}
-                        </div>
-                    </div>
-
-                    {/* Best Current Streak */}
-                    <div style={{
-                        padding: '12px',
-                        background: 'var(--glass-card-bg)',
-                        borderRadius: 'var(--radius-sm)',
-                    }}>
-                        <div style={{ fontSize: '11px', opacity: 0.6, marginBottom: '4px' }}>Best Streak</div>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: bestStreak > 0 ? 'var(--danger)' : 'var(--text-secondary)',
-                        }}>
-                            <Flame size={16} />
-                            {bestStreak} day{bestStreak !== 1 ? 's' : ''}
-                        </div>
+                {/* Per-Habit Breakdown */}
+                <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px' }}>Habit Breakdown</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {habitBreakdown.map(h => (
+                            <div key={h.id} style={{
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                padding: '12px 14px', borderRadius: 14,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                borderLeft: `3px solid ${h.accentColor}`,
+                            }}>
+                                <span style={{
+                                    flex: 1, fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.85)',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>{h.name}</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                                    {h.completed}/{h.total}
+                                </span>
+                                <div style={{
+                                    width: 44, height: 4, borderRadius: 9999,
+                                    background: 'rgba(255,255,255,0.06)',
+                                    overflow: 'hidden',
+                                }}>
+                                    <div style={{
+                                        width: `${h.rate}%`, height: '100%', borderRadius: 9999,
+                                        background: getBarColor(h.rate, false),
+                                        transition: 'width 0.3s ease',
+                                    }} />
+                                </div>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: getBarColor(h.rate, false), fontFamily: 'monospace', minWidth: 32, textAlign: 'right' }}>
+                                    {h.rate}%
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
+};
+
+const navBtn = {
+    width: 32, height: 32, borderRadius: 10,
+    background: 'rgba(255,255,255,0.06)', border: 'none',
+    color: 'rgba(255,255,255,0.6)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer',
 };
 
 export default HabitAnalytics;
