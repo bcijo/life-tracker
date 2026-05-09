@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Home, CheckSquare, ShoppingCart, CreditCard, Activity, Wallet } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
@@ -7,82 +7,11 @@ import AskAI from './AskAI';
 import '../styles/index.css';
 
 const Layout = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
-  const [touchOffset, setTouchOffset] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState(null);
-
-  const routes = ['/', '/todos', '/habits', '/shopping', '/expenses', '/bank-accounts'];
-
-  // Minimum swipe distance (in px)
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e) => {
-    if (isTransitioning) return;
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-    setTouchOffset(0);
-  };
-
-  const onTouchMove = (e) => {
-    if (!touchStart || isTransitioning) return;
-    const currentTouch = e.targetTouches[0].clientX;
-    setTouchEnd(currentTouch);
-    setTouchOffset(currentTouch - touchStart);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd || isTransitioning) {
-      setTouchOffset(0);
-      return;
-    }
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe || isRightSwipe) {
-      const currentIndex = routes.indexOf(location.pathname);
-
-      if (isLeftSwipe && currentIndex < routes.length - 1) {
-        // Swipe left - go to next page
-        setSwipeDirection('left');
-        setIsTransitioning(true);
-        setTimeout(() => {
-          navigate(routes[currentIndex + 1]);
-          setIsTransitioning(false);
-          setSwipeDirection(null);
-          setTouchOffset(0);
-        }, 300);
-      } else if (isRightSwipe && currentIndex > 0) {
-        // Swipe right - go to previous page
-        setSwipeDirection('right');
-        setIsTransitioning(true);
-        setTimeout(() => {
-          navigate(routes[currentIndex - 1]);
-          setIsTransitioning(false);
-          setSwipeDirection(null);
-          setTouchOffset(0);
-        }, 300);
-      } else {
-        setTouchOffset(0);
-      }
-    } else {
-      setTouchOffset(0);
-    }
-  };
 
   return (
-    <div
-      className="app-container"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="app-container">
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -111,11 +40,6 @@ const Layout = () => {
         padding: '20px',
         overflowY: 'auto',
         paddingBottom: '80px',
-        transform: `translateX(${isTransitioning
-          ? swipeDirection === 'left' ? '-100%' : '100%'
-          : touchOffset * 0.3}px)`,
-        transition: isTransitioning ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
-        opacity: isTransitioning ? 0 : 1 - Math.abs(touchOffset / 500),
       }}>
         <Outlet />
       </main>

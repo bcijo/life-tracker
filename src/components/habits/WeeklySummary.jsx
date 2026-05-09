@@ -1,10 +1,9 @@
 import { motion } from 'framer-motion';
-import { format, subDays, getDay } from 'date-fns';
+import { format, subDays, getDay, isToday as isDateToday } from 'date-fns';
 
-export function WeeklySummary({ habits, getStatusForDate }) {
+export function WeeklySummary({ habits, getStatusForDate, selectedDate, onSelectDate }) {
   if (!habits || habits.length === 0) return null;
 
-  // Get the last 7 days including today
   const today = new Date();
   const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(today, 6 - i));
 
@@ -28,17 +27,14 @@ export function WeeklySummary({ habits, getStatusForDate }) {
       {last7Days.map((day, i) => {
         const dateStr = format(day, 'yyyy-MM-dd');
         const dow = getDay(day);
-        const isToday = i === 6;
+        const isToday = isDateToday(day);
+        const isSelected = dateStr === selectedDate;
 
-        // How many habits were active on this day?
         const activeHabits = habits.filter(h => (h.active_days || [0,1,2,3,4,5,6]).includes(dow));
         
-        // How many were completed?
         let completedCount = 0;
         activeHabits.forEach(h => {
-          if (getStatusForDate(h, dateStr) === 'completed') {
-            completedCount++;
-          }
+          if (getStatusForDate(h, dateStr) === 'completed') completedCount++;
         });
 
         const totalActive = activeHabits.length;
@@ -50,29 +46,34 @@ export function WeeklySummary({ habits, getStatusForDate }) {
         else if (someDone) textColor = '#a855f7';
 
         return (
-          <div 
-            key={dateStr} 
+          <motion.button
+            key={dateStr}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onSelectDate(dateStr)}
             style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              minWidth: 40,
-              opacity: isToday ? 1 : 0.7
+              display: 'flex', flexDirection: 'column', alignItems: 'center', 
+              minWidth: 40, cursor: 'pointer',
+              background: isSelected ? 'rgba(168,85,247,0.12)' : 'transparent',
+              border: isSelected ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent',
+              borderRadius: 12, padding: '6px 4px',
+              transition: 'all 0.15s ease',
             }}
           >
-            <span style={{ fontSize: 10, color: isToday ? '#fff' : 'rgba(255,255,255,0.4)', fontWeight: isToday ? 700 : 500 }}>
+            <span style={{ 
+              fontSize: 10, 
+              color: isSelected ? '#a855f7' : isToday ? '#fff' : 'rgba(255,255,255,0.4)', 
+              fontWeight: isSelected || isToday ? 700 : 500 
+            }}>
               {format(day, 'E')}
             </span>
             <span style={{ 
-              fontSize: 12, 
-              fontWeight: 700, 
-              color: textColor,
-              marginTop: 4,
-              fontFamily: 'monospace'
+              fontSize: 12, fontWeight: 700, 
+              color: isSelected ? '#fff' : textColor,
+              marginTop: 4, fontFamily: 'monospace',
             }}>
               {totalActive === 0 ? '-' : `${completedCount}/${totalActive}`}
             </span>
-          </div>
+          </motion.button>
         );
       })}
     </motion.div>

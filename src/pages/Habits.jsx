@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, BarChart2, CalendarDays, Check } from 'lucide-react';
 import useHabits from '../hooks/useHabits';
 import HabitAnalytics from '../components/HabitAnalytics';
-import { format, subDays } from 'date-fns';
+import { format, subDays, parse, isToday as isDateToday, getDay } from 'date-fns';
 import { GradientOrbs } from '../components/habits/GradientOrbs';
 import { BentoGrid } from '../components/habits/BentoGrid';
 import { HabitCard } from '../components/habits/HabitCard';
@@ -44,14 +44,13 @@ const Habits = () => {
     const [showRest, setShowRest] = useState(false);
     const [celebratingId, setCelebratingId] = useState(null);
     const [completedPulse, setCompletedPulse] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
     const handleToggle = (id, newStatus) => {
-        setHabitStatus(id, null, newStatus);
-        if (newStatus === 'completed') {
+        setHabitStatus(id, selectedDate, newStatus);
+        if (newStatus === 'completed' && isViewingToday) {
             setCelebratingId(id);
-            // After card celebration, move it to completed
             setTimeout(() => setCelebratingId(null), 850);
-            // Pulse the completed pill to signal it updated
             setTimeout(() => {
                 setCompletedPulse(true);
                 setTimeout(() => setCompletedPulse(false), 600);
@@ -125,9 +124,22 @@ const Habits = () => {
         return streak;
     };
 
+    const getDateStatus = (habit) => {
+        return getStatusForDate(habit, selectedDate);
+    };
+
+    const isDateActive = (habit) => {
+        const date = parse(selectedDate, 'yyyy-MM-dd', new Date());
+        const dayOfWeek = getDay(date);
+        const activeDays = habit.active_days || ALL_DAYS;
+        return activeDays.includes(dayOfWeek);
+    };
+
+    const isViewingToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+
+    // Stats for the actual today (used by BentoGrid, HabitDetailModal)
     const getTodayStatus = (habit) => {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        return getStatusForDate(habit, today);
+        return getStatusForDate(habit, format(new Date(), 'yyyy-MM-dd'));
     };
 
     const getSuccessRate = (habit) => {
@@ -431,7 +443,9 @@ const Habits = () => {
                 <div style={{ position: 'relative', zIndex: 2 }}>
                     <WeeklySummary 
                         habits={habits} 
-                        getStatusForDate={getStatusForDate} 
+                        getStatusForDate={getStatusForDate}
+                        selectedDate={selectedDate}
+                        onSelectDate={setSelectedDate}
                     />
                 </div>
             )}
@@ -445,7 +459,7 @@ const Habits = () => {
                     transition={{ delay: 0.3 }}
                 >
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Today
+                        {isViewingToday ? 'Today' : format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'EEE, MMM d')}
                     </h2>
                     <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
@@ -474,21 +488,20 @@ const Habits = () => {
 
             {/* Habit Cards — split into pending, completed, and rest */}
             {(() => {
-                // celebratingId stays in active list so we can play animation before it moves
-                const activeHabits    = sortedHabits.filter(h => isTodayActive(h) && (getTodayStatus(h) !== 'completed' || h.id === celebratingId));
-                const completedHabits = sortedHabits.filter(h => isTodayActive(h) && getTodayStatus(h) === 'completed' && h.id !== celebratingId);
-                const restHabits      = sortedHabits.filter(h => !isTodayActive(h));
+                const activeHabits    = sortedHabits.filter(h => isDateActive(h) && (getDateStatus(h) !== 'completed' || h.id === celebratingId));
+                const completedHabits = sortedHabits.filter(h => isDateActive(h) && getDateStatus(h) === 'completed' && h.id !== celebratingId);
+                const restHabits      = sortedHabits.filter(h => !isDateActive(h));
 
                 const renderCard = (habit, index) => (
                     <HabitCard
                         key={habit.id}
                         habit={habit}
                         index={index}
-                        todayStatus={getTodayStatus(habit)}
+                        todayStatus={getDateStatus(habit)}
                         streak={calculateStreak(habit)}
                         successRate={getSuccessRate(habit)}
                         weeklyStatus={getWeeklyStatus(habit)}
-                        isActiveToday={isTodayActive(habit)}
+                        isActiveToday={isDateActive(habit)}
                         getStatusForDate={getStatusForDate}
                         onToggle={handleToggle}
                         onSelectHabit={setSelectedHabitId}
