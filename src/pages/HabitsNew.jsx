@@ -598,7 +598,7 @@ const HabitsNew = () => {
         .habit-input:focus {
           outline: none;
           border-color: var(--accent-primary);
-          box-shadow: 0 0 0 3px var(--accent-primary)20;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 20%, transparent);
         }
 
         .form-section {
@@ -1806,7 +1806,7 @@ const AnalyticsModal = ({ habits, getStatusForDate, onClose }) => {
           align-items: center;
           gap: 16px;
           padding: 16px;
-          background: linear-gradient(135deg, var(--success)15 0%, var(--success)05 100%);
+          background: var(--success-bg);
           border-radius: 16px;
           margin-bottom: 20px;
         }
