@@ -57,18 +57,9 @@ const Layout = () => {
           <Activity size={24} />
           <span>Habits</span>
         </NavLink>
-        <NavLink to="/shopping" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <ShoppingCart size={24} />
-          <span>Shop</span>
-        </NavLink>
-        <NavLink to="/expenses" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <CreditCard size={24} />
-          <span>Expenses</span>
-        </NavLink>
-        <NavLink to="/bank-accounts" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          {/* Using a different icon for Money/Banks */}
+        <NavLink to="/finances" className={({ isActive }) => `nav-item ${isActive || location.pathname.startsWith('/finances') ? 'active' : ''}`}>
           <Wallet size={24} />
-          <span>Money</span>
+          <span>Finances</span>
         </NavLink>
       </nav>
 

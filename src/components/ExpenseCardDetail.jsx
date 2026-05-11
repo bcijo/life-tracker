@@ -1,134 +1,89 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calendar, FileText, Settings } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ShoppingBag, Trash2, PieChart as PieChartIcon, Plus, Settings } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, parseISO } from 'date-fns';
 import useTransactions from '../hooks/useTransactions';
 import useExpenseCards from '../hooks/useExpenseCards';
-import CurrencyInput from './CurrencyInput';
 
-const EMOJI_LIST = ['🍽️', '🚗', '🛒', '💡', '🎬', '🏥', '📦', '🏠', '✈️', '🎮', '🎓', '🎁', '🔧', '💅', '🏋️', '📚', '🍕', '🍻', '👶', '🐾'];
+const PRESET_COLORS = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
+    '#D4A5A5', '#9B59B6', '#3498DB', '#E67E22', '#2ECC71',
+    '#FECA57', '#5F27CD', '#54A0FF', '#01A3A4'
+];
 
-// Format number with Indian numbering system (1,00,000 format)
-const formatIndianNumber = (num) => {
-    if (!num && num !== 0) return '';
-    const numStr = num.toString();
-    const parts = numStr.split('.');
-    let intPart = parts[0];
-    const decPart = parts[1];
-
-    if (intPart.length > 3) {
-        let lastThree = intPart.slice(-3);
-        let remaining = intPart.slice(0, -3);
-        remaining = remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
-        intPart = remaining + ',' + lastThree;
-    }
-
-    return decPart !== undefined ? intPart + '.' + decPart : intPart;
-};
-
-const ExpenseCardDetail = ({ card, onClose }) => {
-    const { addTransaction, deleteTransaction, transactions } = useTransactions();
-    const { fetchSubcategories, addSubcategory, deleteSubcategory, updateCard, deleteCard } = useExpenseCards();
+const ExpenseCardDetail = ({ card, onClose, onEdit, onAddExpense }) => {
+    const { deleteTransaction, transactions } = useTransactions();
+    const { fetchSubcategories } = useExpenseCards();
 
     const [subcategories, setSubcategories] = useState([]);
-    const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', or 'settings'
-
-    // Add Transaction State
-    const [amount, setAmount] = useState('');
-    const [description, setDescription] = useState('');
-    const [selectedSubcategory, setSelectedSubcategory] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-
-    // Manage Subcategories State
-    const [newSubcategoryName, setNewSubcategoryName] = useState('');
-    const [showSubcategoryInput, setShowSubcategoryInput] = useState(false);
-
-    // Settings State
-    const [editName, setEditName] = useState(card.name);
-    const [editIcon, setEditIcon] = useState(card.icon);
-    const [editBudget, setEditBudget] = useState(card.budget_amount || '');
-    const [isSaving, setIsSaving] = useState(false);
+    const [monthOffset, setMonthOffset] = useState(0);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     useEffect(() => {
-        loadSubcategories();
+        const loadSubs = async () => {
+            const data = await fetchSubcategories(card.id);
+            setSubcategories(data || []);
+        };
+        loadSubs();
     }, [card.id]);
 
-    const loadSubcategories = async () => {
-        const data = await fetchSubcategories(card.id);
-        setSubcategories(data || []);
-    };
+    const currentDate = new Date();
+    const targetMonth = monthOffset === 0 ? currentDate :
+        monthOffset < 0 ? subMonths(currentDate, Math.abs(monthOffset)) : addMonths(currentDate, monthOffset);
+    const monthStart = startOfMonth(targetMonth);
+    const monthEnd = endOfMonth(targetMonth);
 
-    const handleAddTransaction = async (e) => {
-        e.preventDefault();
-        if (!amount) return;
+    // Filter transactions for this card and selected month
+    const monthlyTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            if (t.type !== 'expense') return false;
+            const d = parseISO(t.date);
+            const isMatchCard = t.card_id === card.id || t.category === card.id || (card.category_ids && card.category_ids.includes(t.category));
+            return isMatchCard && d >= monthStart && d <= monthEnd;
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [transactions, card.id, monthOffset]);
 
-        await addTransaction({
-            amount,
-            description,
-            type: 'expense',
-            category: card.id,
-            card_id: card.id,
-            subcategory_id: selectedSubcategory || null,
-            date: new Date(date).toISOString(),
+    // Group by subcategory for Pie Chart
+    const chartData = useMemo(() => {
+        const groups = {};
+        let hasData = false;
+
+        monthlyTransactions.forEach(tx => {
+            const subId = tx.subcategory_id || 'uncategorized';
+            if (!groups[subId]) {
+                const subObj = subcategories.find(s => s.id === subId);
+                groups[subId] = {
+                    id: subId,
+                    name: subObj ? subObj.name : 'Uncategorized',
+                    amount: 0,
+                    // Assign a consistent color based on index or fallback
+                    color: subObj ? (PRESET_COLORS[subcategories.findIndex(s => s.id === subId) % PRESET_COLORS.length] || card.color) : 'var(--text-muted)'
+                };
+            }
+            groups[subId].amount += parseFloat(tx.amount);
+            hasData = true;
         });
 
-        setAmount('');
-        setDescription('');
-        setActiveTab('history');
-    };
+        return hasData ? Object.values(groups).sort((a, b) => b.amount - a.amount) : [];
+    }, [monthlyTransactions, subcategories, card.color]);
 
-    const handleAddSubcategory = async () => {
-        if (!newSubcategoryName.trim()) return;
-        const newSub = await addSubcategory(card.id, newSubcategoryName);
-        if (newSub) {
-            setSubcategories([...subcategories, newSub]);
-            setNewSubcategoryName('');
-            setShowSubcategoryInput(false);
-            setSelectedSubcategory(newSub.id);
+    const totalSpent = monthlyTransactions.reduce((acc, t) => acc + parseFloat(t.amount), 0);
+
+    const CustomTooltip = ({ active, payload }) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            return (
+                <div className="glass-panel" style={{ padding: '12px', minWidth: '120px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+                    <p style={{ fontWeight: '600', marginBottom: '8px', color: data.color }}>{data.name}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600' }}>
+                        <span>Total</span>
+                        <span>₹{data.amount.toFixed(0)}</span>
+                    </div>
+                </div>
+            );
         }
+        return null;
     };
-
-    const handleDeleteSubcategory = async (subId, e) => {
-        e.stopPropagation();
-        const success = await deleteSubcategory(subId);
-        if (success) {
-            setSubcategories(subcategories.filter(s => s.id !== subId));
-            if (selectedSubcategory === subId) setSelectedSubcategory('');
-        }
-    };
-
-    const handleSaveSettings = async () => {
-        setIsSaving(true);
-        await updateCard(card.id, {
-            name: editName,
-            icon: editIcon,
-            budget_amount: editBudget ? parseFloat(editBudget) : null
-        });
-        setIsSaving(false);
-        onClose();
-    };
-
-    const handleDeleteCard = async () => {
-        if (window.confirm(`Delete "${card.name}" and all its transactions?`)) {
-            await deleteCard(card.id);
-            onClose();
-        }
-    };
-
-    const cardTransactions = transactions.filter(t =>
-        t.card_id === card.id || t.category === card.id || (card.category_ids && card.category_ids.includes(t.category))
-    ).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    const tabStyle = (tab) => ({
-        flex: 1,
-        padding: '14px 8px',
-        background: activeTab === tab ? 'var(--surface-elevated)' : 'var(--glass-card-bg)',
-        border: 'none',
-        borderBottom: activeTab === tab ? `3px solid ${card.color}` : '3px solid transparent',
-        fontWeight: '600',
-        color: activeTab === tab ? card.color : 'var(--text-secondary)',
-        cursor: 'pointer',
-        fontSize: '13px',
-        transition: 'all 0.2s ease',
-    });
 
     return (
         <div style={{
@@ -146,7 +101,7 @@ const ExpenseCardDetail = ({ card, onClose }) => {
             <div className="glass-panel" style={{
                 width: '100%',
                 maxWidth: '500px',
-                height: '80vh',
+                maxHeight: '90vh',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
@@ -154,6 +109,7 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                 padding: 0,
                 overflow: 'hidden',
                 border: '1px solid var(--glass-border)',
+                animation: 'fadeIn 0.2s ease',
             }}>
                 {/* Header */}
                 <div style={{
@@ -166,14 +122,10 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                     flexShrink: 0
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '28px' }}>{activeTab === 'settings' ? editIcon : card.icon}</span>
                         <div>
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', margin: 0 }}>
-                                {activeTab === 'settings' ? editName : card.name}
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {card.name} Analytics
                             </h2>
-                            <p style={{ fontSize: '13px', opacity: 0.9, margin: 0 }}>
-                                ₹{cardTransactions.reduce((acc, t) => acc + parseFloat(t.amount), 0).toFixed(0)} spent this month
-                            </p>
                         </div>
                     </div>
                     <button
@@ -195,460 +147,208 @@ const ExpenseCardDetail = ({ card, onClose }) => {
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, background: 'var(--glass-card-bg)' }}>
-                    <button onClick={() => setActiveTab('add')} style={tabStyle('add')}>+ Add</button>
-                    <button onClick={() => setActiveTab('history')} style={tabStyle('history')}>History</button>
-                    <button onClick={() => setActiveTab('settings')} style={tabStyle('settings')}>
-                        <Settings size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                        Settings
-                    </button>
-                </div>
-
-                {/* Content */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                    {activeTab === 'add' && (
-                        <form onSubmit={handleAddTransaction} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {/* Amount Input */}
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={amount ? formatIndianNumber(amount) : ''}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/,/g, '');
-                                        if (/^\d*\.?\d*$/.test(val)) setAmount(val);
-                                    }}
-                                    placeholder="0"
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 16px 16px 40px',
-                                        fontSize: '32px',
-                                        fontWeight: '700',
-                                        border: 'none',
-                                        borderBottom: '2px solid var(--border-subtle)',
-                                        outline: 'none',
-                                        background: 'transparent',
-                                        color: 'var(--text-primary)',
-                                    }}
-                                    autoFocus
-                                />
-                                <span style={{
-                                    position: 'absolute',
-                                    left: '16px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    fontSize: '24px',
-                                    fontWeight: '600',
-                                    color: 'var(--text-muted)',
-                                    pointerEvents: 'none',
-                                }}>₹</span>
-                            </div>
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                        <button
+                            onClick={onAddExpense}
+                            style={{
+                                flex: 1,
+                                padding: '12px',
+                                background: card.color,
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            <Plus size={16} /> Add Expense
+                        </button>
+                        <button
+                            onClick={onEdit}
+                            style={{
+                                flex: 1,
+                                padding: '12px',
+                                background: 'var(--surface-input)',
+                                color: 'var(--text-primary)',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: '12px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            <Settings size={16} /> Edit Category
+                        </button>
+                    </div>
 
-                            {/* Subcategory Selection */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
-                                    SUBCATEGORY
-                                </label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    {subcategories.map(sub => (
-                                        <div
-                                            key={sub.id}
-                                            onClick={() => setSelectedSubcategory(sub.id)}
-                                            style={{
-                                                padding: '8px 12px',
-                                                borderRadius: '20px',
-                                                border: selectedSubcategory === sub.id ? `2px solid ${card.color}` : '1px solid var(--glass-card-border)',
-                                                background: selectedSubcategory === sub.id ? `${card.color}18` : 'var(--glass-card-bg)',
-                                                color: selectedSubcategory === sub.id ? card.color : 'var(--text-secondary)',
-                                                cursor: 'pointer',
-                                                fontSize: '13px',
-                                                fontWeight: '500',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
-                                        >
-                                            {sub.name}
-                                            <span
-                                                onClick={(e) => handleDeleteSubcategory(sub.id, e)}
-                                                style={{ opacity: 0.5, fontSize: '14px', cursor: 'pointer' }}
-                                            >×</span>
-                                        </div>
-                                    ))}
+                    {/* Time Navigator */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-card-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--glass-card-border)', marginBottom: '24px' }}>
+                        <button
+                            onClick={() => setMonthOffset(monthOffset - 1)}
+                            style={{ background: 'var(--surface-input)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', color: 'var(--text-primary)' }}
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>
+                                {format(targetMonth, 'MMMM yyyy')}
+                            </p>
+                            <p style={{ fontSize: '12px', opacity: 0.7, margin: 0 }}>
+                                {monthOffset === 0 ? 'This Month' : monthOffset === -1 ? 'Last Month' : `${Math.abs(monthOffset)} months ago`}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setMonthOffset(monthOffset + 1)}
+                            disabled={monthOffset >= 0}
+                            style={{ 
+                                background: 'var(--surface-input)', border: 'none', borderRadius: '8px', padding: '8px', 
+                                cursor: monthOffset >= 0 ? 'not-allowed' : 'pointer', 
+                                opacity: monthOffset >= 0 ? 0.3 : 1, 
+                                color: 'var(--text-primary)' 
+                            }}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
 
-                                    {showSubcategoryInput ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <input
-                                                type="text"
-                                                value={newSubcategoryName}
-                                                onChange={(e) => setNewSubcategoryName(e.target.value)}
-                                                placeholder="New..."
-                                                style={{
-                                                    padding: '8px',
-                                                    borderRadius: '20px',
-                                                    border: '1px solid var(--glass-card-border)',
-                                                    background: 'var(--surface-input)',
-                                                    fontSize: '13px',
-                                                    color: 'var(--text-primary)',
-                                                    width: '100px'
-                                                }}
-                                                autoFocus
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleAddSubcategory();
-                                                    }
-                                                }}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={handleAddSubcategory}
-                                                style={{
-                                                    background: card.color,
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '50%',
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    cursor: 'pointer',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                }}
-                                            >
-                                                <Plus size={14} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowSubcategoryInput(true)}
-                                            style={{
-                                                padding: '8px 12px',
-                                                borderRadius: '20px',
-                                                border: '1px dashed var(--glass-card-border)',
-                                                background: 'transparent',
-                                                color: 'var(--text-secondary)',
-                                                cursor: 'pointer',
-                                                fontSize: '13px',
-                                                display: 'flex', alignItems: 'center', gap: '4px'
-                                            }}
-                                        >
-                                            <Plus size={14} /> Add New
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
+                    {/* Chart Area */}
+                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600', letterSpacing: '0.5px' }}>TOTAL SPENT</p>
+                        <p style={{ fontSize: '32px', fontWeight: '800', color: card.color, margin: 0, letterSpacing: '-0.5px' }}>
+                            ₹{totalSpent.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </p>
+                    </div>
 
-                            {/* Details */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                        DATE
-                                    </label>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '12px',
-                                        background: 'var(--surface-input)',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--surface-input-border)',
-                                    }}>
-                                        <Calendar size={16} style={{ color: 'var(--text-secondary)' }} />
-                                        <input
-                                            type="date"
-                                            value={date}
-                                            onChange={(e) => setDate(e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px', color: 'var(--text-primary)' }}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                        DESCRIPTION
-                                    </label>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '12px',
-                                        background: 'var(--surface-input)',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--surface-input-border)',
-                                    }}>
-                                        <FileText size={16} style={{ color: 'var(--text-secondary)' }} />
-                                        <input
-                                            type="text"
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            placeholder="Optional"
-                                            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px', color: 'var(--text-primary)' }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                style={{
-                                    marginTop: '20px',
-                                    width: '100%',
-                                    padding: '16px',
-                                    background: card.color,
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    fontSize: '16px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                Save Expense
-                            </button>
-                        </form>
-                    )}
-
-                    {activeTab === 'history' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {cardTransactions.length === 0 ? (
-                                <div style={{ textAlign: 'center', opacity: 0.5, marginTop: '40px' }}>
-                                    <p>No transactions yet</p>
-                                </div>
+                    <div style={{ height: '220px', marginBottom: '24px', position: 'relative' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            {chartData.length > 0 ? (
+                                <PieChart>
+                                    <Pie data={chartData} dataKey="amount" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip content={<CustomTooltip />} />
+                                </PieChart>
                             ) : (
-                                cardTransactions.map(t => {
-                                    const sub = subcategories.find(s => s.id === t.subcategory_id);
-                                    return (
-                                        <div
-                                            key={t.id}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '12px',
-                                                borderBottom: '1px solid var(--border-subtle)'
-                                            }}
-                                        >
-                                            <div>
-                                                <p style={{ fontWeight: '600', fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
-                                                    {t.description || (sub ? sub.name : 'Expense')}
-                                                </p>
-                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
-                                                    {new Date(t.date).toLocaleDateString()}
-                                                    {sub && <span style={{
-                                                        marginLeft: '8px',
-                                                        background: 'var(--glass-card-bg)',
-                                                        border: '1px solid var(--glass-card-border)',
-                                                        padding: '2px 6px',
-                                                        borderRadius: '4px',
-                                                        color: 'var(--text-secondary)',
-                                                    }}>{sub.name}</span>}
-                                                </p>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <span style={{ fontWeight: '700', fontSize: '16px' }}>
-                                                    ₹{parseFloat(t.amount).toFixed(0)}
-                                                </span>
-                                                <button
-                                                    onClick={() => deleteTransaction(t.id)}
-                                                    style={{ border: 'none', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5, gap: '8px' }}>
+                                    <PieChartIcon size={32} />
+                                    <span style={{ fontSize: '14px', fontWeight: '500' }}>No expenses this month.</span>
+                                </div>
                             )}
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Legend */}
+                    {chartData.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '24px' }}>
+                            {chartData.map(data => (
+                                <div key={data.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--surface-input)', borderRadius: '20px', fontSize: '13px', border: '1px solid var(--border-subtle)' }}>
+                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: data.color }} />
+                                    <span style={{ color: 'var(--text-secondary)' }}>{data.name}</span>
+                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>₹{data.amount.toFixed(0)}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
 
-                    {activeTab === 'settings' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            {/* Name */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
-                                    CATEGORY NAME
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editName}
-                                    onChange={(e) => setEditName(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        border: '1px solid var(--surface-input-border)',
-                                        borderRadius: '8px',
-                                        fontSize: '16px',
-                                        background: 'var(--surface-input)',
-                                        color: 'var(--text-primary)',
-                                    }}
-                                />
-                            </div>
-
-                            {/* Icon */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
-                                    ICON
-                                </label>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(5, 1fr)',
-                                    gap: '8px',
-                                    padding: '12px',
-                                    background: 'var(--glass-card-bg)',
-                                    border: '1px solid var(--glass-card-border)',
-                                    borderRadius: '8px',
-                                    maxHeight: '120px',
-                                    overflowY: 'auto',
-                                }}>
-                                    {EMOJI_LIST.map(emoji => (
-                                        <button
-                                            key={emoji}
-                                            type="button"
-                                            onClick={() => setEditIcon(emoji)}
-                                            style={{
-                                                border: 'none',
-                                                background: editIcon === emoji ? card.color : 'transparent',
-                                                borderRadius: '8px',
-                                                fontSize: '20px',
-                                                padding: '8px',
-                                                cursor: 'pointer',
-                                                transform: editIcon === emoji ? 'scale(1.1)' : 'scale(1)',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            {emoji}
-                                        </button>
-                                    ))}
+                    {/* Chronological Expenses Dropdown */}
+                    <div style={{ background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', borderRadius: '16px', overflow: 'hidden' }}>
+                        <button
+                            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                            style={{
+                                width: '100%',
+                                padding: '16px',
+                                background: 'transparent',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ background: 'var(--surface-input)', padding: '8px', borderRadius: '10px' }}>
+                                    <ShoppingBag size={18} color="var(--text-secondary)" />
+                                </div>
+                                <div style={{ textAlign: 'left' }}>
+                                    <p style={{ margin: 0, fontWeight: '700', fontSize: '15px' }}>Transaction History</p>
+                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>{monthlyTransactions.length} expenses</p>
                                 </div>
                             </div>
-
-                            {/* Budget */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
-                                    MONTHLY BUDGET
-                                </label>
-                                <CurrencyInput
-                                    value={editBudget}
-                                    onChange={(val) => setEditBudget(val)}
-                                    placeholder="No budget set"
-                                    inputStyle={{
-                                        fontSize: '16px',
-                                        border: '1px solid #ddd',
-                                        borderRadius: '8px',
-                                    }}
-                                />
-                            </div>
-
-                            {/* Subcategories */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#666', marginBottom: '8px' }}>
-                                    SUBCATEGORIES
-                                </label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {subcategories.map(sub => (
-                                        <div key={sub.id} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '10px 12px',
-                                            background: 'var(--glass-card-bg)',
-                                            border: '1px solid var(--glass-card-border)',
-                                            borderRadius: '8px',
-                                        }}>
-                                            <span style={{ fontSize: '14px' }}>{sub.name}</span>
-                                            <button
-                                                onClick={(e) => handleDeleteSubcategory(sub.id, e)}
+                            {isHistoryOpen ? <ChevronUp size={20} color="var(--text-secondary)" /> : <ChevronDown size={20} color="var(--text-secondary)" />}
+                        </button>
+                        
+                        {isHistoryOpen && (
+                            <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                                <div style={{ marginTop: '12px' }} />
+                                {monthlyTransactions.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '20px 0', opacity: 0.5, fontSize: '14px' }}>
+                                        No transactions for this month.
+                                    </div>
+                                ) : (
+                                    monthlyTransactions.map(t => {
+                                        const sub = subcategories.find(s => s.id === t.subcategory_id);
+                                        return (
+                                            <div
+                                                key={t.id}
                                                 style={{
-                                                    border: 'none',
-                                                    background: 'transparent',
-                                                    color: 'var(--danger)',
-                                                    cursor: 'pointer',
-                                                    padding: '4px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '12px',
+                                                    background: 'var(--surface-input)',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid var(--border-subtle)'
                                                 }}
                                             >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <input
-                                            type="text"
-                                            value={newSubcategoryName}
-                                            onChange={(e) => setNewSubcategoryName(e.target.value)}
-                                            placeholder="Add subcategory..."
-                                            style={{
-                                                flex: 1,
-                                                padding: '10px 12px',
-                                                border: '1px dashed var(--glass-card-border)',
-                                                borderRadius: '8px',
-                                                fontSize: '14px',
-                                                background: 'var(--surface-input)',
-                                                color: 'var(--text-primary)',
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    handleAddSubcategory();
-                                                }
-                                            }}
-                                        />
-                                        <button
-                                            onClick={handleAddSubcategory}
-                                            disabled={!newSubcategoryName.trim()}
-                                            style={{
-                                                padding: '10px 16px',
-                                                background: newSubcategoryName.trim() ? card.color : '#ccc',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '8px',
-                                                cursor: newSubcategoryName.trim() ? 'pointer' : 'not-allowed',
-                                                fontWeight: '600'
-                                            }}
-                                        >
-                                            <Plus size={16} />
-                                        </button>
-                                    </div>
-                                </div>
+                                                <div>
+                                                    <p style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
+                                                        {t.description || (sub ? sub.name : 'Expense')}
+                                                    </p>
+                                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
+                                                        {new Date(t.date).toLocaleDateString()}
+                                                        {sub && <span style={{
+                                                            marginLeft: '8px',
+                                                            background: 'var(--glass-card-bg)',
+                                                            border: '1px solid var(--glass-card-border)',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            color: 'var(--text-secondary)',
+                                                        }}>{sub.name}</span>}
+                                                    </p>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <span style={{ fontWeight: '700', fontSize: '15px' }}>
+                                                        -₹{parseFloat(t.amount).toFixed(0)}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => deleteTransaction(t.id)}
+                                                        style={{ border: 'none', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
+                        )}
+                    </div>
 
-                            {/* Action Buttons */}
-                            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                <button
-                                    onClick={handleDeleteCard}
-                                    style={{
-                                        flex: 1,
-                                        padding: '14px',
-                                        background: 'var(--danger-bg)',
-                                        color: 'var(--danger)',
-                                        border: '1px solid var(--danger)',
-                                        borderRadius: '12px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    Delete Category
-                                </button>
-                                <button
-                                    onClick={handleSaveSettings}
-                                    disabled={isSaving}
-                                    style={{
-                                        flex: 2,
-                                        padding: '14px',
-                                        background: card.color,
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '12px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {isSaving ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

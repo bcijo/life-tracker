@@ -10,9 +10,7 @@ import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import Todos from './pages/Todos'
 import Habits from './pages/Habits'
-import Shopping from './pages/Shopping'
-import Expenses from './pages/Expenses'
-import BankAccounts from './pages/BankAccounts'
+import Finances from './pages/Finances'
 import BillSplitter from './pages/BillSplitter'
 
 function App() {
@@ -32,9 +30,10 @@ function App() {
                         <Route index element={<Dashboard />} />
                         <Route path="todos" element={<Todos />} />
                         <Route path="habits" element={<Habits />} />
-                        <Route path="shopping" element={<Shopping />} />
-                        <Route path="expenses" element={<Expenses />} />
-                        <Route path="bank-accounts" element={<BankAccounts />} />
+                        <Route path="finances/*" element={<Finances />} />
+                        <Route path="shopping" element={<Navigate to="/finances/shopping" replace />} />
+                        <Route path="expenses" element={<Navigate to="/finances/spend" replace />} />
+                        <Route path="bank-accounts" element={<Navigate to="/finances/accounts" replace />} />
                         <Route path="split-bill" element={<BillSplitter />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

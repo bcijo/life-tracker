@@ -1,57 +1,106 @@
 import React from 'react';
+import * as LucideIcons from 'lucide-react';
+
+export const getIconByName = (name) => {
+    const iconMap = {
+        'food': 'Utensils',
+        'dining': 'Utensils',
+        'eat': 'Utensils',
+        'grocery': 'ShoppingCart',
+        'groceries': 'ShoppingCart',
+        'transport': 'Car',
+        'travel': 'Plane',
+        'flight': 'Plane',
+        'car': 'Car',
+        'shopping': 'ShoppingBag',
+        'health': 'HeartPulse',
+        'medical': 'Stethoscope',
+        'entertainment': 'Film',
+        'movies': 'Film',
+        'game': 'Gamepad2',
+        'bills': 'FileText',
+        'utilities': 'Zap',
+        'home': 'Home',
+        'rent': 'Home',
+        'education': 'GraduationCap',
+        'study': 'BookOpen',
+        'gifts': 'Gift',
+        'personal': 'User',
+        'fitness': 'Dumbbell',
+        'gym': 'Dumbbell',
+        'pets': 'Dog',
+        'subscriptions': 'Repeat',
+        'tech': 'Laptop',
+        'electronics': 'Smartphone'
+    };
+    
+    let IconName = 'CircleDollarSign';
+    const lowerName = name.toLowerCase();
+    for (const [key, value] of Object.entries(iconMap)) {
+        if (lowerName.includes(key)) {
+            IconName = value;
+            break;
+        }
+    }
+    
+    const IconComponent = LucideIcons[IconName];
+    return IconComponent ? <IconComponent size={24} strokeWidth={2} color="#ffffff" /> : <LucideIcons.CircleDollarSign size={24} color="#ffffff" />;
+};
 
 const ExpenseCard = ({ card, budgetProgress, onClick }) => {
     return (
         <div
             onClick={onClick}
             style={{
-                aspectRatio: '1',
-                borderRadius: '16px',
-                background: card.color,
-                padding: '12px',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
                 justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderRadius: '16px',
+                background: 'var(--glass-card-bg)',
+                border: '1px solid var(--glass-card-border)',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                color: '#fff',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                position: 'relative',
-                overflow: 'hidden',
+                transition: 'all 0.2s ease',
+                boxShadow: 'var(--shadow-sm)',
             }}
             onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                e.currentTarget.style.background = 'var(--surface-elevated)';
             }}
             onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.15)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                e.currentTarget.style.background = 'var(--glass-card-bg)';
             }}
         >
-            <div style={{ fontSize: '24px' }}>{card.icon}</div>
-            <div>
-                <p style={{ fontSize: '13px', fontWeight: '700', lineHeight: '1.2', marginBottom: '2px' }}>
-                    {card.name}
-                </p>
-                <p style={{ fontSize: '11px', opacity: 0.9 }}>
-                    ₹{budgetProgress?.spent.toFixed(0) || 0}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ 
+                    width: '44px', 
+                    height: '44px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    borderRadius: '12px',
+                    background: `${card.color}22`,
+                }}>
+                    {React.cloneElement(getIconByName(card.name), { color: card.color, size: 22 })}
+                </div>
+                <div>
+                    <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, marginBottom: '2px' }}>
+                        {card.name}
+                    </p>
+                    <p style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)', margin: 0 }}>
+                        Tap to view history
+                    </p>
+                </div>
+            </div>
+            
+            <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                    ₹{Math.round(budgetProgress?.spent || 0).toLocaleString('en-IN')}
                 </p>
             </div>
-            {/* Budget progress bar */}
-            {budgetProgress?.percentage > 0 && (
-                <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    height: '4px', background: 'rgba(0,0,0,0.2)',
-                }}>
-                    <div style={{
-                        height: '100%',
-                        width: `${Math.min(budgetProgress.percentage, 100)}%`,
-                        background: budgetProgress.percentage >= 90 ? '#ff6b6b' : '#fff',
-                        opacity: 0.8,
-                        transition: 'width 0.3s ease',
-                    }} />
-                </div>
-            )}
         </div>
     );
 };

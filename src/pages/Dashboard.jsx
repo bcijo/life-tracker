@@ -142,13 +142,13 @@ const Dashboard = () => {
             <JournalCard />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Link to="/expenses" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link to="/finances" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="glass-card" style={{ padding: '16px', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <span style={{ fontSize: '20px', fontWeight: 'bold' }}>₹{todayExpense.toFixed(0)}</span>
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Spent Today</p>
                     </div>
                 </Link>
-                <Link to="/shopping" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link to="/finances/shopping" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="glass-card" style={{ padding: '16px', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{shoppingCount}</span>
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>To Buy</p>
