@@ -43,6 +43,12 @@ const Finances = () => {
     const monthlySpend = transactions
         .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === currentMonth)
         .reduce((acc, t) => acc + parseFloat(t.amount), 0);
+        
+    const monthlyRecurringSpend = transactions
+        .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === currentMonth && t.description?.includes('(Recurring)'))
+        .reduce((acc, t) => acc + parseFloat(t.amount), 0);
+
+    const monthlySpendExcludingRecurring = monthlySpend - monthlyRecurringSpend;
 
     return (
         <div className="page-container finances-hub" style={{ paddingBottom: '100px' }}>
@@ -92,19 +98,27 @@ const Finances = () => {
                         }}
                         style={{ 
                             flex: '0 0 auto', 
-                            width: '160px', 
+                            width: '180px', 
                             padding: '16px', 
                             background: 'linear-gradient(135deg, rgba(245, 101, 101, 0.1), rgba(245, 101, 101, 0.05))',
                             border: '1px solid rgba(245, 101, 101, 0.2)',
                             borderLeft: '4px solid var(--danger)',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between'
                         }}
                     >
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <CreditCard size={14} /> Spent this Month
+                        <div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <CreditCard size={14} /> Spent this Month
+                            </div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                ₹{Math.round(monthlySpend).toLocaleString('en-IN')}
+                            </div>
                         </div>
-                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                            ₹{Math.round(monthlySpend).toLocaleString('en-IN')}
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', fontWeight: '600' }}>
+                            Excl. recurring: ₹{Math.round(monthlySpendExcludingRecurring).toLocaleString('en-IN')}
                         </div>
                     </div>
                 </div>

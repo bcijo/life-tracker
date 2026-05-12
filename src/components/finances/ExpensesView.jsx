@@ -15,6 +15,8 @@ import ExpenseCardDetail from '../ExpenseCardDetail';
 import CategorySettingsModal from '../CategorySettingsModal';
 import Modal from '../Modal';
 import { isToday, parseISO, isSameMonth, format } from 'date-fns';
+import useBudgets from '../../hooks/useBudgets';
+import BudgetsSection from '../BudgetsSection';
 
 const EMOJI_LIST = ['🍽️', '🚗', '🛒', '💡', '🎬', '🏥', '📦', '🏠', '✈️', '🎮', '🎓', '🎁', '🔧', '💅', '🏋️', '📚', '🍕', '🍻', '👶', '🐾'];
 
@@ -42,7 +44,8 @@ const ExpensesView = ({ showAnalytics, setShowAnalytics }) => {
         upcomingExpenses,
         monthlyTotal: recurringTotal
     } = useRecurringExpenses();
-
+    
+    const { budgets, addBudget, updateBudget, deleteBudget } = useBudgets();
 
     // UI State
     const [selectedCard, setSelectedCard] = useState(null); // The card currently opened in modal
@@ -265,31 +268,6 @@ const ExpensesView = ({ showAnalytics, setShowAnalytics }) => {
                 </button>
             </div>
 
-            {/* Top Dashboard */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                <div 
-                    onClick={() => setHideBalance(!hideBalance)}
-                    style={{ flex: 1, padding: '16px', background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', borderRadius: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'center', transition: 'all 0.2s ease', boxShadow: 'var(--shadow-sm)' }}
-                >
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 4px 0', fontWeight: '700', letterSpacing: '0.5px' }}>NET BALANCE</p>
-                    <h3 style={{ 
-                        fontSize: '24px', fontWeight: '800', margin: 0, color: 'var(--text-primary)',
-                        filter: hideBalance ? 'blur(8px)' : 'none', transition: 'filter 0.3s ease', userSelect: hideBalance ? 'none' : 'auto'
-                    }}>
-                        ₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                    </h3>
-                </div>
-                <div 
-                    onClick={() => setShowAnalytics(!showAnalytics)}
-                    style={{ flex: 1, padding: '16px', background: 'var(--glass-card-bg)', border: '1px solid var(--glass-card-border)', borderRadius: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'center', transition: 'all 0.2s ease', boxShadow: 'var(--shadow-sm)' }}
-                >
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 4px 0', fontWeight: '700', letterSpacing: '0.5px' }}>SPENT THIS MONTH</p>
-                    <h3 style={{ fontSize: '24px', fontWeight: '800', margin: 0, color: 'var(--danger)' }}>
-                        ₹{monthlyExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                    </h3>
-                </div>
-            </div>
-
             {/* Analytics Chart */}
             {showAnalytics && (
                 <div style={{ marginBottom: '24px', animation: 'fadeIn 0.3s ease' }}>
@@ -440,6 +418,15 @@ const ExpensesView = ({ showAnalytics, setShowAnalytics }) => {
                     })}
                 </div>
             </div>
+
+            {/* BUDGETS SECTION */}
+            <BudgetsSection 
+                budgets={budgets} 
+                transactions={transactions} 
+                onAddBudget={addBudget} 
+                onUpdateBudget={updateBudget} 
+                onDeleteBudget={deleteBudget} 
+            />
 
             {/* MODALS */}
             {selectedCard && (

@@ -31,7 +31,10 @@ function useRecurringExpenses() {
     };
 
     // Process recurring expenses for current month
+    let isProcessing = false;
     const processRecurringExpenses = async () => {
+        if (isProcessing) return [];
+        isProcessing = true;
         const today = new Date();
         const currentDay = getDate(today);
         const currentMonth = format(today, 'yyyy-MM');
@@ -63,6 +66,7 @@ function useRecurringExpenses() {
             }
         }
 
+        isProcessing = false;
         return processed;
     };
 
