@@ -1,7 +1,8 @@
 import React from 'react';
-import { Sparkles, TrendingUp, Award, Target } from 'lucide-react';
+import { Sparkles, TrendingUp, Award, Target, Check, Plus, Loader2, CheckSquare, Activity, Wallet } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const AIReportCard = ({ report, loading }) => {
+const AIReportCard = ({ report, loading, onAcceptCommitment, acceptingId }) => {
     if (loading) {
         return (
             <div className="glass-card" style={{ padding: '24px', marginBottom: '24px', textAlign: 'center' }}>
@@ -21,7 +22,7 @@ const AIReportCard = ({ report, loading }) => {
     if (!report) return null;
 
     return (
-        <div className="glass-card" style={{ padding: '24px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+        <div className="glass-card glow-purple" style={{ padding: '24px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
             {/* Accent top bar */}
             <div style={{
                 position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
@@ -77,24 +78,159 @@ const AIReportCard = ({ report, loading }) => {
                 </div>
             </div>
 
-            <div style={{
-                marginTop: '20px',
-                padding: '16px',
-                background: 'var(--glass-card-bg)',
-                border: '1px solid var(--glass-card-border)',
-                borderRadius: '12px',
-                display: 'flex',
-                gap: '12px',
-                alignItems: 'center',
-            }}>
-                <Target size={24} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-                <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-primary)', marginBottom: '2px' }}>
-                        Focus for Next Week
-                    </h4>
-                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{report.suggestion}</p>
+            {report.suggestion && (
+                <div style={{
+                    marginTop: '20px',
+                    padding: '16px',
+                    background: 'var(--glass-card-bg)',
+                    border: '1px solid var(--glass-card-border)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'center',
+                }}>
+                    <Target size={24} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    <div>
+                        <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-primary)', marginBottom: '2px' }}>
+                            Focus for Next Week
+                        </h4>
+                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{report.suggestion}</p>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Redesigned Voluntary AI Commitments section */}
+            {report.voluntaryCommitments && report.voluntaryCommitments.length > 0 && (
+                <div style={{
+                    marginTop: '24px',
+                    borderTop: '1px solid var(--border-subtle)',
+                    paddingTop: '20px'
+                }}>
+                    <h3 style={{
+                        fontSize: '15px',
+                        fontWeight: '700',
+                        color: 'var(--text-primary)',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <Sparkles size={16} style={{ color: 'var(--accent-primary)' }} />
+                        Voluntary Weekly Commitments
+                    </h3>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                        Voluntarily accept these challenges to instantly add them to your tasks, habits, or budget!
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {report.voluntaryCommitments.map((commitment) => {
+                            const isAccepted = commitment.accepted;
+                            const isProcessing = acceptingId === commitment.id;
+                            
+                            let typeIcon = <CheckSquare size={16} />;
+                            if (commitment.type === 'habit') typeIcon = <Activity size={16} />;
+                            if (commitment.type === 'budget') typeIcon = <Wallet size={16} />;
+
+                            return (
+                                <motion.div 
+                                    key={commitment.id}
+                                    layout
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '14px 16px',
+                                        borderRadius: '16px',
+                                        background: isAccepted ? 'rgba(72, 187, 120, 0.08)' : 'var(--glass-card-bg)',
+                                        border: isAccepted ? '1px solid rgba(72, 187, 120, 0.3)' : '1px solid var(--glass-card-border)',
+                                        transition: 'all 0.3s ease',
+                                    }}
+                                    whileHover={{ y: -1 }}
+                                >
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, marginRight: '16px' }}>
+                                        <div style={{
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: '10px',
+                                            background: isAccepted ? 'var(--success-bg)' : 'var(--glass-bg)',
+                                            color: isAccepted ? 'var(--success)' : 'var(--accent-primary)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            {typeIcon}
+                                        </div>
+                                        <div style={{ textAlign: 'left' }}>
+                                            <h4 style={{
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                color: isAccepted ? 'var(--success)' : 'var(--text-primary)',
+                                                textDecoration: isAccepted ? 'line-through' : 'none',
+                                                opacity: isAccepted ? 0.7 : 1,
+                                                marginBottom: '2px'
+                                            }}>
+                                                {commitment.title}
+                                            </h4>
+                                            <p style={{
+                                                fontSize: '12px',
+                                                color: 'var(--text-secondary)',
+                                                opacity: isAccepted ? 0.6 : 0.8
+                                            }}>
+                                                {commitment.description}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => !isAccepted && !isProcessing && onAcceptCommitment(commitment.id)}
+                                        disabled={isAccepted || isProcessing}
+                                        style={{
+                                            padding: '8px 14px',
+                                            borderRadius: '20px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: isAccepted ? 'default' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            background: isAccepted 
+                                                ? 'transparent' 
+                                                : 'var(--accent-gradient)',
+                                            color: isAccepted ? 'var(--success)' : '#fff',
+                                            border: isAccepted ? 'none' : 'none',
+                                            boxShadow: isAccepted ? 'none' : '0 4px 10px rgba(100, 120, 240, 0.2)',
+                                            transition: 'all 0.2s ease',
+                                        }}
+                                    >
+                                        {isProcessing ? (
+                                            <>
+                                                <Loader2 size={12} className="spin-fast" />
+                                                <span>Adding...</span>
+                                            </>
+                                        ) : isAccepted ? (
+                                            <>
+                                                <Check size={14} strokeWidth={3} />
+                                                <span>Accepted</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus size={14} />
+                                                <span>Accept</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+            
+            <style>{`
+                .spin-fast { animation: spin 1s linear infinite; }
+                @keyframes spin { 100% { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
 };

@@ -1,9 +1,52 @@
+import { supabase } from './supabase';
+
 // Groq LLM Integration
 // Add VITE_GROQ_API_KEY to your .env file
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_NAME = 'openai/gpt-oss-120b';
 const VISION_MODEL_NAME = 'meta-llama/llama-4-scout-17b-16e-instruct';
+
+// Database query tool registration
+const SQL_TOOL = {
+    type: "function",
+    function: {
+        name: "execute_read_only_query",
+        description: "Executes a read-only SELECT PostgreSQL query against the user's database. Use this tool whenever the user asks for detailed metrics, statistics, average spending, weekly comparison, habit consistency, or journal mood trends. Tables available:\n" +
+            "- transactions (id, user_id, amount, description, type: 'expense'|'income', category: 'food'|'transport'|'shopping'|'entertainment'|'bills'|'health'|'salary'|'other', date: timestamptz)\n" +
+            "- habits (id, user_id, name, history: jsonb array of {date: 'YYYY-MM-DD', status: 'completed'|'failed'}, active_days: jsonb array of day indices, time_of_day: 'morning'|'evening')\n" +
+            "- todos (id, user_id, text, completed: boolean, deadline: date)\n" +
+            "- shopping_items (id, user_id, name, is_bought: boolean)\n" +
+            "- journal_entries (id, user_id, date: date, how_was_today, on_your_mind, change_for_tomorrow, mood_score: integer 1-5)\n\n" +
+            "CRITICAL: Always write queries filtering by user_id = auth.uid() or let RLS handle it (RLS is enabled). DO NOT attempt to INSERT/UPDATE/DELETE. Only SELECT statements are permitted.",
+        parameters: {
+            type: "object",
+            properties: {
+                query_text: {
+                    type: "string",
+                    description: "The SQL SELECT statement. Example: 'SELECT SUM(amount) FROM transactions WHERE type=\'expense\' AND date >= date_trunc(\'month\', CURRENT_DATE)'"
+                }
+            },
+            required: ["query_text"]
+        }
+    }
+};
+
+async function runSQLTool(queryText) {
+    console.log('[Groq SQL Agent] Executing Query:', queryText);
+    try {
+        const { data, error } = await supabase.rpc('execute_read_only_query', { query_text: queryText });
+        if (error) {
+            console.error('[Groq SQL Agent] Database Error:', error);
+            return { error: error.message };
+        }
+        console.log('[Groq SQL Agent] Returned rows:', data ? data.length : 0);
+        return data;
+    } catch (err) {
+        console.error('[Groq SQL Agent] JS Exception:', err);
+        return { error: err.message };
+    }
+}
 
 async function callGroq(messages, systemPrompt, jsonMode = false) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
@@ -44,29 +87,118 @@ async function callGroq(messages, systemPrompt, jsonMode = false) {
     return data.choices[0]?.message?.content;
 }
 
-// 1. General Chat
-export async function askAI(userQuery, contextData) {
-    const systemPrompt = `You are a concise life assistant with access to user's financial and habit data.
+// 1. Agentic Chat with SQL execution capability
+export async function askAI(userQuery, contextData, onQueryLogged = null) {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error('VITE_GROQ_API_KEY is missing');
+    }
+
+    const systemPrompt = `You are an advanced context-aware personal assistant with direct database query capabilities.
+    You have direct, real-time access to the user's data (expenses, habits, tasks, journals) via PostgreSQL read-only SELECT tools.
     
-    Context: ${JSON.stringify(contextData, null, 2)}
+    If the user asks questions requiring specific details, statistics, averages, streaks, weekly trends, or exact lists, you MUST call the execute_read_only_query tool immediately to query the database!
+    
+    Tables available:
+    - transactions: id (uuid), user_id (uuid), amount (numeric), description (text), type (text: 'expense'|'income'), category (text: 'food'|'transport'|'shopping'|'entertainment'|'bills'|'health'|'salary'|'other'), date (timestamptz)
+    - habits: id (uuid), user_id (uuid), name (text), history (jsonb: array of {date: 'YYYY-MM-DD', status: 'completed'|'failed'}), active_days (jsonb: e.g. [0,1,2,3,4,5,6]), time_of_day (text: 'morning'|'evening')
+    - todos: id (uuid), user_id (uuid), text (text), completed (boolean), deadline (date)
+    - shopping_items: id (uuid), user_id (uuid), name (text), is_bought (boolean)
+    - journal_entries: id (uuid), user_id (uuid), date (date), mood_score (integer 1-5), how_was_today (text), on_your_mind (text), change_for_tomorrow (text)
+
+    Static overview state: ${JSON.stringify(contextData, null, 2)}
     
     RULES:
-    - Answer in 1-2 sentences MAX. Be direct and to the point.
-    - Use numbers and key facts only. No fluff.
-    - If data is unavailable, say "I don't have that info" briefly.
-    - Never expose raw JSON.`;
+    - Be extremely helpful, concise, and professional.
+    - If you run database queries, summarize findings nicely. No tech jargon unless asked.
+    - Never expose raw user IDs or raw JSON in final outputs.
+    - If database returns no data or throws an error, try to correct your SQL syntax or handle it gracefully.`;
 
-    const messages = [{ role: 'user', content: userQuery }];
-    return await callGroq(messages, systemPrompt);
+    let messages = [
+        { role: 'user', content: userQuery }
+    ];
+
+    let executedQueries = [];
+
+    // Up to 5 iterations for agentic reasoning
+    for (let i = 0; i < 5; i++) {
+        const payload = {
+            model: MODEL_NAME,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                ...messages
+            ],
+            temperature: 0.4,
+            max_tokens: 1000,
+            tools: [SQL_TOOL],
+            tool_choice: "auto"
+        };
+
+        const response = await fetch(GROQ_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Groq API error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        const responseMessage = data.choices[0]?.message;
+
+        if (!responseMessage) {
+            throw new Error("Empty response from Groq");
+        }
+
+        messages.push(responseMessage);
+
+        const toolCalls = responseMessage.tool_calls;
+        if (!toolCalls || toolCalls.length === 0) {
+            // No tools called, this is the final answer!
+            return {
+                content: responseMessage.content,
+                queries: executedQueries
+            };
+        }
+
+        // Execute tool calls
+        for (const toolCall of toolCalls) {
+            if (toolCall.function.name === 'execute_read_only_query') {
+                const args = JSON.parse(toolCall.function.arguments);
+                const queryText = args.query_text;
+
+                executedQueries.push(queryText);
+                if (onQueryLogged) {
+                    onQueryLogged(queryText);
+                }
+
+                const queryResult = await runSQLTool(queryText);
+
+                messages.push({
+                    role: 'tool',
+                    tool_call_id: toolCall.id,
+                    name: 'execute_read_only_query',
+                    content: JSON.stringify(queryResult)
+                });
+            }
+        }
+    }
+
+    throw new Error("Groq SQL Agent reached maximum execution steps");
 }
 
-// 2. Weekly/Monthly Reports
+// 2. Weekly/Monthly Reports with Voluntary Commitments
 export async function generateReport(type, periodStart, periodEnd, fullData) {
     const systemPrompt = `Generate a ${type} report (${periodStart} to ${periodEnd}).
     
     Data: ${JSON.stringify(fullData, null, 2)}
     
-    Return STRICTLY valid JSON:
+    Return STRICTLY valid JSON with no enclosing markdown ticks, containing exactly these keys:
     {
         "summary": "1 sentence max - key insight only",
         "highlights": ["3 SHORT bullet points - 5-8 words each"],
@@ -74,11 +206,46 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
         "habitAnalysis": "1 sentence - habit consistency",
         "journalInsight": "1 sentence - mood/mindset trend from journal entries",
         "suggestion": "1 actionable tip - under 10 words",
-        "score": 85
+        "score": 85,
+        "voluntaryCommitments": [
+            {
+                "id": "commit-unique-id",
+                "type": "todo", 
+                "title": "Clean room",
+                "description": "Clean and declutter your study desk.",
+                "actionData": {
+                    "deadline": "YYYY-MM-DD"
+                }
+            },
+            {
+                "id": "commit-unique-id-2",
+                "type": "habit",
+                "title": "Morning Journaling",
+                "description": "Write down 3 things you are grateful for each morning.",
+                "actionData": {
+                    "activeDays": [0,1,2,3,4,5,6],
+                    "timeOfDay": "morning"
+                }
+            },
+            {
+                "id": "commit-unique-id-3",
+                "type": "budget",
+                "title": "Limit Dining Out",
+                "description": "Keep restaurants and dining under ₹1,000 this week.",
+                "actionData": {
+                    "amount": 1000,
+                    "categoryIds": ["food"]
+                }
+            }
+        ]
     }
     
-    If journal entries exist, analyze mood patterns and key reflections.
-    Be extremely concise. No fluff.`;
+    You MUST generate exactly 2-3 highly personalized "voluntaryCommitments" based on the user's weaknesses or opportunities in their data.
+    - If they spent too much, suggest a budget.
+    - If they missed habits, suggest a habit.
+    - If they have pending tasks or deadlines, suggest a todo.
+    Make sure each commitment is realistic and highly action-oriented.
+    Be extremely concise in summaries. No fluff.`;
 
     const messages = [{ role: 'user', content: `Generate the ${type} report.` }];
 
@@ -92,7 +259,6 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
 }
 
 // 3. Bill Splitting — Direct Vision Parser (Groq Llama 4 Scout)
-// Returns: { restaurant_name, items, charges, discounts }
 export async function parseBillImage(base64ImageDataUrl) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error('VITE_GROQ_API_KEY is missing');

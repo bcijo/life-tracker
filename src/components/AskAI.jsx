@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Bot } from 'lucide-react';
+import { MessageCircle, Send, X, Bot, Database, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
 import { askAI } from '../lib/groq';
 import useLifeContext from '../hooks/useLifeContext';
 
@@ -10,6 +10,8 @@ const AskAI = () => {
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [currentQueryLogs, setCurrentQueryLogs] = useState([]);
+    const [openQueryIndex, setOpenQueryIndex] = useState(null);
 
     const contextData = useLifeContext();
     const messagesEndRef = useRef(null);
@@ -20,7 +22,7 @@ const AskAI = () => {
 
     useEffect(() => {
         if (isOpen) scrollToBottom();
-    }, [messages, isOpen]);
+    }, [messages, isOpen, currentQueryLogs, loading]);
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -30,15 +32,32 @@ const AskAI = () => {
         setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
         setInput('');
         setLoading(true);
+        setCurrentQueryLogs([]);
 
         try {
-            const response = await askAI(userMessage, contextData);
-            setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+            const response = await askAI(userMessage, contextData, (query) => {
+                setCurrentQueryLogs(prev => [...prev, query]);
+            });
+            
+            setMessages(prev => [...prev, { 
+                role: 'assistant', 
+                content: response.content, 
+                queries: response.queries 
+            }]);
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting. Please check your API key." }]);
+            console.error(error);
+            setMessages(prev => [...prev, { 
+                role: 'assistant', 
+                content: "Sorry, I ran into an error executing your request. Please check that your Supabase execute_read_only_query function is created." 
+            }]);
         } finally {
             setLoading(false);
+            setCurrentQueryLogs([]);
         }
+    };
+
+    const toggleQueriesCollapse = (idx) => {
+        setOpenQueryIndex(openQueryIndex === idx ? null : idx);
     };
 
     if (!isOpen) {
@@ -55,7 +74,7 @@ const AskAI = () => {
                     background: 'var(--accent-gradient)',
                     color: '#fff',
                     border: 'none',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                    boxShadow: '0 8px 24px rgba(100, 120, 240, 0.4)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -64,12 +83,12 @@ const AskAI = () => {
                     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 }}
                 onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+                    e.currentTarget.style.transform = 'scale(1.1) translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 12px 30px rgba(100, 120, 240, 0.5)';
                 }}
                 onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
+                    e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(100, 120, 240, 0.4)';
                 }}
             >
                 <MessageCircle size={22} />
@@ -99,7 +118,7 @@ const AskAI = () => {
                 background: 'var(--surface-elevated)',
                 borderRadius: '24px',
                 overflow: 'hidden',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
                 border: '1px solid var(--glass-border)',
             }}>
                 {/* Header */}
@@ -115,7 +134,7 @@ const AskAI = () => {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Bot size={20} />
-                        <h3 style={{ fontSize: '16px', fontWeight: '600' }}>AI Assistant</h3>
+                        <h3 style={{ fontSize: '16px', fontWeight: '600' }}>AI Assistant (SQL Mode)</h3>
                     </div>
                     <button
                         onClick={() => setIsOpen(false)}
@@ -141,8 +160,8 @@ const AskAI = () => {
                     padding: '16px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
-                    background: 'var(--glass-bg)',
+                    gap: '16px',
+                    background: 'var(--bg-solid)',
                 }}>
                     {messages.map((msg, idx) => (
                         <div
@@ -150,35 +169,134 @@ const AskAI = () => {
                             style={{
                                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                                 maxWidth: '85%',
-                                padding: '12px 16px',
-                                borderRadius: '18px',
-                                borderBottomRightRadius: msg.role === 'user' ? '4px' : '18px',
-                                borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '18px',
-                                background: msg.role === 'user'
-                                    ? 'var(--accent-gradient)'
-                                    : 'var(--surface-elevated)',
-                                border: msg.role === 'assistant' ? '1px solid var(--glass-card-border)' : 'none',
-                                color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                                fontSize: '15px',
-                                lineHeight: '1.5',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px'
                             }}
                         >
-                            {msg.content}
+                            <div
+                                style={{
+                                    padding: '12px 16px',
+                                    borderRadius: '18px',
+                                    borderBottomRightRadius: msg.role === 'user' ? '4px' : '18px',
+                                    borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '18px',
+                                    background: msg.role === 'user'
+                                        ? 'var(--accent-gradient)'
+                                        : 'var(--glass-card-bg)',
+                                    border: msg.role === 'assistant' ? '1px solid var(--glass-card-border)' : 'none',
+                                    color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                    fontSize: '14px',
+                                    lineHeight: '1.5',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                {msg.content}
+                            </div>
+                            
+                            {/* COLLAPSIBLE SQL QUERY LOGS */}
+                            {msg.queries && msg.queries.length > 0 && (
+                                <div style={{ alignSelf: 'flex-start', width: '100%' }}>
+                                    <button
+                                        onClick={() => toggleQueriesCollapse(idx)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--accent-primary)',
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            padding: '2px 8px',
+                                            cursor: 'pointer',
+                                            outline: 'none',
+                                        }}
+                                    >
+                                        <Database size={12} />
+                                        <span>Queries Executed ({msg.queries.length})</span>
+                                        {openQueryIndex === idx ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    </button>
+                                    
+                                    {openQueryIndex === idx && (
+                                        <div style={{
+                                            marginTop: '6px',
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(0,0,0,0.04)',
+                                            border: '1px dashed var(--border-subtle)',
+                                            fontFamily: 'monospace',
+                                            fontSize: '11px',
+                                            color: 'var(--text-secondary)',
+                                            textAlign: 'left',
+                                            whiteSpace: 'pre-wrap',
+                                            maxHeight: '150px',
+                                            overflowY: 'auto'
+                                        }}>
+                                            {msg.queries.map((q, qIdx) => (
+                                                <div key={qIdx} style={{ marginBottom: qIdx < msg.queries.length - 1 ? '8px' : 0 }}>
+                                                    <span style={{ color: 'var(--accent-secondary)' }}>Query #{qIdx+1}:</span> {q}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
+                    
+                    {/* Real-time Query Running Log inside Loading state */}
                     {loading && (
                         <div style={{
                             alignSelf: 'flex-start',
-                            background: 'var(--surface-elevated)',
-                            border: '1px solid var(--glass-card-border)',
-                            padding: '12px 16px',
-                            borderRadius: '18px',
-                            borderBottomLeftRadius: '4px',
-                            color: 'var(--text-muted)',
-                            fontSize: '14px',
+                            maxWidth: '85%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
                         }}>
-                            Thinking...
+                            <div style={{
+                                background: 'var(--glass-card-bg)',
+                                border: '1px solid var(--glass-card-border)',
+                                padding: '12px 16px',
+                                borderRadius: '18px',
+                                borderBottomLeftRadius: '4px',
+                                color: 'var(--text-muted)',
+                                fontSize: '13px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <Bot size={16} className="spin" style={{ color: 'var(--accent-primary)' }} />
+                                <span>AI is gathering details...</span>
+                            </div>
+
+                            {currentQueryLogs.length > 0 && (
+                                <div style={{
+                                    alignSelf: 'flex-start',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '6px',
+                                    padding: '10px 12px',
+                                    borderRadius: '12px',
+                                    background: '#1a1b26',
+                                    border: '1px solid #2f344d',
+                                    color: '#73daca',
+                                    fontFamily: 'monospace',
+                                    fontSize: '11px',
+                                    maxWidth: '380px',
+                                    boxShadow: '0 6px 16px rgba(0,0,0,0.1)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#c0caf5', borderBottom: '1px solid #2f344d', paddingBottom: '4px', marginBottom: '4px' }}>
+                                        <Terminal size={12} />
+                                        <span style={{ fontWeight: '600' }}>Active SQL Logs</span>
+                                    </div>
+                                    {currentQueryLogs.map((q, qIdx) => (
+                                        <div key={qIdx} style={{ whiteSpace: 'pre-wrap', color: '#9ece6a' }}>
+                                            <span style={{ color: '#e0af68' }}>&gt;</span> {q}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                     <div ref={messagesEndRef} />
@@ -200,7 +318,7 @@ const AskAI = () => {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask about your budget, tasks, or habits..."
+                        placeholder="Ask SQL Agent anything about your data..."
                         style={{
                             flex: 1,
                             padding: '12px 16px',
@@ -236,6 +354,10 @@ const AskAI = () => {
                     </button>
                 </form>
             </div>
+            <style>{`
+                .spin { animation: spin 2s linear infinite; }
+                @keyframes spin { 100% { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
 };
