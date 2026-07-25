@@ -45,11 +45,11 @@ const ProfileMenu = () => {
             }
             setUpdated(true);
             setTimeout(() => {
-                window.location.href = window.location.href.split('?')[0] + '?_bust=' + Date.now();
+                window.location.reload();
             }, 800);
         } catch (err) {
             console.error('Update error:', err);
-            window.location.reload(true);
+            window.location.reload();
         }
     };
 
