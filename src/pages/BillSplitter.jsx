@@ -230,7 +230,7 @@ const BillSplitter = () => {
                     <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>
                         {restaurantName
                             ? <span style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>{restaurantName}</span>
-                            : 'AI-powered receipt scanner · Llama 4 Scout'
+                            : 'AI-powered receipt scanner · Qwen 3.6 27B'
                         }
                     </p>
                 </div>

@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_NAME = 'openai/gpt-oss-120b';
-const VISION_MODEL_NAME = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const VISION_MODEL_NAME = 'qwen/qwen3.6-27b';
 
 // Database query tool registration
 const SQL_TOOL = {
@@ -258,7 +258,7 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
     }
 }
 
-// 3. Bill Splitting — Direct Vision Parser (Groq Llama 4 Scout)
+// 3. Bill Splitting — Direct Vision Parser (Groq Qwen 3.6 27B)
 export async function parseBillImage(base64ImageDataUrl) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error('VITE_GROQ_API_KEY is missing');
