@@ -206,6 +206,13 @@ function useHabits() {
         return await remove(id);
     };
 
+    // Toggle habit paused status (streak protection)
+    const togglePauseHabit = async (id) => {
+        const habit = habits.find(h => h.id === id);
+        if (!habit) return { error: 'Habit not found' };
+        return await update(id, { is_paused: !habit.is_paused });
+    };
+
     // Mark habits as missed for yesterday if no status was set (only for active days)
     const markMissedHabits = async () => {
         if (!habits || habits.length === 0) return;
@@ -216,6 +223,9 @@ function useHabits() {
         const yesterdayDayOfWeek = yesterday.getDay();
 
         for (const habit of habits) {
+            // Skip paused habits
+            if (habit.is_paused) continue;
+
             const activeDays = habit.active_days || ALL_DAYS;
 
             // Only mark as missed if yesterday was an active day for this habit
@@ -337,6 +347,7 @@ function useHabits() {
         resetHabitStats,
         batchUpdateHabitOrders,
         calculateCheckinStreak,
+        togglePauseHabit,
     };
 }
 

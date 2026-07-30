@@ -200,6 +200,7 @@ const Dashboard = () => {
     const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
     
     const habitsActiveToday = habits.filter(h => {
+        if (h.is_paused) return false;
         const activeDays = h.active_days || ALL_DAYS;
         return activeDays.includes(todayDayOfWeek);
     });

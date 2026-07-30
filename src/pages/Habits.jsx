@@ -31,6 +31,7 @@ const Habits = () => {
         resetHabitStats,
         batchUpdateHabitOrders,
         calculateCheckinStreak,
+        togglePauseHabit,
     } = useHabits();
 
     const [showForm, setShowForm] = useState(false);
@@ -42,6 +43,7 @@ const Habits = () => {
     const [showReorder, setShowReorder] = useState(false);
     const [showCompleted, setShowCompleted] = useState(false);
     const [showRest, setShowRest] = useState(false);
+    const [showPaused, setShowPaused] = useState(true);
     const [celebratingId, setCelebratingId] = useState(null);
     const [completedPulse, setCompletedPulse] = useState(false);
     const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -119,7 +121,10 @@ const Habits = () => {
             const status = getStatusForDate(habit, dateStr);
             if (status === 'completed') streak++;
             else if (status === 'failed') break;
-            else if (i > 0) break;
+            else if (i > 0) {
+                if (habit.is_paused) continue;
+                break;
+            }
         }
         return streak;
     };
@@ -486,11 +491,12 @@ const Habits = () => {
                 </motion.div>
             )}
 
-            {/* Habit Cards — split into pending, completed, and rest */}
+            {/* Habit Cards — split into pending, completed, rest, and paused */}
             {(() => {
-                const activeHabits    = sortedHabits.filter(h => isDateActive(h) && (getDateStatus(h) !== 'completed' || h.id === celebratingId));
-                const completedHabits = sortedHabits.filter(h => isDateActive(h) && getDateStatus(h) === 'completed' && h.id !== celebratingId);
-                const restHabits      = sortedHabits.filter(h => !isDateActive(h));
+                const activeHabits    = sortedHabits.filter(h => !h.is_paused && isDateActive(h) && (getDateStatus(h) !== 'completed' || h.id === celebratingId));
+                const completedHabits = sortedHabits.filter(h => !h.is_paused && isDateActive(h) && getDateStatus(h) === 'completed' && h.id !== celebratingId);
+                const restHabits      = sortedHabits.filter(h => !h.is_paused && !isDateActive(h));
+                const pausedHabits    = sortedHabits.filter(h => h.is_paused);
 
                 const renderCard = (habit, index) => (
                     <HabitCard
@@ -505,12 +511,13 @@ const Habits = () => {
                         getStatusForDate={getStatusForDate}
                         onToggle={handleToggle}
                         onSelectHabit={setSelectedHabitId}
+                        onTogglePause={togglePauseHabit}
                         isCelebrating={habit.id === celebratingId}
                     />
                 );
 
-                const collapsibleSection = (habits, show, setShow, label, icon, color, bgColor, pulse = false) =>
-                    habits.length > 0 && (
+                const collapsibleSection = (habitsList, show, setShow, label, icon, color, bgColor, pulse = false, dim = true) =>
+                    habitsList.length > 0 && (
                         <div style={{ marginTop: 4 }}>
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
@@ -529,7 +536,7 @@ const Habits = () => {
                             >
                                 <span style={{ fontSize: 13 }}>{icon}</span>
                                 <span style={{ fontSize: 13, fontWeight: 700, color, flex: 1, textAlign: 'left' }}>
-                                    {habits.length} {label}
+                                    {habitsList.length} {label}
                                 </span>
                                 <motion.span
                                     animate={{ rotate: show ? 180 : 0 }}
@@ -546,8 +553,8 @@ const Habits = () => {
                                         transition={{ duration: 0.25, ease: 'easeInOut' }}
                                         style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12 }}
                                     >
-                                        {habits.map((habit, i) => (
-                                            <div key={habit.id} style={{ opacity: 0.55, filter: 'saturate(0.4)' }}>
+                                        {habitsList.map((habit, i) => (
+                                            <div key={habit.id} style={dim ? { opacity: 0.85 } : {}}>
                                                 {renderCard(habit, activeHabits.length + i)}
                                             </div>
                                         ))}
@@ -559,6 +566,7 @@ const Habits = () => {
 
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 2 }}>
+                        {collapsibleSection(pausedHabits, showPaused, setShowPaused, 'Paused (Streak Preserved)', '⏸️', '#eab308', 'rgba(234,179,8,0.08)', false, false)}
                         {collapsibleSection(completedHabits, showCompleted, setShowCompleted, 'Completed', '✓', '#22c55e', 'rgba(34,197,94,0.06)', completedPulse)}
                         {collapsibleSection(restHabits, showRest, setShowRest, 'Rest Day', '💤', '#64748b', 'rgba(100,116,139,0.06)')}
                         <AnimatePresence mode="popLayout">
@@ -603,6 +611,7 @@ const Habits = () => {
                         onDelete={deleteHabitDb}
                         onSaveEditDays={updateHabitDays}
                         onTimeOfDayChange={updateHabitTimeOfDay}
+                        onTogglePause={togglePauseHabit}
                         onCalendarClick={(id, dateStr) => {
                             const habit = habits.find((h) => h.id === id);
                             const current = getStatusForDate(habit, dateStr);

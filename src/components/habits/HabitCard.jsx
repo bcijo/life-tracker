@@ -1,6 +1,6 @@
 import { motion, useAnimation } from 'framer-motion';
 import { useEffect } from 'react';
-import { Flame } from 'lucide-react';
+import { Flame, Play, PauseCircle } from 'lucide-react';
 import { AuraSpringToggle } from './AuraSpringToggle';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -16,10 +16,11 @@ export function HabitCard({
   getStatusForDate,
   onToggle,
   onSelectHabit,
+  onTogglePause,
   isCelebrating = false,
 }) {
   const timeOfDay = habit.time_of_day || 'morning';
-  const accentColor = timeOfDay === 'morning' ? '#f59e0b' : '#a855f7';
+  const accentColor = habit.is_paused ? '#eab308' : (timeOfDay === 'morning' ? '#f59e0b' : '#a855f7');
 
   const glowControls = useAnimation();
 
@@ -68,6 +69,7 @@ export function HabitCard({
           borderRadius: 20,
           position: 'relative',
           border: `1px solid rgba(255,255,255,0.06)`,
+          opacity: habit.is_paused ? 0.75 : 1,
         }}
       >
         {/* Left accent bar */}
@@ -76,7 +78,9 @@ export function HabitCard({
             position: 'absolute',
             left: 0, top: 16, bottom: 16,
             width: 3, borderRadius: 9999,
-            background: `linear-gradient(180deg, ${accentColor}, ${accentColor}40)`,
+            background: habit.is_paused
+              ? 'linear-gradient(180deg, #eab308, rgba(234,179,8,0.3))'
+              : `linear-gradient(180deg, ${accentColor}, ${accentColor}40)`,
           }}
         />
 
@@ -96,7 +100,14 @@ export function HabitCard({
                 >
                   {timeOfDay === 'morning' ? '☀️ Morning' : '🌙 Evening'}
                 </span>
-                {streak >= 3 && (
+
+                {habit.is_paused && (
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 9999, background: 'rgba(234,179,8,0.18)', color: '#eab308', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <PauseCircle size={10} /> Paused
+                  </span>
+                )}
+
+                {streak >= 3 && !habit.is_paused && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, fontWeight: 600, color: '#f59e0b' }}>
                     <Flame size={10} />
                     {streak}
@@ -113,19 +124,36 @@ export function HabitCard({
               </h3>
 
               {/* Success rate */}
-              {successRate !== null && (
-                <span style={{
-                  fontSize: 10, color: 'rgba(255,255,255,0.28)',
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}>
-                  {successRate}% success · {streak} day streak
-                </span>
-              )}
+              <span style={{
+                fontSize: 10, color: 'rgba(255,255,255,0.28)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}>
+                {habit.is_paused
+                  ? `Streak protected · ${streak} d`
+                  : successRate !== null ? `${successRate}% success · ${streak} day streak` : `${streak} day streak`
+                }
+              </span>
             </div>
 
             {/* Right controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              {isActiveToday ? (
+              {habit.is_paused ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onTogglePause) onTogglePause(habit.id);
+                  }}
+                  style={{
+                    padding: '6px 12px', borderRadius: 9999,
+                    background: 'rgba(234,179,8,0.15)',
+                    border: '1px solid rgba(234,179,8,0.3)',
+                    color: '#eab308', fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <Play size={12} fill="#eab308" /> Resume
+                </button>
+              ) : isActiveToday ? (
                 <div onClick={(e) => e.stopPropagation()}>
                   <AuraSpringToggle status={todayStatus} onToggle={(newStatus) => onToggle(habit.id, newStatus)} />
                 </div>

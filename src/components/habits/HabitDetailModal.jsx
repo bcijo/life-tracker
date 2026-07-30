@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { Flame, Trash2, Edit2, ChevronLeft, Trophy, Target, TrendingUp } from 'lucide-react';
+import { Flame, Trash2, Edit2, ChevronLeft, Trophy, Target, TrendingUp, PauseCircle, Play } from 'lucide-react';
 import { AuraSpringToggle } from './AuraSpringToggle';
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isFuture, isToday, subDays } from 'date-fns';
 
@@ -44,6 +44,7 @@ export function HabitDetailModal({
   onSaveEditDays,
   onTimeOfDayChange,
   onCalendarClick,
+  onTogglePause,
   onClose,
 }) {
   const [editingDays, setEditingDays] = useState(false);
@@ -243,6 +244,24 @@ export function HabitDetailModal({
           <button onClick={handleTimeToggle} style={rowBtn}>
             <span style={iconBox}>{timeOfDay === 'morning' ? '🌙' : '☀️'}</span>
             Switch to {timeOfDay === 'morning' ? 'Evening' : 'Morning'}
+          </button>
+
+          {/* Pause / Resume Habit toggle */}
+          <button
+            onClick={async () => {
+              if (onTogglePause) await onTogglePause(habit.id);
+            }}
+            style={{
+              ...rowBtn,
+              background: habit.is_paused ? 'rgba(234,179,8,0.12)' : 'rgba(255,255,255,0.03)',
+              border: habit.is_paused ? '1px solid rgba(234,179,8,0.3)' : 'none',
+              color: habit.is_paused ? '#eab308' : '#fff',
+            }}
+          >
+            <span style={{ ...iconBox, background: habit.is_paused ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.06)' }}>
+              {habit.is_paused ? <Play size={15} color="#eab308" /> : <PauseCircle size={15} color="rgba(255,255,255,0.7)" />}
+            </span>
+            {habit.is_paused ? 'Resume Habit (Active)' : 'Pause Habit (Freeze Streak)'}
           </button>
 
           {/* Edit active days */}
