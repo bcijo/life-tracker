@@ -406,124 +406,127 @@ const Dashboard = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Glassmorphic Daily Overview */}
-                <div className="glass-card glow-cyan" style={{ padding: '20px', marginBottom: '20px', borderLeft: '4px solid var(--accent-primary)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Zap size={16} style={{ color: 'var(--accent-primary)' }} />
-                            Daily Status
-                        </h3>
-                        <span style={{ fontSize: '11px', background: 'var(--success-bg)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
-                            Keep it up!
-                        </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '16px' }}>
-                        {/* Habits Link */}
-                        <Link to="/habits" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
-                            <motion.div
-                                whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(168, 85, 247, 0.2)' }}
-                                whileTap={{ scale: 0.96 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                                style={{
-                                    background: 'var(--glass-bg)',
-                                    padding: '14px 12px',
-                                    borderRadius: '14px',
-                                    textAlign: 'center',
-                                    border: '1px solid var(--glass-border)',
-                                    cursor: 'pointer',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
-                                    <ArrowUpRight size={14} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
-                                </div>
-                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Habits Completed</p>
-                            </motion.div>
-                        </Link>
-
-                        {/* Tasks Link */}
-                        <Link to="/todos" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
-                            <motion.div
-                                whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)' }}
-                                whileTap={{ scale: 0.96 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                                style={{
-                                    background: 'var(--glass-bg)',
-                                    padding: '14px 12px',
-                                    borderRadius: '14px',
-                                    textAlign: 'center',
-                                    border: '1px solid var(--glass-border)',
-                                    cursor: 'pointer',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{activeTodos}</span>
-                                    <ArrowUpRight size={14} style={{ color: 'var(--accent-secondary)', opacity: 0.8 }} />
-                                </div>
-                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Tasks Remaining</p>
-                            </motion.div>
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Highly Customized Recharts Area Chart for 7-day Spending */}
-                <div className="glass-card" style={{ padding: '20px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <TrendingUp size={16} style={{ color: 'var(--success)' }} />
-                            Spending Trend (7d)
-                        </h3>
-                        <Link to="/finances" style={{ fontSize: '12px', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            View All <ArrowUpRight size={14} />
-                        </Link>
-                    </div>
-
-                    <div style={{ width: '100%', height: 160 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.4}/>
-                                        <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0.0}/>
-                                    </linearGradient>
-                                </defs>
-                                <XAxis 
-                                    dataKey="name" 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                />
-                                <YAxis 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                />
-                                <Tooltip 
-                                    contentStyle={{ 
-                                        background: 'var(--surface-elevated)', 
-                                        border: '1px solid var(--glass-card-border)', 
-                                        borderRadius: '12px',
-                                        fontSize: '12px',
-                                        color: 'var(--text-primary)',
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+                {/* Dashboard Widgets Responsive Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                    {/* Glassmorphic Daily Overview */}
+                    <div className="glass-card glow-cyan" style={{ padding: '20px', borderLeft: '4px solid var(--accent-primary)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Zap size={16} style={{ color: 'var(--accent-primary)' }} />
+                                Daily Status
+                            </h3>
+                            <span style={{ fontSize: '11px', background: 'var(--success-bg)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                                Keep it up!
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            {/* Habits Link */}
+                            <Link to="/habits" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
+                                <motion.div
+                                    whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(168, 85, 247, 0.2)' }}
+                                    whileTap={{ scale: 0.96 }}
+                                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                    style={{
+                                        background: 'var(--glass-bg)',
+                                        padding: '14px 12px',
+                                        borderRadius: '14px',
+                                        textAlign: 'center',
+                                        border: '1px solid var(--glass-border)',
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        overflow: 'hidden',
                                     }}
-                                    itemStyle={{ color: 'var(--accent-primary)' }}
-                                    labelStyle={{ fontWeight: 'bold' }}
-                                />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="amount" 
-                                    stroke="var(--accent-primary)" 
-                                    strokeWidth={3}
-                                    fillOpacity={1} 
-                                    fill="url(#colorAmount)" 
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                        <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
+                                        <ArrowUpRight size={14} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
+                                    </div>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Habits Completed</p>
+                                </motion.div>
+                            </Link>
+
+                            {/* Tasks Link */}
+                            <Link to="/todos" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
+                                <motion.div
+                                    whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)' }}
+                                    whileTap={{ scale: 0.96 }}
+                                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                    style={{
+                                        background: 'var(--glass-bg)',
+                                        padding: '14px 12px',
+                                        borderRadius: '14px',
+                                        textAlign: 'center',
+                                        border: '1px solid var(--glass-border)',
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                        <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{activeTodos}</span>
+                                        <ArrowUpRight size={14} style={{ color: 'var(--accent-secondary)', opacity: 0.8 }} />
+                                    </div>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Tasks Remaining</p>
+                                </motion.div>
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Highly Customized Recharts Area Chart for 7-day Spending */}
+                    <div className="glass-card" style={{ padding: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <TrendingUp size={16} style={{ color: 'var(--success)' }} />
+                                Spending Trend (7d)
+                            </h3>
+                            <Link to="/finances" style={{ fontSize: '12px', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                View All <ArrowUpRight size={14} />
+                            </Link>
+                        </div>
+
+                        <div style={{ width: '100%', height: 160 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.4}/>
+                                            <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0.0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis 
+                                        dataKey="name" 
+                                        tickLine={false} 
+                                        axisLine={false}
+                                        tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                    />
+                                    <YAxis 
+                                        tickLine={false} 
+                                        axisLine={false}
+                                        tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                    />
+                                    <Tooltip 
+                                        contentStyle={{ 
+                                            background: 'var(--surface-elevated)', 
+                                            border: '1px solid var(--glass-card-border)', 
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            color: 'var(--text-primary)',
+                                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+                                        }}
+                                        itemStyle={{ color: 'var(--accent-primary)' }}
+                                        labelStyle={{ fontWeight: 'bold' }}
+                                    />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="amount" 
+                                        stroke="var(--accent-primary)" 
+                                        strokeWidth={3}
+                                        fillOpacity={1} 
+                                        fill="url(#colorAmount)" 
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
 

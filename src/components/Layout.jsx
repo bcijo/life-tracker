@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, ShoppingCart, CreditCard, Activity, Wallet } from 'lucide-react';
+import { Home, CheckSquare, Activity, Wallet, Scissors } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
 import AskAI from './AskAI';
@@ -10,71 +10,184 @@ const Layout = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  return (
-    <div className="app-container">
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '12px 20px',
-        borderBottom: '1px solid var(--glass-border)',
-        background: 'var(--header-bg)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        transition: 'background 0.3s ease',
-      }}>
-        <div className="accent-gradient-text" style={{
-          fontWeight: '700',
-          fontSize: '20px',
-          letterSpacing: '-0.5px'
-        }}>
-          LifeTracker
-        </div>
-        <ProfileMenu />
-      </header>
-      <main style={{
-        flex: 1,
-        padding: '20px',
-        overflowY: 'auto',
-        paddingBottom: '80px',
-      }}>
-        <Outlet />
-      </main>
+  const navItems = [
+    { to: '/', label: 'Home', icon: Home },
+    { to: '/todos', label: 'Todos', icon: CheckSquare },
+    { to: '/habits', label: 'Habits', icon: Activity },
+    { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
+    { to: '/split-bill', label: 'Split Bill', icon: Scissors },
+  ];
 
+  return (
+    <div className="app-container" style={{ display: 'flex', flexDirection: 'row', minHeight: '100vh' }}>
+      {/* Desktop Navigation Sidebar (visible >= 768px) */}
+      <aside className="desktop-sidebar glass-panel">
+        <div style={{ padding: '24px 20px 16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="accent-gradient-text" style={{ fontWeight: '800', fontSize: '22px', letterSpacing: '-0.5px' }}>
+            LifeTracker
+          </div>
+        </div>
+
+        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.matchPrefix 
+              ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
+              : location.pathname === item.to;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <Icon size={20} />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer with Profile & AI */}
+        <div style={{ padding: '16px 12px', borderTop: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <ProfileMenu />
+        </div>
+      </aside>
+
+      {/* Main Layout Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Mobile Header (visible < 768px) */}
+        <header className="mobile-header">
+          <div className="accent-gradient-text" style={{ fontWeight: '700', fontSize: '20px', letterSpacing: '-0.5px' }}>
+            LifeTracker
+          </div>
+          <ProfileMenu />
+        </header>
+
+        {/* Main Content Viewport */}
+        <main className="main-content-area">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Mobile Bottom Navigation (visible < 768px) */}
       <nav className="bottom-nav glass-panel">
-        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Home size={24} />
-          <span>Home</span>
-        </NavLink>
-        <NavLink to="/todos" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <CheckSquare size={24} />
-          <span>Todos</span>
-        </NavLink>
-        <NavLink to="/habits" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Activity size={24} />
-          <span>Habits</span>
-        </NavLink>
-        <NavLink to="/finances" className={({ isActive }) => `nav-item ${isActive || location.pathname.startsWith('/finances') ? 'active' : ''}`}>
-          <Wallet size={24} />
-          <span>Finances</span>
-        </NavLink>
+        {navItems.slice(0, 4).map((item) => {
+          const Icon = item.icon;
+          const isActive = item.matchPrefix 
+            ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
+            : location.pathname === item.to;
+
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={`nav-item ${isActive ? 'active' : ''}`}
+            >
+              <Icon size={22} />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
       <AskAI />
+
       <style>{`
+        /* Desktop Sidebar Navigation */
+        .desktop-sidebar {
+          width: 240px;
+          position: fixed;
+          top: 16px;
+          bottom: 16px;
+          left: 16px;
+          display: flex;
+          flex-direction: column;
+          z-index: 100;
+          border-radius: 20px;
+        }
+
+        .sidebar-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: var(--text-secondary);
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+        }
+
+        .sidebar-nav-item:hover {
+          background: var(--glass-card-bg);
+          color: var(--text-primary);
+        }
+
+        .sidebar-nav-item.active {
+          background: var(--accent-gradient);
+          color: #fff;
+          box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+        }
+
+        .main-content-area {
+          flex: 1;
+          padding: 24px;
+          overflow-y: auto;
+        }
+
+        /* Mobile Header */
+        .mobile-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 20px;
+          border-bottom: 1px solid var(--glass-border);
+          background: var(--header-bg);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          position: sticky;
+          top: 0;
+          z-index: 90;
+        }
+
+        /* Responsive Breakpoint Switch */
+        @media (min-width: 768px) {
+          .mobile-header {
+            display: none !important;
+          }
+          .bottom-nav {
+            display: none !important;
+          }
+          .main-content-area {
+            margin-left: 260px;
+            padding: 32px 40px;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .desktop-sidebar {
+            display: none !important;
+          }
+          .main-content-area {
+            margin-left: 0;
+            padding: 16px;
+            padding-bottom: 90px;
+          }
+        }
+
+        /* Bottom Nav Mobile */
         .bottom-nav {
           position: fixed;
-          bottom: 20px;
+          bottom: 16px;
           left: 50%;
           transform: translateX(-50%);
-          width: calc(100% - 40px);
+          width: calc(100% - 32px);
           max-width: 440px;
           display: flex;
           justify-content: space-around;
-          padding: 12px 16px;
+          padding: 10px 16px;
           z-index: 100;
         }
         
@@ -97,7 +210,7 @@ const Layout = () => {
         }
         
         .nav-item svg {
-          stroke-width: 2.5px;
+          stroke-width: 2.2px;
         }
       `}</style>
     </div>
