@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { parseBillImage } from '../lib/groq';
-import { ArrowLeft, Upload, Users, Share2, Plus, Trash2, CheckCircle, Receipt, Camera, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Upload, Users, Share2, Plus, Trash2, CheckCircle, Receipt, Camera, Copy, Check, ChevronDown, ChevronUp, FilePlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ const BillSplitter = () => {
     const [imagePreview, setImagePreview] = useState(null);
     const [loadingState, setLoadingState] = useState('idle');
     const [error, setError] = useState(null);
+    const [isManualMode, setIsManualMode] = useState(false);
 
     const [items, setItems] = useState([]);
     const [charges, setCharges] = useState([]);
@@ -72,6 +73,21 @@ const BillSplitter = () => {
         reader.readAsDataURL(file);
     };
 
+    // ── Manual Split Initialization ────────────────────────────────────────
+    const startManualSplit = () => {
+        setIsManualMode(true);
+        if (items.length === 0) {
+            setItems([{
+                id: uid(),
+                name: 'Item 1',
+                quantity: 1,
+                unit_price: 0,
+                total_price: 0,
+                activeParticipants: ['Me'],
+            }]);
+        }
+    };
+
     // ── Participants ───────────────────────────────────────────────────────
     const addParticipant = (e) => {
         e.preventDefault();
@@ -124,7 +140,7 @@ const BillSplitter = () => {
     };
 
     const manualAddItem = () => {
-        setItems([...items, { id: uid(), name: 'New Item', quantity: 1, unit_price: 0, total_price: 0, activeParticipants: [] }]);
+        setItems([...items, { id: uid(), name: `Item ${items.length + 1}`, quantity: 1, unit_price: 0, total_price: 0, activeParticipants: ['Me'] }]);
     };
 
     const updateCharge = (id, field, value) => setCharges(charges.map(c => c.id === id ? { ...c, [field]: value } : c));
@@ -211,9 +227,10 @@ const BillSplitter = () => {
         setRestaurantName('');
         setParticipants(['Me']);
         setError(null);
+        setIsManualMode(false);
     };
 
-    const isReady = items.length > 0;
+    const isReady = items.length > 0 || isManualMode;
     const { totals, grandTotal, personItems, chargePerPerson, discountPerPerson, totalCharges, totalDiscounts } = isReady ? calculate() : {};
 
     // ─── Render ────────────────────────────────────────────────────────────
@@ -230,7 +247,7 @@ const BillSplitter = () => {
                     <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>
                         {restaurantName
                             ? <span style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>{restaurantName}</span>
-                            : 'AI-powered receipt scanner · Qwen 3.6 27B'
+                            : 'Receipt Scanner & Manual Bill Splitter'
                         }
                     </p>
                 </div>
@@ -241,45 +258,84 @@ const BillSplitter = () => {
                 )}
             </header>
 
-            {/* ── Upload: two buttons ── */}
-            {!imagePreview && (
-                <div style={{
-                    marginBottom: '24px',
-                    border: '2px dashed var(--accent-primary)',
-                    borderRadius: '20px',
-                    background: 'var(--glass-card-bg)',
-                    padding: '28px 20px',
-                    textAlign: 'center',
-                }}>
-                    <Receipt size={36} style={{ color: 'var(--accent-primary)', opacity: 0.7, marginBottom: '10px' }} />
-                    <h3 style={{ margin: '0 0 6px', color: 'var(--accent-primary)', fontWeight: 700 }}>Scan your receipt</h3>
-                    <p style={{ fontSize: '13px', opacity: 0.6, margin: '0 0 20px', lineHeight: 1.5 }}>
-                        AI reads items, prices, charges &amp; discounts automatically.
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            {/* ── Landing Choices (When no active bill yet) ── */}
+            {!isReady && !imagePreview && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                    {/* Option 1: AI Scan */}
+                    <div style={{
+                        border: '2px dashed var(--accent-primary)',
+                        borderRadius: '20px',
+                        background: 'var(--glass-card-bg)',
+                        padding: '24px 20px',
+                        textAlign: 'center',
+                    }}>
+                        <Receipt size={36} style={{ color: 'var(--accent-primary)', opacity: 0.7, marginBottom: '10px' }} />
+                        <h3 style={{ margin: '0 0 6px', color: 'var(--accent-primary)', fontWeight: 700 }}>Scan your receipt</h3>
+                        <p style={{ fontSize: '13px', opacity: 0.6, margin: '0 0 18px', lineHeight: 1.5 }}>
+                            AI reads items, prices, charges &amp; discounts automatically.
+                        </p>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => cameraInputRef.current.click()}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '11px 20px', borderRadius: '12px', border: 'none',
+                                    background: 'var(--accent-gradient)', color: 'white',
+                                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                                }}
+                            >
+                                <Camera size={18} /> Take Photo
+                            </button>
+                            <button
+                                onClick={() => fileInputRef.current.click()}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '11px 20px', borderRadius: '12px',
+                                    border: '1.5px solid var(--glass-card-border)',
+                                    background: 'var(--glass-card-bg)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                                }}
+                            >
+                                <Upload size={18} /> Upload
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: 0.5, margin: '4px 0' }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-card-border)' }} />
+                        <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>OR</span>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--glass-card-border)' }} />
+                    </div>
+
+                    {/* Option 2: Start Manual Split */}
+                    <div style={{
+                        border: '1px solid var(--glass-card-border)',
+                        borderRadius: '20px',
+                        background: 'var(--glass-card-bg)',
+                        padding: '22px 20px',
+                        textAlign: 'center',
+                    }}>
+                        <FilePlus size={32} style={{ color: 'var(--text-primary)', opacity: 0.8, marginBottom: '8px' }} />
+                        <h3 style={{ margin: '0 0 6px', fontWeight: 700 }}>Start without photo</h3>
+                        <p style={{ fontSize: '13px', opacity: 0.6, margin: '0 0 16px', lineHeight: 1.5 }}>
+                            Enter items, prices, and split with friends manually.
+                        </p>
                         <button
-                            onClick={() => cameraInputRef.current.click()}
+                            onClick={startManualSplit}
                             style={{
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                padding: '11px 20px', borderRadius: '12px', border: 'none',
-                                background: 'var(--accent-gradient)', color: 'white',
-                                fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-                            }}
-                        >
-                            <Camera size={18} /> Take Photo
-                        </button>
-                        <button
-                            onClick={() => fileInputRef.current.click()}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                padding: '11px 20px', borderRadius: '12px',
+                                width: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                padding: '12px 20px', borderRadius: '12px',
                                 border: '1.5px solid var(--glass-card-border)',
-                                background: 'var(--glass-card-bg)',
+                                background: 'var(--surface-input)',
                                 color: 'var(--text-primary)',
                                 fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                                transition: 'all 0.2s',
                             }}
                         >
-                            <Upload size={18} /> Upload
+                            <Plus size={18} /> Start Manual Split
                         </button>
                     </div>
                 </div>
@@ -324,6 +380,20 @@ const BillSplitter = () => {
 
             {isReady && (
                 <>
+                    {/* ╔══════════════════════════╗ */}
+                    {/* ║  BILL TITLE              ║ */}
+                    {/* ╚══════════════════════════╝ */}
+                    <Section title="📝 Bill / Restaurant Title" style={{ marginBottom: '16px' }}>
+                        <input
+                            type="text"
+                            className="styled-input"
+                            value={restaurantName}
+                            onChange={e => setRestaurantName(e.target.value)}
+                            placeholder="e.g., Friday Dinner, Groceries, Beach Party..."
+                            style={{ width: '100%', fontSize: '14px', fontWeight: 500 }}
+                        />
+                    </Section>
+
                     {/* ╔══════════════════════════╗ */}
                     {/* ║  PARTICIPANTS            ║ */}
                     {/* ╚══════════════════════════╝ */}
