@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
@@ -39,6 +40,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
+            <Analytics />
         </AuthProvider>
         </ThemeProvider>
     )
