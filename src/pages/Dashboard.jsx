@@ -12,22 +12,28 @@ import useLifeContext from '../hooks/useLifeContext';
 import { generateReport } from '../lib/groq';
 import AIReportCard from '../components/AIReportCard';
 import WeeklyReportModal from '../components/WeeklyReportModal';
-import JournalCard from '../components/JournalCard';
+import { JournalModal } from '../components/JournalModal';
 import { supabase } from '../lib/supabase';
 import { 
     Sparkles, 
     TrendingUp, 
     CheckSquare, 
     Activity, 
-    ShoppingCart, 
     ArrowUpRight, 
-    RefreshCw, 
     Zap,
     Calendar,
     Plus,
-    Wallet
+    BookOpen
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+const getUserDisplayName = (profile) => {
+    if (!profile) return '';
+    let rawName = profile.display_name || (profile.email ? profile.email.split('@')[0] : '');
+    if (!rawName) return '';
+    const words = rawName.replace(/[._]/g, ' ').split(' ').filter(Boolean);
+    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+};
 
 const Dashboard = () => {
     const { todos, addTodo } = useTodos();
@@ -43,6 +49,7 @@ const Dashboard = () => {
     const [reportLoading, setReportLoading] = useState(false);
     const [acceptingId, setAcceptingId] = useState(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
 
     // Fetch weekly report (only on Sundays)
     const isSunday = new Date().getDay() === 0;
@@ -268,31 +275,33 @@ const Dashboard = () => {
                             {dateFormatted}
                         </p>
                         <h1 style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>
-                            Hello, <span className="accent-gradient-text">{profile?.display_name || 'there'}</span>
+                            Hello, <span className="accent-gradient-text">{getUserDisplayName(profile) || 'Abhin'}</span>
                         </h1>
                     </div>
                     
-                    {/* Manual report voluntary generator trigger */}
-                    <button
-                        onClick={handleForceGenerateReport}
-                        disabled={reportLoading}
+                    {/* Top Right Journal Trigger Button */}
+                    <motion.button
+                        whileHover={{ scale: 1.05, boxShadow: '0 6px 20px rgba(168, 85, 247, 0.25)' }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setIsJournalModalOpen(true)}
                         style={{
                             background: 'var(--glass-card-bg)',
                             border: '1px solid var(--glass-card-border)',
                             color: 'var(--text-primary)',
-                            padding: '10px',
-                            borderRadius: '50%',
+                            padding: '8px 14px',
+                            borderRadius: '16px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                            transition: 'all 0.3s ease'
+                            gap: '8px',
+                            boxShadow: '0 4px 14px rgba(168, 85, 247, 0.15)',
+                            backdropFilter: 'blur(12px)',
+                            transition: 'all 0.2s ease',
                         }}
-                        title="Regenerate Weekly AI Report"
                     >
-                        <RefreshCw size={18} className={reportLoading ? 'spin' : ''} style={{ color: 'var(--accent-primary)' }} />
-                    </button>
+                        <BookOpen size={17} style={{ color: 'var(--accent-primary)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: '600' }}>Journal</span>
+                    </motion.button>
                 </header>
 
                 {/* Sunday Weekly Insights Banner Card */}
@@ -409,14 +418,55 @@ const Dashboard = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '16px' }}>
-                        <div style={{ flex: 1, background: 'var(--glass-bg)', padding: '12px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--glass-border)' }}>
-                            <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
-                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Habits Completed</p>
-                        </div>
-                        <div style={{ flex: 1, background: 'var(--glass-bg)', padding: '12px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--glass-border)' }}>
-                            <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{activeTodos}</span>
-                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Tasks Remaining</p>
-                        </div>
+                        {/* Habits Link */}
+                        <Link to="/habits" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
+                            <motion.div
+                                whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(168, 85, 247, 0.2)' }}
+                                whileTap={{ scale: 0.96 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                style={{
+                                    background: 'var(--glass-bg)',
+                                    padding: '14px 12px',
+                                    borderRadius: '14px',
+                                    textAlign: 'center',
+                                    border: '1px solid var(--glass-border)',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
+                                    <ArrowUpRight size={14} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
+                                </div>
+                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Habits Completed</p>
+                            </motion.div>
+                        </Link>
+
+                        {/* Tasks Link */}
+                        <Link to="/todos" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
+                            <motion.div
+                                whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)' }}
+                                whileTap={{ scale: 0.96 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                style={{
+                                    background: 'var(--glass-bg)',
+                                    padding: '14px 12px',
+                                    borderRadius: '14px',
+                                    textAlign: 'center',
+                                    border: '1px solid var(--glass-border)',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{activeTodos}</span>
+                                    <ArrowUpRight size={14} style={{ color: 'var(--accent-secondary)', opacity: 0.8 }} />
+                                </div>
+                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Tasks Remaining</p>
+                            </motion.div>
+                        </Link>
                     </div>
                 </div>
 
@@ -477,33 +527,6 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Daily Mindset / Journal */}
-                <div style={{ marginBottom: '20px' }}>
-                    <JournalCard />
-                </div>
-
-                {/* Bottom Quick Navigation Widgets */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                    <Link to="/finances" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div className="glass-card hover-lift" style={{ padding: '18px', height: '110px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                            <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>₹{todayExpense.toFixed(0)}</span>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Wallet size={12} />
-                                Spent Today
-                            </p>
-                        </div>
-                    </Link>
-                    <Link to="/finances/shopping" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div className="glass-card hover-lift" style={{ padding: '18px', height: '110px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                            <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-secondary)' }}>{shoppingCount}</span>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <ShoppingCart size={12} />
-                                Items to Buy
-                            </p>
-                        </div>
-                    </Link>
-                </div>
-
                 {/* Floating Quick Action split bill */}
                 <div style={{ marginTop: '16px' }}>
                     <Link to="/split-bill" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -521,6 +544,7 @@ const Dashboard = () => {
                         </div>
                     </Link>
                 </div>
+
                 {/* Weekly Report Full-Page Modal Overlay */}
                 <WeeklyReportModal
                     isOpen={isReportModalOpen}
@@ -530,6 +554,12 @@ const Dashboard = () => {
                     onAcceptCommitment={handleAcceptCommitment}
                     acceptingId={acceptingId}
                     onForceGenerate={handleForceGenerateReport}
+                />
+
+                {/* Daily Journal Modal */}
+                <JournalModal
+                    isOpen={isJournalModalOpen}
+                    onClose={() => setIsJournalModalOpen(false)}
                 />
             </div>
             
