@@ -11,6 +11,7 @@ import { isToday, parseISO, startOfWeek, endOfWeek, format, subDays } from 'date
 import useLifeContext from '../hooks/useLifeContext';
 import { generateReport } from '../lib/groq';
 import AIReportCard from '../components/AIReportCard';
+import WeeklyReportModal from '../components/WeeklyReportModal';
 import JournalCard from '../components/JournalCard';
 import { supabase } from '../lib/supabase';
 import { 
@@ -41,10 +42,18 @@ const Dashboard = () => {
     const [report, setReport] = useState(null);
     const [reportLoading, setReportLoading] = useState(false);
     const [acceptingId, setAcceptingId] = useState(null);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-    // Fetch weekly report (either existing from DB or generate if Sunday and none exists)
+    // Fetch weekly report (only on Sundays)
+    const isSunday = new Date().getDay() === 0;
+
     useEffect(() => {
         const fetchOrGenerateReport = async () => {
+            if (!isSunday) {
+                setReport(null);
+                return;
+            }
+
             try {
                 setReportLoading(true);
                 const { data: { user } } = await supabase.auth.getUser();
@@ -64,9 +73,9 @@ const Dashboard = () => {
 
                 if (existing) {
                     setReport(existing.content);
-                } else if (new Date().getDay() === 0) {
+                } else {
                     // Only auto-generate on Sundays if no report exists
-                    console.log("Generating new weekly report...");
+                    console.log("Generating new weekly report for Sunday...");
                     const newReport = await generateReport('weekly', start, end, contextData);
 
                     if (newReport) {
@@ -90,7 +99,7 @@ const Dashboard = () => {
         // Delay slightly to ensure contextData is populated
         const timer = setTimeout(fetchOrGenerateReport, 1500);
         return () => clearTimeout(timer);
-    }, [contextData.financial.totalBalance]); // Depend on balanced state
+    }, [contextData.financial.totalBalance, isSunday]); // Depend on balanced state
 
     // On-demand manual report regeneration
     const handleForceGenerateReport = async () => {
@@ -285,21 +294,104 @@ const Dashboard = () => {
                     </button>
                 </header>
 
-                {/* AI Insights Card */}
+                {/* Sunday Weekly Insights Banner Card */}
                 <AnimatePresence mode="wait">
-                    {(report || reportLoading) && (
+                    {isSunday && (report || reportLoading) && (
                         <motion.div
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -15 }}
                             transition={{ duration: 0.3 }}
+                            onClick={() => setIsReportModalOpen(true)}
+                            className="glass-card glow-purple"
+                            style={{
+                                padding: '20px 24px',
+                                marginBottom: '24px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                borderLeft: '4px solid var(--accent-primary, #a855f7)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '16px',
+                                transition: 'all 0.3s ease'
+                            }}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
                         >
-                            <AIReportCard 
-                                report={report} 
-                                loading={reportLoading} 
-                                onAcceptCommitment={handleAcceptCommitment}
-                                acceptingId={acceptingId}
-                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                                <div style={{
+                                    width: '46px',
+                                    height: '46px',
+                                    borderRadius: '14px',
+                                    background: 'var(--accent-gradient, linear-gradient(135deg, #6366f1, #a855f7))',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    flexShrink: 0,
+                                    boxShadow: '0 8px 20px rgba(168, 85, 247, 0.3)'
+                                }}>
+                                    <Sparkles size={22} className={reportLoading ? 'spin' : ''} />
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                                            {reportLoading ? "Generating Your Weekly Report..." : "Hey, your weekly report is here!"}
+                                        </h3>
+                                        <span style={{
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            padding: '2px 8px',
+                                            borderRadius: '10px',
+                                            background: 'rgba(168, 85, 247, 0.15)',
+                                            color: 'var(--accent-primary, #a855f7)',
+                                            border: '1px solid rgba(168, 85, 247, 0.3)'
+                                        }}>
+                                            Sunday Special
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                                        {reportLoading 
+                                            ? "Analyzing your habits and transactions..." 
+                                            : "Check it out to view your weekly performance & insights."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {report && report.score !== undefined && (
+                                    <div style={{
+                                        background: 'var(--glass-card-bg)',
+                                        border: '1px solid var(--glass-card-border)',
+                                        padding: '6px 14px',
+                                        borderRadius: '16px',
+                                        textAlign: 'center'
+                                    }}>
+                                        <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                                            {report.score}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
+                                    </div>
+                                )}
+                                <div style={{
+                                    background: 'var(--accent-gradient, linear-gradient(135deg, #6366f1, #a855f7))',
+                                    color: '#fff',
+                                    padding: '8px 16px',
+                                    borderRadius: '20px',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                                    flexShrink: 0
+                                }}>
+                                    <span>Open Report</span>
+                                    <ArrowUpRight size={16} />
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -428,6 +520,16 @@ const Dashboard = () => {
                         </div>
                     </Link>
                 </div>
+                {/* Weekly Report Full-Page Modal Overlay */}
+                <WeeklyReportModal
+                    isOpen={isReportModalOpen}
+                    onClose={() => setIsReportModalOpen(false)}
+                    report={report}
+                    loading={reportLoading}
+                    onAcceptCommitment={handleAcceptCommitment}
+                    acceptingId={acceptingId}
+                    onForceGenerate={handleForceGenerateReport}
+                />
             </div>
             
             <style>{`
