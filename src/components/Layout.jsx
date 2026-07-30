@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, Activity, Wallet, Scissors } from 'lucide-react';
+import { Home, CheckSquare, Activity, Wallet, Scissors, Users } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
 import AskAI from './AskAI';
@@ -15,6 +15,7 @@ const Layout = () => {
     { to: '/todos', label: 'Todos', icon: CheckSquare },
     { to: '/habits', label: 'Habits', icon: Activity },
     { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
+    { to: '/friends', label: 'Friends', icon: Users },
     { to: '/split-bill', label: 'Split Bill', icon: Scissors },
   ];
 
@@ -72,7 +73,7 @@ const Layout = () => {
 
       {/* Mobile Bottom Navigation (visible < 768px) */}
       <nav className="bottom-nav glass-panel">
-        {navItems.slice(0, 4).map((item) => {
+        {navItems.slice(0, 5).map((item) => {
           const Icon = item.icon;
           const isActive = item.matchPrefix 
             ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)

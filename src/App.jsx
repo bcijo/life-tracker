@@ -13,6 +13,7 @@ import Todos from './pages/Todos'
 import Habits from './pages/Habits'
 import Finances from './pages/Finances'
 import BillSplitter from './pages/BillSplitter'
+import Friends from './pages/Friends'
 
 function App() {
     return (
@@ -35,6 +36,7 @@ function App() {
                         <Route path="shopping" element={<Navigate to="/finances/shopping" replace />} />
                         <Route path="expenses" element={<Navigate to="/finances/spend" replace />} />
                         <Route path="bank-accounts" element={<Navigate to="/finances/accounts" replace />} />
+                        <Route path="friends" element={<Friends />} />
                         <Route path="split-bill" element={<BillSplitter />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

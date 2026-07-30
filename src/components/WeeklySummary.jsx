@@ -238,62 +238,6 @@ const WeeklySummary = ({ transactions, categories }) => {
                             ))}
                         </div>
                     </div>
-
-                    {/* AI Insights */}
-                    <div style={{
-                        padding: '12px',
-                        background: 'var(--glass-card-bg)',
-                        border: '1px solid var(--glass-card-border)',
-                        borderRadius: 'var(--radius-sm)',
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: insights.length > 0 ? '10px' : 0,
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Sparkles size={14} color="#805ad5" />
-                                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)' }}>
-                                    AI Insights
-                                </span>
-                            </div>
-                            <button
-                                onClick={fetchInsights}
-                                disabled={loading}
-                                style={{
-                                    background: 'var(--surface-input)',
-                                    border: '1px solid var(--surface-input-border)',
-                                    borderRadius: '6px',
-                                    padding: '6px 10px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    fontSize: '11px',
-                                    color: 'var(--accent-primary)',
-                                    fontWeight: '500',
-                                }}
-                            >
-                                <RefreshCw size={12} className={loading ? 'spin' : ''} />
-                                {insights.length > 0 ? 'Refresh' : 'Generate'}
-                            </button>
-                        </div>
-
-                        {insights.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {insights.map((insight, index) => (
-                                    <p key={index} style={{ fontSize: '13px', lineHeight: '1.5' }}>
-                                        💡 {insight}
-                                    </p>
-                                ))}
-                            </div>
-                        ) : (
-                            <p style={{ fontSize: '12px', opacity: 0.7 }}>
-                                Click "Generate" to get AI-powered spending insights
-                            </p>
-                        )}
-                    </div>
                 </div>
             )}
 

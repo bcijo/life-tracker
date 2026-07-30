@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LogOut, ChevronDown, RefreshCw, Check, Palette } from 'lucide-react';
+import { LogOut, ChevronDown, RefreshCw, Check, Palette, Dices, User, AtSign } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 
 const ProfileMenu = () => {
     const { user, signOut } = useAuth();
-    const { profile } = useProfile();
+    const { profile, updateProfile, rerollUsername } = useProfile();
     const { theme, setTheme, THEMES } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
@@ -31,6 +31,38 @@ const ProfileMenu = () => {
 
     const [updating, setUpdating] = useState(false);
     const [updated, setUpdated] = useState(false);
+    const [rerolling, setRerolling] = useState(false);
+    const [fullName, setFullName] = useState(profile?.full_name || '');
+    const [savingProfile, setSavingProfile] = useState(false);
+    const [profileSaved, setProfileSaved] = useState(false);
+
+    useEffect(() => {
+        if (profile) setFullName(profile.full_name || '');
+    }, [profile]);
+
+    const handleReroll = async () => {
+        setRerolling(true);
+        try {
+            await rerollUsername();
+        } catch (err) {
+            console.error('Reroll error:', err);
+        } finally {
+            setTimeout(() => setRerolling(false), 300);
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        setSavingProfile(true);
+        try {
+            await updateProfile({ full_name: fullName });
+            setProfileSaved(true);
+            setTimeout(() => setProfileSaved(false), 2000);
+        } catch (err) {
+            console.error('Save profile error:', err);
+        } finally {
+            setSavingProfile(false);
+        }
+    };
 
     const handleUpdate = async () => {
         setUpdating(true);
@@ -154,6 +186,17 @@ const ProfileMenu = () => {
                                         {profile.display_name}
                                     </p>
                                 )}
+                                {profile?.username && (
+                                    <p style={{
+                                        margin: '0 0 2px 0',
+                                        fontSize: '11px',
+                                        color: 'var(--accent-primary)',
+                                        fontWeight: '600',
+                                        fontFamily: 'monospace',
+                                    }}>
+                                        @{profile.username}
+                                    </p>
+                                )}
                                 <p style={{
                                     margin: 0,
                                     fontSize: '12px',
@@ -234,6 +277,127 @@ const ProfileMenu = () => {
                         }}>
                             {THEMES.find(t => t.id === theme)?.label}
                         </p>
+                    </div>
+
+                    {/* ── Profile Section ── */}
+                    <div style={{ padding: '10px 14px 12px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '6px' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '10px',
+                        }}>
+                            <User size={14} style={{ color: 'var(--text-muted)' }} />
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Profile
+                            </span>
+                        </div>
+
+                        {/* Full Name */}
+                        <div style={{ marginBottom: '8px' }}>
+                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>Full Name</label>
+                            <input
+                                type="text"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                placeholder="Your full name"
+                                style={{
+                                    width: '100%',
+                                    padding: '7px 10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--glass-card-border)',
+                                    background: 'var(--glass-card-bg)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                }}
+                            />
+                        </div>
+
+                        {/* Username (read-only + re-roll) */}
+                        <div style={{ marginBottom: '8px' }}>
+                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
+                                <AtSign size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+                                Username
+                            </label>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <div style={{
+                                    flex: 1,
+                                    padding: '7px 10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--glass-card-border)',
+                                    background: 'var(--glass-card-bg)',
+                                    color: profile?.username ? 'var(--accent-primary)' : 'var(--text-muted)',
+                                    fontSize: '13px',
+                                    fontFamily: 'monospace',
+                                    fontWeight: '600',
+                                }}>
+                                    {profile?.username || 'Not set — visit Friends tab!'}
+                                </div>
+                                {profile?.username && (
+                                    <button
+                                        onClick={handleReroll}
+                                        disabled={rerolling}
+                                        title="Re-roll username"
+                                        style={{
+                                            padding: '7px 8px',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--glass-card-border)',
+                                            background: 'var(--glass-card-bg)',
+                                            color: 'var(--accent-primary)',
+                                            cursor: rerolling ? 'default' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            opacity: rerolling ? 0.5 : 1,
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        <Dices size={16} style={{ animation: rerolling ? 'spin 0.5s linear infinite' : 'none' }} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Email (read-only) */}
+                        <div style={{ marginBottom: '10px' }}>
+                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>Email</label>
+                            <div style={{
+                                padding: '7px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--glass-card-border)',
+                                background: 'var(--glass-card-bg)',
+                                color: 'var(--text-muted)',
+                                fontSize: '13px',
+                            }}>
+                                {user.email}
+                            </div>
+                        </div>
+
+                        {/* Save Profile Button */}
+                        <button
+                            onClick={handleSaveProfile}
+                            disabled={savingProfile}
+                            style={{
+                                width: '100%',
+                                padding: '7px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: profileSaved ? 'var(--success)' : 'var(--accent-gradient)',
+                                color: '#fff',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                cursor: savingProfile ? 'default' : 'pointer',
+                                opacity: savingProfile ? 0.7 : 1,
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                            }}
+                        >
+                            {profileSaved ? <><Check size={14} /> Saved!</> : savingProfile ? 'Saving...' : 'Save Profile'}
+                        </button>
                     </div>
 
                     {/* ── Check for Updates ── */}
