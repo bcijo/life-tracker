@@ -14,6 +14,7 @@ import Habits from './pages/Habits'
 import Finances from './pages/Finances'
 import BillSplitter from './pages/BillSplitter'
 import Friends from './pages/Friends'
+import InviteLanding from './pages/InviteLanding'
 
 function App() {
     return (
@@ -24,6 +25,11 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/invite/:username" element={
+                        <ProtectedRoute>
+                            <InviteLanding />
+                        </ProtectedRoute>
+                    } />
                     <Route path="/" element={
                         <ProtectedRoute>
                             <Layout />

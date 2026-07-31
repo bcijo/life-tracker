@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell } from 'lucide-react';
+import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
@@ -46,6 +46,33 @@ const Friends = () => {
   const [activeTab, setActiveTab] = useState('friends');
   const [showSearch, setShowSearch] = useState(false);
   const [showPending, setShowPending] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const shareInviteLink = async () => {
+    const inviteUrl = `${window.location.origin}/invite/${profile.username}`;
+    const shareData = {
+      title: 'Join me on Life Tracker!',
+      text: `Track habits with me! Add me as a friend 🏆`,
+      url: inviteUrl,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(inviteUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(inviteUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    }
+  };
 
   // If no username, show onboarding
   if (!profile?.username) {
@@ -97,6 +124,24 @@ const Friends = () => {
               </span>
             </div>
           )}
+
+          {/* Share Invite Link */}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={shareInviteLink}
+            style={{
+              width: 36, height: 36, borderRadius: 12,
+              background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              color: copied ? '#22c55e' : 'var(--text-secondary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            title="Share invite link"
+          >
+            {copied ? <Check size={16} /> : <Share2 size={16} />}
+          </motion.button>
 
           {/* Add Friend Button */}
           <motion.button
