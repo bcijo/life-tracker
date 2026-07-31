@@ -236,5 +236,15 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7. Enable realtime for friendships table
-ALTER PUBLICATION supabase_realtime ADD TABLE friendships;
+-- 7. Enable realtime for friendships table (idempotent check)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+      AND schemaname = 'public' 
+      AND tablename = 'friendships'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE friendships;
+  END IF;
+END $$;
