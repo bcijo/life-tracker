@@ -108,28 +108,33 @@ export const useFriends = () => {
 
     if (!user) return;
 
+    // Single unfiltered subscription — more reliable for both sides of a friendship
     const subscription = supabase
-      .channel('friendships_changes')
+      .channel(`friendships_${user.id}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'friendships',
-        filter: `requester_id=eq.${user.id}`
-      }, () => {
-        fetchFriendsAndScores();
-      })
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'friendships',
-        filter: `addressee_id=eq.${user.id}`
-      }, () => {
-        fetchFriendsAndScores();
+        table: 'friendships'
+      }, (payload) => {
+        // Only refresh if this change involves the current user
+        const row = payload.new || payload.old;
+        if (row && (row.requester_id === user.id || row.addressee_id === user.id)) {
+          fetchFriendsAndScores();
+        }
       })
       .subscribe();
 
+    // Auto-refresh when user returns to the tab
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchFriendsAndScores();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       supabase.removeChannel(subscription);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [user, fetchFriendsAndScores]);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check } from 'lucide-react';
+import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
@@ -47,6 +47,13 @@ const Friends = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [showPending, setShowPending] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshFriends(), refreshLeaderboard()]);
+    setTimeout(() => setRefreshing(false), 500);
+  };
 
   const shareInviteLink = async () => {
     const inviteUrl = `${window.location.origin}/invite/${profile.username}`;
@@ -124,6 +131,26 @@ const Friends = () => {
               </span>
             </div>
           )}
+
+          {/* Refresh Button */}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{
+              width: 36, height: 36, borderRadius: 12,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'var(--text-secondary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: refreshing ? 'default' : 'pointer',
+              opacity: refreshing ? 0.5 : 1,
+              transition: 'all 0.2s',
+            }}
+            title="Refresh"
+          >
+            <RefreshCw size={16} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
+          </motion.button>
 
           {/* Share Invite Link */}
           <motion.button
