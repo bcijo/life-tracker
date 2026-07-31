@@ -17,14 +17,22 @@ CREATE TABLE IF NOT EXISTS profiles (
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 -- Users can insert their own profile
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 CREATE POLICY "Users can insert own profile" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
+-- Allow all authenticated users to read profiles (non-sensitive data: username, display_name, full_name)
+DROP POLICY IF EXISTS "Users can search profiles" ON profiles;
+CREATE POLICY "Users can search profiles" ON profiles
+  FOR SELECT USING (true);
+
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW
@@ -79,22 +87,21 @@ CREATE INDEX IF NOT EXISTS idx_friendships_status ON friendships(status);
 -- 3. RLS Policies for friendships
 ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own friendships" ON friendships;
 CREATE POLICY "Users can view own friendships" ON friendships
   FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
 
+DROP POLICY IF EXISTS "Users can send friend requests" ON friendships;
 CREATE POLICY "Users can send friend requests" ON friendships
   FOR INSERT WITH CHECK (auth.uid() = requester_id);
 
+DROP POLICY IF EXISTS "Users can update own friendships" ON friendships;
 CREATE POLICY "Users can update own friendships" ON friendships
   FOR UPDATE USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
 
+DROP POLICY IF EXISTS "Users can delete own friendships" ON friendships;
 CREATE POLICY "Users can delete own friendships" ON friendships
   FOR DELETE USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
-
--- 5. Allow cross-user profile reads (for username search)
--- Only contains non-sensitive data (username, display_name, full_name)
-CREATE POLICY "Users can search profiles" ON profiles
-  FOR SELECT USING (true);
 
 -- 5. Server-side habit score computation (SECURITY DEFINER bypasses RLS)
 CREATE OR REPLACE FUNCTION get_user_habit_score(target_user_id UUID)
