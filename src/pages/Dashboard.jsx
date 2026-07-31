@@ -29,7 +29,8 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 const getUserDisplayName = (profile) => {
     if (!profile) return '';
-    let rawName = profile.display_name || (profile.email ? profile.email.split('@')[0] : '');
+    // Prefer full_name, then display_name, then nothing
+    let rawName = profile.full_name || profile.display_name || '';
     if (!rawName) return '';
     const words = rawName.replace(/[._]/g, ' ').split(' ').filter(Boolean);
     return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -40,7 +41,7 @@ const Dashboard = () => {
     const { habits, addHabit } = useHabits();
     const { items: shoppingItems } = useShopping();
     const { transactions } = useTransactions();
-    const { profile } = useProfile();
+    const { profile, updateProfile } = useProfile();
     const { budgets, addBudget } = useBudgets();
     const contextData = useLifeContext();
 
@@ -50,6 +51,8 @@ const Dashboard = () => {
     const [acceptingId, setAcceptingId] = useState(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+    const [nameInput, setNameInput] = useState('');
+    const [savingName, setSavingName] = useState(false);
 
     // Fetch weekly report (only on Sundays)
     const isSunday = new Date().getDay() === 0;
@@ -275,8 +278,53 @@ const Dashboard = () => {
                             {dateFormatted}
                         </p>
                         <h1 style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>
-                            Hello, <span className="accent-gradient-text">{getUserDisplayName(profile) || 'Abhin'}</span>
+                            {getUserDisplayName(profile) ? (
+                                <>Hello, <span className="accent-gradient-text">{getUserDisplayName(profile)}</span></>
+                            ) : (
+                                <>Hello! <span style={{ fontSize: '16px', fontWeight: '500', color: 'var(--text-muted)' }}>What's your name?</span></>
+                            )}
                         </h1>
+                        {!getUserDisplayName(profile) && (
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    if (!nameInput.trim()) return;
+                                    setSavingName(true);
+                                    await updateProfile({ full_name: nameInput.trim() });
+                                    setSavingName(false);
+                                }}
+                                style={{ display: 'flex', gap: '8px', marginTop: '8px' }}
+                            >
+                                <input
+                                    type="text"
+                                    value={nameInput}
+                                    onChange={(e) => setNameInput(e.target.value)}
+                                    placeholder="Enter your name"
+                                    autoFocus
+                                    style={{
+                                        flex: 1, padding: '8px 12px', borderRadius: '10px',
+                                        border: '1px solid var(--glass-card-border)',
+                                        background: 'var(--glass-card-bg)',
+                                        color: 'var(--text-primary)', fontSize: '14px',
+                                        outline: 'none',
+                                    }}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={savingName || !nameInput.trim()}
+                                    style={{
+                                        padding: '8px 16px', borderRadius: '10px',
+                                        background: 'var(--accent-gradient)',
+                                        border: 'none', color: '#fff',
+                                        fontSize: '13px', fontWeight: '700',
+                                        cursor: savingName ? 'default' : 'pointer',
+                                        opacity: savingName || !nameInput.trim() ? 0.6 : 1,
+                                    }}
+                                >
+                                    {savingName ? '...' : 'Save'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                     
                     {/* Top Right Journal Trigger Button */}
