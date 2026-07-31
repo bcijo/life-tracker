@@ -49,12 +49,15 @@ const FriendSearchModal = ({ isOpen, onClose, onSendRequest, searchUsers }) => {
     const res = await onSendRequest(username);
     if (res?.error) {
       setToast({ type: 'error', message: res.error });
+      if (res.error.toLowerCase().includes('already pending') || res.error.toLowerCase().includes('already sent')) {
+        setLocalStatuses(prev => ({ ...prev, [username]: 'pending' }));
+      }
     } else {
       setLocalStatuses(prev => ({ ...prev, [username]: 'pending' }));
       setToast({ type: 'success', message: 'Friend request sent!' });
     }
     
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   };
 
   const overlayStyle = {
@@ -191,17 +194,21 @@ const FriendSearchModal = ({ isOpen, onClose, onSendRequest, searchUsers }) => {
     bottom: '20px',
     left: '50%',
     transform: 'translateX(-50%)',
-    background: toast?.type === 'error' ? 'var(--danger-bg)' : 'var(--surface-elevated)',
-    color: toast?.type === 'error' ? 'var(--danger)' : 'var(--success)',
-    padding: '12px 24px',
-    borderRadius: '24px',
-    border: `1px solid ${toast?.type === 'error' ? 'var(--danger)' : 'var(--success)'}`,
+    width: 'calc(100% - 40px)',
+    maxWidth: '380px',
+    background: toast?.type === 'error' ? '#2a1215' : 'var(--surface-elevated)',
+    color: toast?.type === 'error' ? '#f87171' : 'var(--success)',
+    padding: '12px 18px',
+    borderRadius: '16px',
+    border: `1px solid ${toast?.type === 'error' ? '#ef4444' : 'var(--success)'}`,
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '14px',
+    gap: '10px',
+    fontSize: '13px',
     fontWeight: '500',
-    zIndex: 10
+    textAlign: 'left',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    zIndex: 100
   };
 
   return (

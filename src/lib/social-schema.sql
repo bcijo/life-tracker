@@ -34,11 +34,11 @@ CREATE TRIGGER update_profiles_updated_at
 CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_username_lower 
   ON profiles (LOWER(username));
 
--- 2. Create friendships table
+-- 2. Create friendships table (referencing profiles.id for PostgREST joins)
 CREATE TABLE IF NOT EXISTS friendships (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  requester_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  addressee_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  requester_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  addressee_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' 
     CHECK (status IN ('pending', 'accepted', 'declined')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -46,6 +46,30 @@ CREATE TABLE IF NOT EXISTS friendships (
   UNIQUE(requester_id, addressee_id),
   CHECK (requester_id != addressee_id)
 );
+
+-- Ensure foreign keys point to profiles table for existing installations
+DO $$
+BEGIN
+  -- Add requester FK to profiles if missing
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'friendships_requester_id_fkey_profiles'
+  ) THEN
+    ALTER TABLE friendships DROP CONSTRAINT IF EXISTS friendships_requester_id_fkey;
+    ALTER TABLE friendships ADD CONSTRAINT friendships_requester_id_fkey_profiles 
+      FOREIGN KEY (requester_id) REFERENCES profiles(id) ON DELETE CASCADE;
+  END IF;
+
+  -- Add addressee FK to profiles if missing
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'friendships_addressee_id_fkey_profiles'
+  ) THEN
+    ALTER TABLE friendships DROP CONSTRAINT IF EXISTS friendships_addressee_id_fkey;
+    ALTER TABLE friendships ADD CONSTRAINT friendships_addressee_id_fkey_profiles 
+      FOREIGN KEY (addressee_id) REFERENCES profiles(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- Indexes for efficient friend lookups
 CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id);
