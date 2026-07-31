@@ -113,29 +113,39 @@ DECLARE
   v_rate NUMERIC := 0;
   v_score NUMERIC := 0;
 BEGIN
-  -- Count active (non-paused) habits
+  -- Count active (non-paused) habits for this user
   SELECT COUNT(*) INTO v_active_habits
   FROM habits
-  WHERE user_id = target_user_id AND (is_paused IS NULL OR is_paused = false);
+  WHERE user_id = target_user_id 
+    AND (is_paused IS NULL OR is_paused = false);
 
   -- Count completions in last 30 days from JSONB history
-  SELECT COALESCE(SUM(completion_count), 0) INTO v_completions
-  FROM (
-    SELECT COUNT(*) as completion_count
+  BEGIN
+    SELECT COALESCE(COUNT(*), 0) INTO v_completions
     FROM habits h,
          LATERAL jsonb_array_elements(COALESCE(h.history, '[]'::jsonb)) AS elem
     WHERE h.user_id = target_user_id
       AND (h.is_paused IS NULL OR h.is_paused = false)
       AND (
-        -- Handle object format {date, status}
-        (elem ? 'date' AND elem->>'status' = 'completed' 
-         AND (elem->>'date')::date >= CURRENT_DATE - INTERVAL '30 days')
+        -- Object format: {"date": "YYYY-MM-DD", "status": "completed"}
+        (
+          jsonb_typeof(elem) = 'object'
+          AND elem->>'status' = 'completed'
+          AND elem->>'date' IS NOT NULL
+          AND length(elem->>'date') >= 10
+          AND substring(elem->>'date' from 1 for 10) >= to_char(CURRENT_DATE - 30, 'YYYY-MM-DD')
+        )
         OR
-        -- Handle legacy string format
-        (NOT elem ? 'date' AND jsonb_typeof(elem) = 'string'
-         AND (elem #>> '{}')::date >= CURRENT_DATE - INTERVAL '30 days')
-      )
-  ) sub;
+        -- Legacy string format: "YYYY-MM-DD..."
+        (
+          jsonb_typeof(elem) = 'string'
+          AND length(elem #>> '{}') >= 10
+          AND substring(elem #>> '{}' from 1 for 10) >= to_char(CURRENT_DATE - 30, 'YYYY-MM-DD')
+        )
+      );
+  EXCEPTION WHEN OTHERS THEN
+    v_completions := 0;
+  END;
 
   -- Completion rate: completions / (active_habits * 30) * 100
   IF v_active_habits > 0 THEN
@@ -154,6 +164,13 @@ BEGIN
   );
 
   RETURN result;
+EXCEPTION WHEN OTHERS THEN
+  RETURN json_build_object(
+    'completions_30d', 0,
+    'active_habits', 0,
+    'completion_rate', 0,
+    'score', 0
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -167,10 +184,12 @@ DECLARE
   result JSON;
 BEGIN
   WITH eligible_users AS (
-    SELECT p.id as user_id, p.username, p.display_name, p.full_name
+    SELECT p.id as user_id, 
+           COALESCE(p.username, LOWER(REPLACE(COALESCE(p.display_name, 'user'), ' ', '')) || '_' || substring(p.id::text from 1 for 4)) as username, 
+           p.display_name, 
+           p.full_name
     FROM profiles p
-    WHERE p.username IS NOT NULL
-      AND (
+    WHERE (
         p_scope = 'global'
         OR p.id = p_user_id
         OR EXISTS (
@@ -192,7 +211,7 @@ BEGIN
   ranked AS (
     SELECT
       scored.*,
-      ROW_NUMBER() OVER (ORDER BY (scored.score_data->>'score')::numeric DESC) AS rank
+      ROW_NUMBER() OVER (ORDER BY COALESCE((scored.score_data->>'score')::numeric, 0) DESC) AS rank
     FROM scored
   )
   SELECT json_agg(
@@ -201,10 +220,10 @@ BEGIN
       'username', ranked.username,
       'display_name', ranked.display_name,
       'full_name', ranked.full_name,
-      'score', (ranked.score_data->>'score')::numeric,
-      'completions_30d', (ranked.score_data->>'completions_30d')::integer,
-      'active_habits', (ranked.score_data->>'active_habits')::integer,
-      'completion_rate', (ranked.score_data->>'completion_rate')::numeric,
+      'score', COALESCE((ranked.score_data->>'score')::numeric, 0),
+      'completions_30d', COALESCE((ranked.score_data->>'completions_30d')::integer, 0),
+      'active_habits', COALESCE((ranked.score_data->>'active_habits')::integer, 0),
+      'completion_rate', COALESCE((ranked.score_data->>'completion_rate')::numeric, 0),
       'rank', ranked.rank
     )
     ORDER BY ranked.rank
@@ -212,6 +231,8 @@ BEGIN
   FROM ranked;
 
   RETURN COALESCE(result, '[]'::json);
+EXCEPTION WHEN OTHERS THEN
+  RETURN '[]'::json;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
