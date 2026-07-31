@@ -65,7 +65,7 @@ const FriendSearchModal = ({ isOpen, onClose, onSendRequest, searchUsers }) => {
     bottom: 0,
     background: 'rgba(0, 0, 0, 0.7)',
     backdropFilter: 'blur(8px)',
-    zIndex: 1000,
+    zIndex: 1100,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center'
@@ -82,6 +82,7 @@ const FriendSearchModal = ({ isOpen, onClose, onSendRequest, searchUsers }) => {
 
   const headerStyle = {
     padding: '20px',
+    paddingTop: 'calc(env(safe-area-inset-top, 0px) + 60px)',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
