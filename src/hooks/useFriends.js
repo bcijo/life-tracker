@@ -3,13 +3,11 @@ import { supabase } from '../lib/supabase';
 import useAuth from './useAuth';
 
 /**
- * Compute habit score for a user directly from their habits data.
- * This replaces the broken get_user_habit_score RPC which returned zeros
- * because the SQL couldn't parse the JSONB history array.
+ * Client-side calculation for the logged-in user's own habit score.
+ * (Always works for user.id because RLS allows users to read their own habits table rows).
  */
-const computeScoreFromHabits = async (userId) => {
+const computeMyHabitScore = async (userId) => {
   const defaultScore = { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
-
   try {
     const { data: habits, error } = await supabase
       .from('habits')
@@ -31,75 +29,50 @@ const computeScoreFromHabits = async (userId) => {
 
     for (const habit of habits) {
       if (habit.is_paused) continue;
-
       const history = habit.history || [];
       const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
 
-      // Count this as an active habit if it has any history entries
-      if (history.length > 0) {
-        activeHabitCount++;
-      }
+      if (history.length > 0) activeHabitCount++;
 
-      // Count completions in the last 30 days
       let habitCompletions30d = 0;
       for (const entry of history) {
         const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
         const status = typeof entry === 'string' ? 'completed' : entry.status;
-
         if (date >= thirtyDaysAgoStr && date <= todayStr && status === 'completed') {
           habitCompletions30d++;
         }
       }
       totalCompletions30d += habitCompletions30d;
 
-      // Count active days in last 30 days for completion rate
-      let activeDayCount = 0;
-      let completedDayCount = 0;
       const completedDates = new Set(
         history
-          .filter(e => {
-            const status = typeof e === 'string' ? 'completed' : e.status;
-            return status === 'completed';
-          })
+          .filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed')
           .map(e => typeof e === 'string' ? e.split('T')[0] : e.date)
       );
 
       const cursor = new Date(thirtyDaysAgo);
       while (cursor <= now) {
-        const dayOfWeek = cursor.getDay();
-        if (activeDays.includes(dayOfWeek)) {
-          activeDayCount++;
-          const dateStr = cursor.toISOString().split('T')[0];
-          if (completedDates.has(dateStr)) {
-            completedDayCount++;
+        if (activeDays.includes(cursor.getDay())) {
+          totalActiveDays30d++;
+          if (completedDates.has(cursor.toISOString().split('T')[0])) {
+            totalCompletedActiveDays30d++;
           }
         }
         cursor.setDate(cursor.getDate() + 1);
       }
-
-      totalActiveDays30d += activeDayCount;
-      totalCompletedActiveDays30d += completedDayCount;
     }
 
     const completionRate = totalActiveDays30d > 0
       ? Math.round((totalCompletedActiveDays30d / totalActiveDays30d) * 100)
       : 0;
 
-    // Score = weighted combination: completions + rate bonus + active habits bonus
     const score = Math.round(
-      (totalCompletions30d * 2) +
-      (completionRate * 1.5) +
-      (activeHabitCount * 10)
+      (totalCompletions30d * 10) + (completionRate * 2)
     );
 
-    return {
-      score,
-      completions_30d: totalCompletions30d,
-      active_habits: activeHabitCount,
-      completion_rate: completionRate,
-    };
+    return { score, completions_30d: totalCompletions30d, active_habits: activeHabitCount, completion_rate: completionRate };
   } catch (err) {
-    console.error('Error computing score for user:', userId, err);
+    console.error('Error computing score for self:', err);
     return defaultScore;
   }
 };
@@ -167,8 +140,15 @@ export const useFriends = () => {
           };
 
           if (f.status === 'accepted') {
-            // Compute score client-side from habits data
-            const scoreInfo = await computeScoreFromHabits(otherUserId);
+            // Fetch score for friend via RPC (bypasses RLS)
+            let scoreInfo = { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+            const { data: scoreData, error: scoreError } = await supabase.rpc('get_user_habit_score', {
+              target_user_id: otherUserId
+            });
+            
+            if (!scoreError && scoreData) {
+              scoreInfo = Array.isArray(scoreData) ? (scoreData[0] || scoreInfo) : scoreData;
+            }
 
             acceptedFriends.push({
               id: otherProfile.id,
@@ -200,9 +180,14 @@ export const useFriends = () => {
         setPendingSent(sent);
       }
 
-      // 5. Compute my own score client-side
-      const myScoreData = await computeScoreFromHabits(user.id);
-      setMyScore(myScoreData);
+      // 5. Fetch my own score: try client calculation first, fallback to RPC
+      const selfScore = await computeMyHabitScore(user.id);
+      if (selfScore && selfScore.score > 0) {
+        setMyScore(selfScore);
+      } else {
+        const { data: rpcScore } = await supabase.rpc('get_user_habit_score', { target_user_id: user.id });
+        setMyScore(rpcScore || selfScore);
+      }
 
     } catch (err) {
       console.error('Error fetching friends:', err);
@@ -214,10 +199,8 @@ export const useFriends = () => {
 
   useEffect(() => {
     fetchFriendsAndScores();
-
     if (!user) return;
 
-    // Single unfiltered subscription — handles any changes involving current user
     const subscription = supabase
       .channel(`friendships_channel_${user.id}`)
       .on('postgres_changes', { 
@@ -232,7 +215,6 @@ export const useFriends = () => {
       })
       .subscribe();
 
-    // Auto-refresh when user switches back to the tab
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchFriendsAndScores();
@@ -248,14 +230,10 @@ export const useFriends = () => {
 
   const sendFriendRequest = async (username) => {
     if (!user) return { success: false, error: 'Not authenticated' };
-    
     try {
       const cleanUsername = username ? username.trim().replace(/^@/, '') : '';
-      if (!cleanUsername) {
-        return { success: false, error: 'Please enter a username' };
-      }
+      if (!cleanUsername) return { success: false, error: 'Please enter a username' };
 
-      // 1. Find user by username (case-insensitive)
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, display_name, full_name')
@@ -268,12 +246,8 @@ export const useFriends = () => {
       }
       
       const targetUserId = profiles[0].id;
-      
-      if (targetUserId === user.id) {
-        return { success: false, error: 'Cannot send a friend request to yourself' };
-      }
+      if (targetUserId === user.id) return { success: false, error: 'Cannot send a friend request to yourself' };
 
-      // 2. Check for existing friendship in either direction
       const { data: existing, error: existingError } = await supabase
         .from('friendships')
         .select('id, status, requester_id')
@@ -284,32 +258,20 @@ export const useFriends = () => {
 
       if (existing && existing.length > 0) {
         const item = existing[0];
-        if (item.status === 'accepted') {
-          return { success: false, error: `You are already friends with @${cleanUsername}!` };
-        } else if (item.requester_id === user.id) {
-          return { success: false, error: `Friend request is already pending with @${cleanUsername}` };
-        } else {
-          return { success: false, error: `@${cleanUsername} has already sent you a request! Check your incoming requests.` };
-        }
+        if (item.status === 'accepted') return { success: false, error: `You are already friends with @${cleanUsername}!` };
+        if (item.requester_id === user.id) return { success: false, error: `Friend request is already pending with @${cleanUsername}` };
+        return { success: false, error: `@${cleanUsername} has already sent you a request! Check incoming requests.` };
       }
 
-      // 3. Create request
       const { error: insertError } = await supabase
         .from('friendships')
-        .insert({
-          requester_id: user.id,
-          addressee_id: targetUserId,
-          status: 'pending'
-        });
+        .insert({ requester_id: user.id, addressee_id: targetUserId, status: 'pending' });
         
       if (insertError) {
-        if (insertError.code === '23505') {
-          return { success: false, error: `A request is already pending with @${cleanUsername}` };
-        }
+        if (insertError.code === '23505') return { success: false, error: `A request is already pending with @${cleanUsername}` };
         throw insertError;
       }
       
-      // Trigger instant refetch
       fetchFriendsAndScores();
       return { success: true };
     } catch (err) {
@@ -324,7 +286,6 @@ export const useFriends = () => {
         .from('friendships')
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
         .eq('id', friendshipId);
-        
       if (error) throw error;
       fetchFriendsAndScores();
     } catch (err) {
@@ -335,11 +296,7 @@ export const useFriends = () => {
 
   const declineRequest = async (friendshipId) => {
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
-        
+      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
       if (error) throw error;
       fetchFriendsAndScores();
     } catch (err) {
@@ -350,11 +307,7 @@ export const useFriends = () => {
 
   const removeFriend = async (friendshipId) => {
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
-        
+      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
       if (error) throw error;
       fetchFriendsAndScores();
     } catch (err) {
@@ -365,7 +318,6 @@ export const useFriends = () => {
 
   const searchUsers = async (query) => {
     if (!user || !query || query.trim().length < 2) return [];
-    
     try {
       const cleanQuery = query.trim().replace(/^@/, '');
       const { data, error } = await supabase
@@ -377,24 +329,11 @@ export const useFriends = () => {
         
       if (error) throw error;
       
-      return data.map(profile => {
-        let isFriend = false;
-        let isPending = false;
-        
-        if (friends.some(f => f.id === profile.id)) {
-          isFriend = true;
-        } else if (pendingSent.some(p => p.addressee.id === profile.id)) {
-          isPending = true;
-        } else if (pendingReceived.some(p => p.requester.id === profile.id)) {
-          isPending = true;
-        }
-        
-        return {
-          ...profile,
-          isFriend,
-          isPending
-        };
-      });
+      return data.map(profile => ({
+        ...profile,
+        isFriend: friends.some(f => f.id === profile.id),
+        isPending: pendingSent.some(p => p.addressee.id === profile.id) || pendingReceived.some(p => p.requester.id === profile.id)
+      }));
     } catch (err) {
       console.error('Error searching users:', err);
       return [];
@@ -402,18 +341,8 @@ export const useFriends = () => {
   };
 
   return {
-    friends,
-    pendingReceived,
-    pendingSent,
-    myScore,
-    loading,
-    error,
-    sendFriendRequest,
-    acceptRequest,
-    declineRequest,
-    removeFriend,
-    searchUsers,
-    refresh: fetchFriendsAndScores
+    friends, pendingReceived, pendingSent, myScore, loading, error,
+    sendFriendRequest, acceptRequest, declineRequest, removeFriend, searchUsers, refresh: fetchFriendsAndScores
   };
 };
 
