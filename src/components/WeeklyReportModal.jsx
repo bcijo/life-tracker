@@ -59,29 +59,30 @@ const WeeklyReportModal = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '20px 24px',
-                        borderBottom: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
-                        background: 'rgba(0, 0, 0, 0.2)'
+                        padding: '18px 24px',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                        background: 'rgba(255, 255, 255, 0.02)'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{
-                                width: '36px',
-                                height: '36px',
+                                width: '32px',
+                                height: '32px',
                                 borderRadius: '10px',
-                                background: 'var(--accent-gradient, linear-gradient(135deg, #6366f1, #a855f7))',
+                                background: 'rgba(168, 85, 247, 0.12)',
+                                border: '1px solid rgba(168, 85, 247, 0.25)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: '#fff'
+                                color: '#a855f7'
                             }}>
-                                <Sparkles size={20} />
+                                <Sparkles size={16} />
                             </div>
                             <div>
-                                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
-                                    Weekly Report
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                                    Sunday AI Review
                                 </h3>
                                 <p style={{ fontSize: '12px', margin: 0, color: 'var(--text-muted)' }}>
-                                    Personalized AI financial & habit insights
+                                    Personalized weekly habits & financial analysis
                                 </p>
                             </div>
                         </div>
@@ -92,22 +93,22 @@ const WeeklyReportModal = ({
                                     onClick={onForceGenerate}
                                     disabled={loading}
                                     style={{
-                                        background: 'var(--glass-card-bg, rgba(255, 255, 255, 0.05))',
-                                        border: '1px solid var(--glass-card-border, rgba(255, 255, 255, 0.1))',
-                                        color: 'var(--text-primary)',
-                                        padding: '8px 14px',
-                                        borderRadius: '12px',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        color: 'var(--text-secondary)',
+                                        padding: '6px 12px',
+                                        borderRadius: '10px',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '6px',
-                                        fontSize: '13px',
+                                        fontSize: '12px',
                                         fontWeight: '600',
                                         transition: 'all 0.2s ease'
                                     }}
                                     title="Regenerate Weekly AI Report"
                                 >
-                                    <RefreshCw size={15} className={loading ? 'spin' : ''} style={{ color: 'var(--accent-primary)' }} />
+                                    <RefreshCw size={14} className={loading ? 'spin' : ''} style={{ color: '#a855f7' }} />
                                     <span>Regenerate</span>
                                 </button>
                             )}
@@ -115,11 +116,11 @@ const WeeklyReportModal = ({
                             <button
                                 onClick={onClose}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    background: 'rgba(255, 255, 255, 0.06)',
                                     border: 'none',
-                                    color: 'var(--text-primary)',
-                                    width: '36px',
-                                    height: '36px',
+                                    color: 'var(--text-secondary)',
+                                    width: '32px',
+                                    height: '32px',
                                     borderRadius: '50%',
                                     cursor: 'pointer',
                                     display: 'flex',
@@ -129,7 +130,7 @@ const WeeklyReportModal = ({
                                 }}
                                 title="Close"
                             >
-                                <X size={20} />
+                                <X size={18} />
                             </button>
                         </div>
                     </div>

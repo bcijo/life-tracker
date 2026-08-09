@@ -352,102 +352,98 @@ const Dashboard = () => {
                     </motion.button>
                 </header>
 
-                {/* Sunday Weekly Insights Banner Card */}
+                {/* Sunday Weekly Insights Banner Card (Subtle & Refined) */}
                 <AnimatePresence mode="wait">
                     {isSunday && (report || reportLoading) && (
                         <motion.div
-                            initial={{ opacity: 0, y: 15 }}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -15 }}
-                            transition={{ duration: 0.3 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.25 }}
                             onClick={() => setIsReportModalOpen(true)}
-                            className="glass-card glow-purple"
                             style={{
-                                padding: '20px 24px',
-                                marginBottom: '24px',
-                                position: 'relative',
-                                overflow: 'hidden',
+                                padding: '14px 18px',
+                                marginBottom: '20px',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                borderRadius: '16px',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(12px)',
                                 cursor: 'pointer',
-                                borderLeft: '4px solid var(--accent-primary, #a855f7)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                gap: '16px',
-                                transition: 'all 0.3s ease'
+                                gap: '14px',
+                                transition: 'all 0.2s ease',
                             }}
-                            whileHover={{ scale: 1.01 }}
+                            whileHover={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(168, 85, 247, 0.3)' }}
                             whileTap={{ scale: 0.99 }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                                 <div style={{
-                                    width: '46px',
-                                    height: '46px',
-                                    borderRadius: '14px',
-                                    background: 'var(--accent-gradient, linear-gradient(135deg, #6366f1, #a855f7))',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '10px',
+                                    background: 'rgba(168, 85, 247, 0.1)',
+                                    border: '1px solid rgba(168, 85, 247, 0.2)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    color: '#fff',
+                                    color: '#a855f7',
                                     flexShrink: 0,
-                                    boxShadow: '0 8px 20px rgba(168, 85, 247, 0.3)'
                                 }}>
-                                    <Sparkles size={22} className={reportLoading ? 'spin' : ''} />
+                                    <Sparkles size={18} className={reportLoading ? 'spin' : ''} />
                                 </div>
-                                <div>
+                                <div style={{ minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
-                                            {reportLoading ? "Generating Your Weekly Report..." : "Hey, your weekly report is here!"}
-                                        </h3>
+                                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {reportLoading ? "Analyzing weekly progress..." : "Sunday AI Review"}
+                                        </span>
                                         <span style={{
-                                            fontSize: '11px',
+                                            fontSize: '10px',
                                             fontWeight: '600',
-                                            padding: '2px 8px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(168, 85, 247, 0.15)',
-                                            color: 'var(--accent-primary, #a855f7)',
-                                            border: '1px solid rgba(168, 85, 247, 0.3)'
+                                            padding: '1px 7px',
+                                            borderRadius: '6px',
+                                            background: 'rgba(168, 85, 247, 0.12)',
+                                            color: '#a855f7',
+                                            letterSpacing: '0.03em',
                                         }}>
-                                            Sunday Special
+                                            Weekly
                                         </span>
                                     </div>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {reportLoading 
-                                            ? "Analyzing your habits and transactions..." 
-                                            : "Check it out to view your weekly performance & insights."}
+                                            ? "Generating your habits & financial summary..." 
+                                            : report?.summary 
+                                                ? `"${report.summary.slice(0, 65)}..."` 
+                                                : "Tap to review your weekly insights"}
                                     </p>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                 {report && report.score !== undefined && (
                                     <div style={{
-                                        background: 'var(--glass-card-bg)',
-                                        border: '1px solid var(--glass-card-border)',
-                                        padding: '6px 14px',
-                                        borderRadius: '16px',
-                                        textAlign: 'center'
+                                        padding: '4px 10px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        color: '#a855f7',
                                     }}>
-                                        <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-                                            {report.score}
-                                        </span>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
+                                        {report.score}<span style={{ fontSize: '10px', opacity: 0.6, fontWeight: '500' }}>/100</span>
                                     </div>
                                 )}
                                 <div style={{
-                                    background: 'var(--accent-gradient, linear-gradient(135deg, #6366f1, #a855f7))',
-                                    color: '#fff',
-                                    padding: '8px 16px',
-                                    borderRadius: '20px',
+                                    fontSize: '12px',
                                     fontWeight: '600',
-                                    fontSize: '13px',
+                                    color: 'var(--text-secondary)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '6px',
-                                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                                    flexShrink: 0
+                                    gap: '4px',
                                 }}>
-                                    <span>Open Report</span>
-                                    <ArrowUpRight size={16} />
+                                    <span>View</span>
+                                    <ArrowUpRight size={14} style={{ opacity: 0.7 }} />
                                 </div>
                             </div>
                         </motion.div>
