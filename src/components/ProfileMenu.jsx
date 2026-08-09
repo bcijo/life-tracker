@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LogOut, ChevronDown, RefreshCw, Check, Palette, Dices, User, AtSign } from 'lucide-react';
+import { LogOut, ChevronUp, ChevronDown, RefreshCw, Check, Palette, Dices, User, AtSign } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
-const ProfileMenu = () => {
+const ProfileMenu = ({ variant = 'default' }) => {
+    const isSidebar = variant === 'sidebar';
     const { user, signOut } = useAuth();
     const { profile, updateProfile, rerollUsername } = useProfile();
     const { theme, setTheme, THEMES } = useTheme();
@@ -89,25 +90,33 @@ const ProfileMenu = () => {
 
     const displayName = profile?.display_name || user.email;
     const initial = displayName ? displayName[0].toUpperCase() : 'U';
+    const ChevronIcon = isSidebar ? ChevronUp : ChevronDown;
 
     return (
-        <div style={{ position: 'relative' }} ref={menuRef}>
+        <div style={{ position: 'relative', width: isSidebar ? '100%' : 'auto' }} ref={menuRef}>
             {/* Avatar trigger button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 rounded-full px-1 py-1 transition-all duration-200"
                 style={{
-                    background: 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: isSidebar ? '10px' : '6px',
+                    width: isSidebar ? '100%' : 'auto',
+                    padding: isSidebar ? '10px 12px' : '4px',
+                    borderRadius: isSidebar ? '14px' : '9999px',
+                    background: isOpen && isSidebar ? 'rgba(255,255,255,0.06)' : 'transparent',
                     border: 'none',
                     cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'var(--glass-card-bg)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                onMouseOver={(e) => e.currentTarget.style.background = isSidebar ? 'rgba(255,255,255,0.06)' : 'var(--glass-card-bg)'}
+                onMouseOut={(e) => e.currentTarget.style.background = isOpen && isSidebar ? 'rgba(255,255,255,0.06)' : 'transparent'}
             >
                 {/* Avatar circle */}
                 <div style={{
-                    width: '34px',
-                    height: '34px',
+                    width: isSidebar ? '36px' : '34px',
+                    height: isSidebar ? '36px' : '34px',
                     borderRadius: '50%',
                     background: 'var(--accent-gradient)',
                     color: '#fff',
@@ -115,18 +124,52 @@ const ProfileMenu = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: '700',
-                    fontSize: '14px',
+                    fontSize: isSidebar ? '15px' : '14px',
                     flexShrink: 0,
                 }}>
                     {initial}
                 </div>
-                <ChevronDown
+
+                {/* Name + username shown in sidebar variant */}
+                {isSidebar && (
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                        <div style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: 1.3,
+                        }}>
+                            {profile?.display_name || profile?.full_name || 'User'}
+                        </div>
+                        {profile?.username && (
+                            <div style={{
+                                fontSize: '11px',
+                                color: 'var(--text-muted)',
+                                fontFamily: 'monospace',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                lineHeight: 1.3,
+                            }}>
+                                @{profile.username}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <ChevronIcon
                     size={15}
                     style={{
                         opacity: 0.5,
-                        transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
+                        transform: isOpen ? (isSidebar ? 'rotate(180deg)' : 'rotate(180deg)') : 'rotate(0)',
                         transition: 'transform 0.2s ease',
                         color: 'var(--text-primary)',
+                        flexShrink: 0,
+                        marginLeft: isSidebar ? 'auto' : 0,
                     }}
                 />
             </button>
@@ -135,10 +178,13 @@ const ProfileMenu = () => {
             {isOpen && (
                 <div style={{
                     position: 'absolute',
-                    top: '100%',
-                    right: '0',
-                    marginTop: '10px',
-                    width: '256px',
+                    ...(isSidebar
+                        ? { bottom: '100%', left: '0', marginBottom: '10px' }
+                        : { top: '100%', right: '0', marginTop: '10px' }
+                    ),
+                    width: isSidebar ? '280px' : '256px',
+                    maxHeight: isSidebar ? 'calc(100vh - 140px)' : 'none',
+                    overflowY: isSidebar ? 'auto' : 'visible',
                     background: 'var(--surface-elevated)',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
@@ -147,7 +193,9 @@ const ProfileMenu = () => {
                     border: '1px solid var(--glass-border)',
                     padding: '8px',
                     zIndex: 1000,
-                    animation: 'menuSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                    animation: isSidebar
+                        ? 'menuSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                        : 'menuSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}>
 
                     {/* ── User Info ── */}
@@ -461,6 +509,10 @@ const ProfileMenu = () => {
             <style>{`
                 @keyframes menuSlideIn {
                     from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+                    to   { opacity: 1; transform: translateY(0)   scale(1);    }
+                }
+                @keyframes menuSlideUp {
+                    from { opacity: 0; transform: translateY(8px) scale(0.97); }
                     to   { opacity: 1; transform: translateY(0)   scale(1);    }
                 }
                 @keyframes spin {

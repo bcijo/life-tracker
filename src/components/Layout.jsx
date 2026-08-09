@@ -50,8 +50,8 @@ const Layout = () => {
         </nav>
 
         {/* Sidebar Footer with Profile & AI */}
-        <div style={{ padding: '16px 12px', borderTop: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <ProfileMenu />
+        <div style={{ padding: '12px', borderTop: '1px solid var(--glass-border)' }}>
+          <ProfileMenu variant="sidebar" />
         </div>
       </aside>
 
