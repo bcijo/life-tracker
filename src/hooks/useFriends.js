@@ -2,78 +2,104 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import useAuth from './useAuth';
 
-/**
- * Client-side calculation for the logged-in user's own habit score.
- * (Always works for user.id because RLS allows users to read their own habits table rows).
- */
-const computeMyHabitScore = async (userId) => {
-  const defaultScore = { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
-  try {
-    const { data: habits, error } = await supabase
-      .from('habits')
-      .select('history, active_days, is_paused')
-      .eq('user_id', userId);
+const getLocalDateStr = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
-    if (error || !habits || habits.length === 0) return defaultScore;
+export const computeScoreForUserHabits = (userHabits) => {
+  if (!userHabits || userHabits.length === 0) {
+    return { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+  }
 
-    const now = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(now.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-    const todayStr = now.toISOString().split('T')[0];
+  const now = new Date();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = getLocalDateStr(thirtyDaysAgo);
+  const todayStr = getLocalDateStr(now);
 
-    let totalCompletions30d = 0;
-    let activeHabitCount = 0;
-    let totalActiveDays30d = 0;
-    let totalCompletedActiveDays30d = 0;
+  let totalCompletions30d = 0;
+  let allTimeCompletions = 0;
+  let activeHabitCount = 0;
+  let totalActiveDays30d = 0;
+  let totalCompletedActiveDays30d = 0;
 
-    for (const habit of habits) {
-      if (habit.is_paused) continue;
-      const history = habit.history || [];
-      const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
+  for (const habit of userHabits) {
+    if (habit.is_paused === true) continue;
 
-      if (history.length > 0) activeHabitCount++;
+    const history = habit.history || [];
+    const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
 
-      let habitCompletions30d = 0;
-      for (const entry of history) {
-        const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
-        const status = typeof entry === 'string' ? 'completed' : entry.status;
-        if (date >= thirtyDaysAgoStr && date <= todayStr && status === 'completed') {
+    if (history.length > 0) {
+      activeHabitCount++;
+    }
+
+    let habitCompletions30d = 0;
+    for (const entry of history) {
+      const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
+      const status = typeof entry === 'string' ? 'completed' : entry.status;
+
+      if (status === 'completed') {
+        allTimeCompletions++;
+        if (date >= thirtyDaysAgoStr && date <= todayStr) {
           habitCompletions30d++;
         }
       }
-      totalCompletions30d += habitCompletions30d;
-
-      const completedDates = new Set(
-        history
-          .filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed')
-          .map(e => typeof e === 'string' ? e.split('T')[0] : e.date)
-      );
-
-      const cursor = new Date(thirtyDaysAgo);
-      while (cursor <= now) {
-        if (activeDays.includes(cursor.getDay())) {
-          totalActiveDays30d++;
-          if (completedDates.has(cursor.toISOString().split('T')[0])) {
-            totalCompletedActiveDays30d++;
-          }
-        }
-        cursor.setDate(cursor.getDate() + 1);
-      }
     }
+    totalCompletions30d += habitCompletions30d;
 
-    const completionRate = totalActiveDays30d > 0
-      ? Math.round((totalCompletedActiveDays30d / totalActiveDays30d) * 100)
-      : 0;
-
-    const score = Math.round(
-      (totalCompletions30d * 10) + (completionRate * 2)
+    const completedDates = new Set(
+      history
+        .filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed')
+        .map(e => typeof e === 'string' ? e.split('T')[0] : e.date)
     );
 
-    return { score, completions_30d: totalCompletions30d, active_habits: activeHabitCount, completion_rate: completionRate };
+    const cursor = new Date(thirtyDaysAgo);
+    while (cursor <= now) {
+      const dayOfWeek = cursor.getDay();
+      if (activeDays.includes(dayOfWeek)) {
+        totalActiveDays30d++;
+        const dateStr = getLocalDateStr(cursor);
+        if (completedDates.has(dateStr)) {
+          totalCompletedActiveDays30d++;
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  const completionRate = totalActiveDays30d > 0
+    ? Math.round((totalCompletedActiveDays30d / totalActiveDays30d) * 100)
+    : 0;
+
+  const score = (totalCompletions30d * 10) + (allTimeCompletions * 2) + (activeHabitCount * 5);
+
+  return {
+    score,
+    completions_30d: totalCompletions30d,
+    active_habits: activeHabitCount,
+    completion_rate: completionRate,
+  };
+};
+
+export const fetchScoreForUser = async (userId) => {
+  try {
+    const { data: habits, error } = await supabase
+      .from('habits')
+      .select('history, active_days')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching habits for score:', error);
+      return { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+    }
+
+    return computeScoreForUserHabits(habits || []);
   } catch (err) {
-    console.error('Error computing score for self:', err);
-    return defaultScore;
+    console.error('Error fetching score for user:', userId, err);
+    return { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
   }
 };
 
@@ -92,7 +118,7 @@ export const useFriends = () => {
       setLoading(true);
       setError(null);
 
-      // 1. Fetch raw friendships for current user (requester or addressee)
+      // 1. Fetch raw friendships for current user
       const { data: rawFriendships, error: friendshipsError } = await supabase
         .from('friendships')
         .select('id, requester_id, addressee_id, status, created_at')
@@ -105,12 +131,10 @@ export const useFriends = () => {
         setPendingReceived([]);
         setPendingSent([]);
       } else {
-        // 2. Collect all other user IDs involved in friendships
         const otherUserIds = [...new Set(
           rawFriendships.map(f => f.requester_id === user.id ? f.addressee_id : f.requester_id)
         )];
 
-        // 3. Fetch profiles for all involved users in a single query
         let profileMap = new Map();
         if (otherUserIds.length > 0) {
           const { data: profilesData, error: profilesError } = await supabase
@@ -128,7 +152,6 @@ export const useFriends = () => {
         const received = [];
         const sent = [];
 
-        // 4. Process friendships into categorized lists
         for (const f of rawFriendships) {
           const isRequester = f.requester_id === user.id;
           const otherUserId = isRequester ? f.addressee_id : f.requester_id;
@@ -140,16 +163,7 @@ export const useFriends = () => {
           };
 
           if (f.status === 'accepted') {
-            // Fetch score for friend via RPC (bypasses RLS)
-            let scoreInfo = { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
-            const { data: scoreData, error: scoreError } = await supabase.rpc('get_user_habit_score', {
-              target_user_id: otherUserId
-            });
-            
-            if (!scoreError && scoreData) {
-              scoreInfo = Array.isArray(scoreData) ? (scoreData[0] || scoreInfo) : scoreData;
-            }
-
+            const scoreInfo = await fetchScoreForUser(otherUserId);
             acceptedFriends.push({
               id: otherProfile.id,
               friendship_id: f.id,
@@ -180,14 +194,9 @@ export const useFriends = () => {
         setPendingSent(sent);
       }
 
-      // 5. Fetch my own score: try client calculation first, fallback to RPC
-      const selfScore = await computeMyHabitScore(user.id);
-      if (selfScore && selfScore.score > 0) {
-        setMyScore(selfScore);
-      } else {
-        const { data: rpcScore } = await supabase.rpc('get_user_habit_score', { target_user_id: user.id });
-        setMyScore(rpcScore || selfScore);
-      }
+      // 5. Fetch my own score
+      const selfScore = await fetchScoreForUser(user.id);
+      setMyScore(selfScore);
 
     } catch (err) {
       console.error('Error fetching friends:', err);
