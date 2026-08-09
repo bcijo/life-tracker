@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Swords, ChevronDown } from 'lucide-react';
 
 const CompareView = ({ friends, myScore, currentUserId, myProfile }) => {
   const [selectedFriendId, setSelectedFriendId] = useState(friends?.[0]?.friendship_id || '');
+
+  // Auto-select first friend when friends list loads asynchronously
+  useEffect(() => {
+    if (friends?.length > 0 && !selectedFriendId) {
+      setSelectedFriendId(friends[0].friendship_id);
+    }
+  }, [friends, selectedFriendId]);
 
   const selectedFriend = friends?.find(f => f.friendship_id === selectedFriendId);
 

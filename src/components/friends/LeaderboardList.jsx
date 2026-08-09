@@ -61,7 +61,6 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
 
     if (isCurrentUser) {
       border = '1px solid var(--accent-primary)';
-      boxShadow = '0 0 12px rgba(var(--accent-primary-rgb, 100, 100, 255), 0.2)';
     }
 
     return {
