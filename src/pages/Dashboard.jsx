@@ -1,26 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import useTodos from '../hooks/useTodos';
 import useHabits from '../hooks/useHabits';
 import useShopping from '../hooks/useShopping';
 import useTransactions from '../hooks/useTransactions';
 import useBudgets from '../hooks/useBudgets';
 import { useProfile } from '../hooks/useProfile';
-import { isToday, parseISO, startOfWeek, endOfWeek, format, subDays } from 'date-fns';
-import useLifeContext from '../hooks/useLifeContext';
-import { generateReport } from '../lib/groq';
-import AIReportCard from '../components/AIReportCard';
-import WeeklyReportModal from '../components/WeeklyReportModal';
+import { isToday, parseISO, format, subDays } from 'date-fns';
 import { JournalModal } from '../components/JournalModal';
-import { supabase } from '../lib/supabase';
 import { 
-    Sparkles, 
     TrendingUp, 
     CheckSquare, 
     Activity, 
     ArrowUpRight, 
-    Zap,
     Calendar,
     Plus,
     BookOpen
@@ -29,7 +22,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 const getUserDisplayName = (profile) => {
     if (!profile) return '';
-    // Prefer full_name, then display_name, then nothing
     let rawName = profile.full_name || profile.display_name || '';
     if (!rawName) return '';
     const words = rawName.replace(/[._]/g, ' ').split(' ').filter(Boolean);
@@ -37,170 +29,16 @@ const getUserDisplayName = (profile) => {
 };
 
 const Dashboard = () => {
-    const { todos, addTodo } = useTodos();
-    const { habits, addHabit } = useHabits();
+    const { todos } = useTodos();
+    const { habits } = useHabits();
     const { items: shoppingItems } = useShopping();
     const { transactions } = useTransactions();
     const { profile, updateProfile } = useProfile();
-    const { budgets, addBudget } = useBudgets();
-    const contextData = useLifeContext();
+    const { budgets } = useBudgets();
 
-    // AI Report State
-    const [report, setReport] = useState(null);
-    const [reportLoading, setReportLoading] = useState(false);
-    const [acceptingId, setAcceptingId] = useState(null);
-    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
     const [nameInput, setNameInput] = useState('');
     const [savingName, setSavingName] = useState(false);
-
-    // Fetch weekly report (only on Sundays)
-    const isSunday = new Date().getDay() === 0;
-
-    useEffect(() => {
-        const fetchOrGenerateReport = async () => {
-            if (!isSunday) {
-                setReport(null);
-                return;
-            }
-
-            try {
-                setReportLoading(true);
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                const start = format(startOfWeek(new Date()), 'yyyy-MM-dd');
-                const end = format(endOfWeek(new Date()), 'yyyy-MM-dd');
-
-                // 1. Check DB for existing report
-                const { data: existing } = await supabase
-                    .from('ai_reports')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .eq('type', 'weekly')
-                    .eq('period_start', start)
-                    .maybeSingle();
-
-                if (existing) {
-                    setReport(existing.content);
-                } else {
-                    // Only auto-generate on Sundays if no report exists
-                    console.log("Generating new weekly report for Sunday...");
-                    const newReport = await generateReport('weekly', start, end, contextData);
-
-                    if (newReport) {
-                        setReport(newReport);
-                        await supabase.from('ai_reports').insert({
-                            user_id: user.id,
-                            type: 'weekly',
-                            period_start: start,
-                            period_end: end,
-                            content: newReport
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error("Report Fetch Error:", err);
-            } finally {
-                setReportLoading(false);
-            }
-        };
-
-        // Delay slightly to ensure contextData is populated
-        const timer = setTimeout(fetchOrGenerateReport, 1500);
-        return () => clearTimeout(timer);
-    }, [contextData.financial.totalBalance, isSunday]); // Depend on balanced state
-
-    // On-demand manual report regeneration
-    const handleForceGenerateReport = async () => {
-        if (reportLoading) return;
-        try {
-            setReportLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const start = format(startOfWeek(new Date()), 'yyyy-MM-dd');
-            const end = format(endOfWeek(new Date()), 'yyyy-MM-dd');
-
-            console.log("Regenerating weekly report on-demand...");
-            const newReport = await generateReport('weekly', start, end, contextData);
-
-            if (newReport) {
-                setReport(newReport);
-
-                const { data: existing } = await supabase
-                    .from('ai_reports')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .eq('type', 'weekly')
-                    .eq('period_start', start)
-                    .maybeSingle();
-
-                if (existing) {
-                    await supabase.from('ai_reports')
-                        .update({ content: newReport })
-                        .eq('id', existing.id);
-                } else {
-                    await supabase.from('ai_reports').insert({
-                        user_id: user.id,
-                        type: 'weekly',
-                        period_start: start,
-                        period_end: end,
-                        content: newReport
-                    });
-                }
-            }
-        } catch (err) {
-            console.error("Manual report generation error:", err);
-        } finally {
-            setReportLoading(false);
-        }
-    };
-
-    // Handle voluntary commitment acceptance
-    const handleAcceptCommitment = async (commitmentId) => {
-        if (!report || !report.voluntaryCommitments) return;
-        
-        const commitment = report.voluntaryCommitments.find(c => c.id === commitmentId);
-        if (!commitment) return;
-
-        setAcceptingId(commitmentId);
-        try {
-            // 1. Perform actual addition via context hooks
-            if (commitment.type === 'todo') {
-                await addTodo(commitment.title, commitment.actionData?.deadline || null);
-            } else if (commitment.type === 'habit') {
-                const days = commitment.actionData?.activeDays || [0, 1, 2, 3, 4, 5, 6];
-                const tod = commitment.actionData?.timeOfDay || 'morning';
-                await addHabit(commitment.title, days, tod);
-            } else if (commitment.type === 'budget') {
-                const amt = commitment.actionData?.amount || 1000;
-                const cats = commitment.actionData?.categoryIds || [];
-                addBudget(commitment.title, amt, cats, null);
-            }
-
-            // 2. Update local state and DB to mark as accepted
-            const updatedCommitments = report.voluntaryCommitments.map(c => 
-                c.id === commitmentId ? { ...c, accepted: true } : c
-            );
-            const updatedReport = { ...report, voluntaryCommitments: updatedCommitments };
-            
-            const { data: { user } } = await supabase.auth.getUser();
-            const start = format(startOfWeek(new Date()), 'yyyy-MM-dd');
-
-            await supabase.from('ai_reports')
-                .update({ content: updatedReport })
-                .eq('user_id', user.id)
-                .eq('type', 'weekly')
-                .eq('period_start', start);
-
-            setReport(updatedReport);
-        } catch (err) {
-            console.error("Failed to accept commitment:", err);
-        } finally {
-            setAcceptingId(null);
-        }
-    };
 
     // Stats calculations
     const activeTodos = todos.filter(t => !t.completed).length;
@@ -231,7 +69,7 @@ const Dashboard = () => {
         .filter(t => t.type === 'expense' && isToday(parseISO(t.date)))
         .reduce((acc, t) => acc + parseFloat(t.amount), 0);
 
-    // Compute beautiful 7-day visual graph data
+    // Compute 7-day visual graph data
     const chartData = useMemo(() => {
         const data = [];
         for (let i = 6; i >= 0; i--) {
@@ -300,51 +138,36 @@ const Dashboard = () => {
                                     value={nameInput}
                                     onChange={(e) => setNameInput(e.target.value)}
                                     placeholder="Enter your name"
-                                    autoFocus
-                                    style={{
-                                        flex: 1, padding: '8px 12px', borderRadius: '10px',
-                                        border: '1px solid var(--glass-card-border)',
-                                        background: 'var(--glass-card-bg)',
-                                        color: 'var(--text-primary)', fontSize: '14px',
-                                        outline: 'none',
-                                    }}
+                                    className="surface-input"
+                                    style={{ padding: '6px 12px', fontSize: '14px', borderRadius: '8px', maxWidth: '200px' }}
                                 />
                                 <button
                                     type="submit"
-                                    disabled={savingName || !nameInput.trim()}
-                                    style={{
-                                        padding: '8px 16px', borderRadius: '10px',
-                                        background: 'var(--accent-gradient)',
-                                        border: 'none', color: '#fff',
-                                        fontSize: '13px', fontWeight: '700',
-                                        cursor: savingName ? 'default' : 'pointer',
-                                        opacity: savingName || !nameInput.trim() ? 0.6 : 1,
-                                    }}
+                                    disabled={savingName}
+                                    className="btn-primary"
+                                    style={{ padding: '6px 14px', fontSize: '13px', borderRadius: '8px' }}
                                 >
-                                    {savingName ? '...' : 'Save'}
+                                    {savingName ? 'Saving...' : 'Save'}
                                 </button>
                             </form>
                         )}
                     </div>
-                    
-                    {/* Top Right Journal Trigger Button */}
+
                     <motion.button
-                        whileHover={{ scale: 1.05, boxShadow: '0 6px 20px rgba(168, 85, 247, 0.25)' }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setIsJournalModalOpen(true)}
                         style={{
-                            background: 'var(--glass-card-bg)',
-                            border: '1px solid var(--glass-card-border)',
-                            color: 'var(--text-primary)',
-                            padding: '8px 14px',
-                            borderRadius: '16px',
-                            cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            boxShadow: '0 4px 14px rgba(168, 85, 247, 0.15)',
-                            backdropFilter: 'blur(12px)',
-                            transition: 'all 0.2s ease',
+                            padding: '10px 16px',
+                            borderRadius: '16px',
+                            background: 'var(--surface-elevated)',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                         }}
                     >
                         <BookOpen size={17} style={{ color: 'var(--accent-primary)' }} />
@@ -352,256 +175,118 @@ const Dashboard = () => {
                     </motion.button>
                 </header>
 
-                {/* Sunday Weekly Insights Banner Card (Subtle & Refined) */}
-                <AnimatePresence mode="wait">
-                    {isSunday && (report || reportLoading) && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.25 }}
-                            onClick={() => setIsReportModalOpen(true)}
-                            style={{
-                                padding: '14px 18px',
-                                marginBottom: '20px',
-                                background: 'rgba(255, 255, 255, 0.03)',
-                                borderRadius: '16px',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                backdropFilter: 'blur(12px)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '14px',
-                                transition: 'all 0.2s ease',
-                            }}
-                            whileHover={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(168, 85, 247, 0.3)' }}
-                            whileTap={{ scale: 0.99 }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-                                <div style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '10px',
-                                    background: 'rgba(168, 85, 247, 0.1)',
-                                    border: '1px solid rgba(168, 85, 247, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#a855f7',
-                                    flexShrink: 0,
-                                }}>
-                                    <Sparkles size={18} className={reportLoading ? 'spin' : ''} />
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {reportLoading ? "Analyzing weekly progress..." : "Sunday AI Review"}
-                                        </span>
-                                        <span style={{
-                                            fontSize: '10px',
-                                            fontWeight: '600',
-                                            padding: '1px 7px',
-                                            borderRadius: '6px',
-                                            background: 'rgba(168, 85, 247, 0.12)',
-                                            color: '#a855f7',
-                                            letterSpacing: '0.03em',
-                                        }}>
-                                            Weekly
-                                        </span>
-                                    </div>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {reportLoading 
-                                            ? "Generating your habits & financial summary..." 
-                                            : report?.summary 
-                                                ? `"${report.summary.slice(0, 65)}..."` 
-                                                : "Tap to review your weekly insights"}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                                {report && report.score !== undefined && (
-                                    <div style={{
-                                        padding: '4px 10px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(255, 255, 255, 0.04)',
-                                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                                        fontSize: '13px',
-                                        fontWeight: '700',
-                                        color: '#a855f7',
-                                    }}>
-                                        {report.score}<span style={{ fontSize: '10px', opacity: 0.6, fontWeight: '500' }}>/100</span>
-                                    </div>
-                                )}
-                                <div style={{
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: 'var(--text-secondary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                }}>
-                                    <span>View</span>
-                                    <ArrowUpRight size={14} style={{ opacity: 0.7 }} />
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Dashboard Widgets Responsive Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                    {/* Glassmorphic Daily Overview */}
-                    <div className="glass-card glow-cyan" style={{ padding: '20px', borderLeft: '4px solid var(--accent-primary)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                {/* Grid Layout: Hero Stats & Features */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                    
+                    {/* Quick Daily Status Card */}
+                    <div className="glass-card" style={{ padding: '20px', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Zap size={16} style={{ color: 'var(--accent-primary)' }} />
-                                Daily Status
-                            </h3>
-                            <span style={{ fontSize: '11px', background: 'var(--success-bg)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ padding: '8px', borderRadius: '12px', background: 'rgba(102,126,234,0.15)', color: 'var(--accent-primary)' }}>
+                                    <Activity size={20} />
+                                </div>
+                                <span style={{ fontSize: '15px', fontWeight: '700' }}>Daily Status</span>
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', background: 'var(--success-bg)', color: 'var(--success)' }}>
                                 Keep it up!
                             </span>
                         </div>
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                            {/* Habits Link */}
-                            <Link to="/habits" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
-                                <motion.div
-                                    whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(168, 85, 247, 0.2)' }}
-                                    whileTap={{ scale: 0.96 }}
-                                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                                    style={{
-                                        background: 'var(--glass-bg)',
-                                        padding: '14px 12px',
-                                        borderRadius: '14px',
-                                        textAlign: 'center',
-                                        border: '1px solid var(--glass-border)',
-                                        cursor: 'pointer',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                        <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{habitsDoneToday}/{habitsActiveToday.length}</span>
-                                        <ArrowUpRight size={14} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
-                                    </div>
-                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Habits Completed</p>
-                                </motion.div>
-                            </Link>
 
-                            {/* Tasks Link */}
-                            <Link to="/todos" style={{ flex: 1, textDecoration: 'none', color: 'inherit' }}>
-                                <motion.div
-                                    whileHover={{ scale: 1.03, y: -3, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)' }}
-                                    whileTap={{ scale: 0.96 }}
-                                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                                    style={{
-                                        background: 'var(--glass-bg)',
-                                        padding: '14px 12px',
-                                        borderRadius: '14px',
-                                        textAlign: 'center',
-                                        border: '1px solid var(--glass-border)',
-                                        cursor: 'pointer',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                        <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{activeTodos}</span>
-                                        <ArrowUpRight size={14} style={{ color: 'var(--accent-secondary)', opacity: 0.8 }} />
-                                    </div>
-                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>Tasks Remaining</p>
-                                </motion.div>
-                            </Link>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div style={{ background: 'var(--surface-input)', padding: '14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Habits Completed</p>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                    <span style={{ fontSize: '24px', fontWeight: '800' }}>{habitsDoneToday}</span>
+                                    <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/{habitsActiveToday.length}</span>
+                                </div>
+                            </div>
+                            <div style={{ background: 'var(--surface-input)', padding: '14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Tasks Remaining</p>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                    <span style={{ fontSize: '24px', fontWeight: '800' }}>{activeTodos}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Highly Customized Recharts Area Chart for 7-day Spending */}
-                    <div className="glass-card" style={{ padding: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <TrendingUp size={16} style={{ color: 'var(--success)' }} />
-                                Spending Trend (7d)
-                            </h3>
+                    {/* Weekly Spending Graph Card */}
+                    <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ padding: '8px', borderRadius: '12px', background: 'rgba(236,72,153,0.15)', color: '#ec4899' }}>
+                                    <TrendingUp size={20} />
+                                </div>
+                                <span style={{ fontSize: '15px', fontWeight: '700' }}>Spending Trend (7d)</span>
+                            </div>
                             <Link to="/finances" style={{ fontSize: '12px', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
                                 View All <ArrowUpRight size={14} />
                             </Link>
                         </div>
 
-                        <div style={{ width: '100%', height: 160 }}>
+                        <div style={{ width: '100%', height: '100px' }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                                     <defs>
-                                        <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.4}/>
-                                            <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0.0}/>
+                                            <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
-                                    <XAxis 
-                                        dataKey="name" 
-                                        tickLine={false} 
-                                        axisLine={false}
-                                        tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                    <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                    <YAxis hide domain={[0, 'auto']} />
+                                    <Tooltip
+                                        contentStyle={{ background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)', borderRadius: '8px', fontSize: '12px' }}
+                                        formatter={(val) => [`₹${val}`, 'Spent']}
                                     />
-                                    <YAxis 
-                                        tickLine={false} 
-                                        axisLine={false}
-                                        tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                    />
-                                    <Tooltip 
-                                        contentStyle={{ 
-                                            background: 'var(--surface-elevated)', 
-                                            border: '1px solid var(--glass-card-border)', 
-                                            borderRadius: '12px',
-                                            fontSize: '12px',
-                                            color: 'var(--text-primary)',
-                                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
-                                        }}
-                                        itemStyle={{ color: 'var(--accent-primary)' }}
-                                        labelStyle={{ fontWeight: 'bold' }}
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="amount" 
-                                        stroke="var(--accent-primary)" 
-                                        strokeWidth={3}
-                                        fillOpacity={1} 
-                                        fill="url(#colorAmount)" 
-                                    />
+                                    <Area type="monotone" dataKey="amount" stroke="var(--accent-primary)" strokeWidth={2} fillOpacity={1} fill="url(#spendGrad)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
                 </div>
 
-                {/* Floating Quick Action split bill */}
-                <div style={{ marginTop: '16px' }}>
-                    <Link to="/split-bill" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div className="glass-card hover-lift glow-pink" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRight: '4px solid var(--accent-secondary)' }}>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <div style={{ background: 'var(--accent-gradient)', color: 'white', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Plus size={20} />
-                                </div>
-                                <div style={{ textAlign: 'left' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: '700', display: 'block', color: 'var(--text-primary)' }}>Split a Bill</span>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Upload receipt and calculate shares</span>
-                                </div>
+                {/* Module Quick Nav Cards */}
+                <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                    Quick Access
+                </h2>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <Link to="/todos" style={{ textDecoration: 'none' }}>
+                        <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(99,102,241,0.15)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CheckSquare size={22} />
                             </div>
-                            <span style={{ color: 'var(--accent-secondary)', fontSize: '14px', fontWeight: 'bold' }}>→</span>
+                            <div>
+                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Todos</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>{activeTodos} pending tasks</p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <Link to="/habits" style={{ textDecoration: 'none' }}>
+                        <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(168,85,247,0.15)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Activity size={22} />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Habits</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>{habitsDoneToday}/{habitsActiveToday.length} completed today</p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <Link to="/finances" style={{ textDecoration: 'none' }}>
+                        <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(34,197,94,0.15)', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <TrendingUp size={22} />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Finances</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>₹{todayExpense} spent today</p>
+                            </div>
                         </div>
                     </Link>
                 </div>
-
-                {/* Weekly Report Full-Page Modal Overlay */}
-                <WeeklyReportModal
-                    isOpen={isReportModalOpen}
-                    onClose={() => setIsReportModalOpen(false)}
-                    report={report}
-                    loading={reportLoading}
-                    onAcceptCommitment={handleAcceptCommitment}
-                    acceptingId={acceptingId}
-                    onForceGenerate={handleForceGenerateReport}
-                />
 
                 {/* Daily Journal Modal */}
                 <JournalModal

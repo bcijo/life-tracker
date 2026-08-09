@@ -190,6 +190,12 @@ const Layout = () => {
           justify-content: space-around;
           padding: 10px 16px;
           z-index: 100;
+          background: var(--surface-elevated, rgba(13, 17, 28, 0.92));
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+          border-radius: 24px;
         }
         
         .nav-item {

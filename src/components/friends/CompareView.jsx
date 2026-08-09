@@ -123,7 +123,7 @@ const CompareView = ({ friends, myScore, currentUserId, myProfile }) => {
   const myInitial = myDisplayName[0]?.toUpperCase() || 'Y';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '100px' }}>
       
       {/* ── Friend Select Header ── */}
       <div style={{
