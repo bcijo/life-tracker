@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { UserPlus, Check, X, Loader2, LogIn } from 'lucide-react';
+import { UserPlus, Check, X, LogIn } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import useAuth from '../hooks/useAuth';
+import AppLoader from '../components/common/AppLoader';
 
 const InviteLanding = () => {
   const { username } = useParams();
@@ -132,10 +133,7 @@ const InviteLanding = () => {
       >
         {/* Loading */}
         {status === 'loading' && (
-          <>
-            <Loader2 size={48} style={{ color: '#a855f7', animation: 'spin 1s linear infinite', marginBottom: 16 }} />
-            <p style={{ color: 'var(--text-muted, #888)', fontSize: 15 }}>Looking up invite...</p>
-          </>
+          <AppLoader variant="section" size="normal" message="Looking up invite..." />
         )}
 
         {/* Needs Login */}
@@ -213,10 +211,7 @@ const InviteLanding = () => {
 
         {/* Sending */}
         {status === 'sending' && (
-          <>
-            <Loader2 size={48} style={{ color: '#a855f7', animation: 'spin 1s linear infinite', marginBottom: 16 }} />
-            <p style={{ color: 'var(--text-muted, #888)', fontSize: 15 }}>Sending friend request...</p>
-          </>
+          <AppLoader variant="section" size="normal" message="Sending friend request..." />
         )}
 
         {/* Sent! */}

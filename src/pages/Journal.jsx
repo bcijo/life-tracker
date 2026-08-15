@@ -20,6 +20,7 @@ import {
 import { format, parseISO, subDays } from 'date-fns';
 import useJournal from '../hooks/useJournal';
 import { transcribeAudio } from '../lib/groq';
+import AppLoader from '../components/common/AppLoader';
 
 const MOODS = [
     { value: 1, emoji: '😞', label: 'Rough', color: '#ef4444' },
@@ -426,35 +427,6 @@ const Journal = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                    {/* Quick Dictation Header Pill */}
-                    <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        type="button"
-                        onClick={() => {
-                            const field = activeTab !== 'all' ? activeTab : 'how_was_today';
-                            if (isRecording) stopRecording();
-                            else startRecording(field);
-                        }}
-                        className="journal-header-btn"
-                        style={{
-                            padding: '7px 12px',
-                            borderRadius: '12px',
-                            border: isRecording ? '1.5px solid #ef4444' : '1px solid var(--border-subtle)',
-                            background: isRecording ? 'rgba(239, 68, 68, 0.15)' : 'var(--surface-input)',
-                            color: isRecording ? '#ef4444' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        {isRecording ? <Square size={13} /> : <Mic size={13} style={{ color: 'var(--accent-primary)' }} />}
-                        <span>{isRecording ? formatTimer(recordingSeconds) : 'Speak'}</span>
-                    </motion.button>
-
                     <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
@@ -654,10 +626,7 @@ const Journal = () => {
             </div>
 
             {loading ? (
-                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--accent-primary)' }}>
-                    <Loader2 className="spin" size={30} style={{ margin: '0 auto 8px' }} />
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading journal...</p>
-                </div>
+                <AppLoader variant="section" size="small" message="Loading your reflections..." />
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     

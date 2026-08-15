@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, X, Loader2, Sparkles, Check } from 'lucide-react';
+import { BookOpen, X, Sparkles, Check } from 'lucide-react';
 import useJournal from '../hooks/useJournal';
+import AppLoader from './common/AppLoader';
 
 const MOOD_OPTIONS = [
     { value: 1, emoji: '😞', label: 'Rough' },
@@ -144,9 +145,7 @@ export const JournalModal = ({ isOpen, onClose }) => {
                     </div>
 
                     {loading ? (
-                        <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--accent-primary)' }}>
-                            <Loader2 className="spin" size={32} />
-                        </div>
+                        <AppLoader variant="section" size="small" message="Loading your reflections..." />
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {/* Mood Selector */}

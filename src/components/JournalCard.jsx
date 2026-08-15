@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BookOpen, ChevronDown, ChevronUp, Sun, Cloud, CloudRain, Loader2 } from 'lucide-react';
 import useJournal from '../hooks/useJournal';
+import AppLoader from './common/AppLoader';
 
 const MOOD_OPTIONS = [
     { value: 1, emoji: '😞', label: 'Rough' },
@@ -97,9 +98,7 @@ const JournalCard = () => {
             {isExpanded && (
                 <div style={{ padding: '20px' }}>
                     {loading ? (
-                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-primary)' }}>
-                            <Loader2 className="spin" size={24} />
-                        </div>
+                        <AppLoader variant="section" size="small" message="Loading your reflections..." />
                     ) : (
                         <>
                             {/* Mood Selector */}

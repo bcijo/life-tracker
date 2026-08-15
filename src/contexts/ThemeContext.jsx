@@ -34,9 +34,9 @@ export const ThemeProvider = ({ children }) => {
     const [theme, setThemeState] = useState(() => {
         // Read from localStorage synchronously before first paint
         try {
-            return localStorage.getItem('lifetracker-theme') || 'light';
+            return localStorage.getItem('lifetracker-theme') || 'dark';
         } catch {
-            return 'light';
+            return 'dark';
         }
     });
 

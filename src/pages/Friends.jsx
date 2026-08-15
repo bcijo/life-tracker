@@ -11,6 +11,7 @@ import FriendRequestCard from '../components/friends/FriendRequestCard';
 import FriendSearchModal from '../components/friends/FriendSearchModal';
 import LeaderboardList from '../components/friends/LeaderboardList';
 import CompareView from '../components/friends/CompareView';
+import AppLoader from '../components/common/AppLoader';
 
 const TABS = [
   { id: 'friends', label: 'Friends', icon: Users },
@@ -302,16 +303,7 @@ const Friends = () => {
 
             {/* Friends List */}
             {friendsLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[1, 2, 3].map(i => (
-                  <div key={i} style={{
-                    height: 72, borderRadius: 16,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    animation: 'pulse 1.5s ease infinite',
-                  }} />
-                ))}
-              </div>
+              <AppLoader variant="section" size="small" message="Loading your friends..." />
             ) : friends.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
