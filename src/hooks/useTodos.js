@@ -19,6 +19,10 @@ function useTodos() {
         return await update(id, { completed: !todo.completed });
     };
 
+    const updateTodo = async (id, updates) => {
+        return await update(id, updates);
+    };
+
     const deleteTodo = async (id) => {
         return await remove(id);
     };
@@ -29,6 +33,7 @@ function useTodos() {
         error,
         addTodo,
         toggleTodo,
+        updateTodo,
         deleteTodo,
     };
 }
