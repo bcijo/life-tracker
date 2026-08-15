@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw } from 'lucide-react';
+import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw, Send, AlertCircle } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
@@ -50,10 +50,34 @@ const Friends = () => {
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Quick Inline Add State
+  const [inlineUsername, setInlineUsername] = useState('');
+  const [quickAddStatus, setQuickAddStatus] = useState(null); // { type: 'success'|'error', msg: string }
+  const [sendingQuickAdd, setSendingQuickAdd] = useState(false);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await Promise.all([refreshFriends(), refreshLeaderboard()]);
     setTimeout(() => setRefreshing(false), 500);
+  };
+
+  const handleQuickAdd = async (e) => {
+    if (e) e.preventDefault();
+    const clean = inlineUsername.trim().replace(/^@/, '');
+    if (!clean) return;
+
+    setSendingQuickAdd(true);
+    const res = await sendFriendRequest(clean);
+    setSendingQuickAdd(false);
+
+    if (res?.error) {
+      setQuickAddStatus({ type: 'error', msg: res.error });
+    } else {
+      setQuickAddStatus({ type: 'success', msg: `Request sent to @${clean}!` });
+      setInlineUsername('');
+    }
+
+    setTimeout(() => setQuickAddStatus(null), 4000);
   };
 
   const shareInviteLink = async () => {
@@ -74,7 +98,6 @@ const Friends = () => {
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        // Fallback to clipboard
         await navigator.clipboard.writeText(inviteUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -82,7 +105,6 @@ const Friends = () => {
     }
   };
 
-  // If no username, show onboarding
   if (!profile?.username) {
     return (
       <div className="page-container" style={{ position: 'relative', zIndex: 1 }}>
@@ -99,35 +121,35 @@ const Friends = () => {
       <motion.header
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 20, position: 'relative', zIndex: 2,
+          marginBottom: 16, position: 'relative', zIndex: 2,
         }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
       >
         <div>
           <h1 style={{
-            margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em',
+            margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em',
             color: 'var(--text-primary)',
           }}>
             Friends
           </h1>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, display: 'block' }}>
             Compete & stay motivated
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {/* My Score Badge */}
           {myScore && (
             <div style={{
-              padding: '6px 12px', borderRadius: 9999,
+              padding: '4px 10px', borderRadius: 9999,
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.25)',
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 5,
             }}>
-              <Trophy size={13} style={{ color: '#a855f7' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', fontFamily: 'monospace' }}>
+              <Trophy size={12} style={{ color: '#a855f7' }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#a855f7', fontFamily: 'monospace' }}>
                 {Math.round(myScore.score || 0)}
               </span>
             </div>
@@ -135,48 +157,46 @@ const Friends = () => {
 
           {/* Refresh Button */}
           <motion.button
-            whileTap={{ scale: 0.88 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleRefresh}
             disabled={refreshing}
             style={{
-              width: 36, height: 36, borderRadius: 12,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              width: 32, height: 32, borderRadius: 10,
+              background: 'var(--surface-elevated)',
+              border: '1px solid var(--border-subtle)',
               color: 'var(--text-secondary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: refreshing ? 'default' : 'pointer',
               opacity: refreshing ? 0.5 : 1,
-              transition: 'all 0.2s',
             }}
             title="Refresh"
           >
-            <RefreshCw size={16} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
+            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
           </motion.button>
 
           {/* Share Invite Link */}
           <motion.button
-            whileTap={{ scale: 0.88 }}
+            whileTap={{ scale: 0.9 }}
             onClick={shareInviteLink}
             style={{
-              width: 36, height: 36, borderRadius: 12,
-              background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
-              border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              width: 32, height: 32, borderRadius: 10,
+              background: copied ? 'rgba(34,197,94,0.15)' : 'var(--surface-elevated)',
+              border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border-subtle)'}`,
               color: copied ? '#22c55e' : 'var(--text-secondary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
-              transition: 'all 0.2s',
             }}
             title="Share invite link"
           >
-            {copied ? <Check size={16} /> : <Share2 size={16} />}
+            {copied ? <Check size={14} /> : <Share2 size={14} />}
           </motion.button>
 
-          {/* Add Friend Button */}
+          {/* Add Friend Search Modal Trigger */}
           <motion.button
-            whileTap={{ scale: 0.88 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => setShowSearch(true)}
             style={{
-              width: 36, height: 36, borderRadius: 12,
+              width: 32, height: 32, borderRadius: 10,
               background: 'linear-gradient(135deg, #a855f7, #ec4899)',
               border: 'none',
               color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -184,7 +204,7 @@ const Friends = () => {
             }}
             title="Add Friend"
           >
-            <UserPlus size={18} />
+            <UserPlus size={15} />
           </motion.button>
         </div>
       </motion.header>
@@ -192,14 +212,13 @@ const Friends = () => {
       {/* Tab Switcher */}
       <motion.div
         style={{
-          display: 'flex', gap: 4, marginBottom: 20,
-          background: 'rgba(255,255,255,0.04)',
-          borderRadius: 14, padding: 4,
-          border: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', gap: 4, marginBottom: 14,
+          background: 'var(--surface-input)',
+          borderRadius: 12, padding: 3,
+          border: '1px solid var(--border-subtle)',
         }}
-        initial={{ opacity: 0, y: -6 }}
+        initial={{ opacity: 0, y: -4 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -210,22 +229,21 @@ const Friends = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                flex: 1, padding: '10px 0', borderRadius: 10,
-                background: isActive ? 'linear-gradient(135deg, rgba(168,85,247,0.25), rgba(236,72,153,0.15))' : 'transparent',
+                flex: 1, padding: '8px 0', borderRadius: 9,
+                background: isActive ? 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.12))' : 'transparent',
                 border: isActive ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent',
-                color: isActive ? '#fff' : 'var(--text-muted)',
-                fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                transition: 'all 0.2s ease',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: 12, fontWeight: isActive ? 800 : 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 position: 'relative',
               }}
             >
-              <Icon size={15} />
+              <Icon size={14} />
               {tab.label}
               {hasBadge && (
                 <span style={{
                   position: 'absolute', top: 4, right: 8,
-                  width: 8, height: 8, borderRadius: '50%',
+                  width: 7, height: 7, borderRadius: '50%',
                   background: '#ef4444',
                   border: '2px solid var(--glass-card-bg)',
                 }} />
@@ -240,33 +258,119 @@ const Friends = () => {
         {activeTab === 'friends' && (
           <motion.div
             key="friends"
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
           >
+            {/* ── CLEAN INLINE QUICK ADD BY USERNAME BAR ── */}
+            <div className="glass-card" style={{
+              borderRadius: '14px',
+              padding: '8px 10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              marginBottom: '12px'
+            }}>
+              <form onSubmit={handleQuickAdd} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'var(--surface-input)',
+                  borderRadius: '10px',
+                  padding: '0 10px',
+                  border: '1px solid var(--border-subtle)'
+                }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)', marginRight: '2px' }}>
+                    @
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="add friend by username..."
+                    value={inlineUsername}
+                    onChange={(e) => setInlineUsername(e.target.value)}
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      color: 'var(--text-primary)',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      padding: '7px 0'
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!inlineUsername.trim() || sendingQuickAdd}
+                  className="btn-primary"
+                  style={{
+                    padding: '0 12px',
+                    height: '32px',
+                    borderRadius: '10px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    border: 'none',
+                    cursor: !inlineUsername.trim() ? 'not-allowed' : 'pointer',
+                    opacity: !inlineUsername.trim() ? 0.5 : 1,
+                    flexShrink: 0
+                  }}
+                >
+                  <Send size={11} />
+                  <span>Add</span>
+                </button>
+              </form>
+
+              {/* Status Toast Notification */}
+              {quickAddStatus && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: quickAddStatus.type === 'error' ? '#ef4444' : '#10b981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    paddingLeft: '4px'
+                  }}
+                >
+                  {quickAddStatus.type === 'error' ? <AlertCircle size={12} /> : <Check size={12} />}
+                  <span>{quickAddStatus.msg}</span>
+                </motion.div>
+              )}
+            </div>
+
             {/* Pending Requests Section */}
             {hasPending && (
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 14 }}>
                 <button
                   onClick={() => setShowPending(v => !v)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 12px', borderRadius: 12, marginBottom: 10,
-                    background: pendingReceived.length > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${pendingReceived.length > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 10px', borderRadius: '10px', marginBottom: 8,
+                    background: pendingReceived.length > 0 ? 'rgba(239,68,68,0.08)' : 'var(--surface-input)',
+                    border: `1px solid ${pendingReceived.length > 0 ? 'rgba(239,68,68,0.2)' : 'var(--border-subtle)'}`,
                     cursor: 'pointer', width: '100%',
                     color: pendingReceived.length > 0 ? '#ef4444' : 'var(--text-muted)',
-                    fontSize: 13, fontWeight: 700,
+                    fontSize: 12, fontWeight: 700,
                   }}
                 >
-                  <Bell size={14} />
+                  <Bell size={13} />
                   {pendingReceived.length > 0 && `${pendingReceived.length} incoming · `}
                   {pendingSent.length > 0 && `${pendingSent.length} sent`}
                   {!pendingReceived.length && !pendingSent.length && 'No pending'}
                   <motion.span
                     animate={{ rotate: showPending ? 180 : 0 }}
-                    style={{ marginLeft: 'auto', fontSize: 12 }}
+                    style={{ marginLeft: 'auto', fontSize: 11 }}
                   >▾</motion.span>
                 </button>
 
@@ -276,7 +380,7 @@ const Friends = () => {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 8 }}
+                      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 6 }}
                     >
                       {pendingReceived.map(req => (
                         <FriendRequestCard
@@ -306,32 +410,20 @@ const Friends = () => {
               <AppLoader variant="section" size="small" message="Loading your friends..." />
             ) : friends.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{ textAlign: 'center', padding: '60px 24px' }}
+                style={{ textAlign: 'center', padding: '40px 20px' }}
               >
-                <div style={{ fontSize: 48, marginBottom: 16 }}>👋</div>
-                <h3 style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 8 }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>👋</div>
+                <h3 style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
                   No friends yet
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>
-                  Add friends to compete on habit scores!
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16 }}>
+                  Type a username above to start comparing habit streaks!
                 </p>
-                <button
-                  onClick={() => setShowSearch(true)}
-                  style={{
-                    padding: '12px 24px', borderRadius: 12,
-                    background: 'linear-gradient(135deg, #a855f7, #ec4899)',
-                    border: 'none', color: '#fff', fontSize: 14, fontWeight: 700,
-                    cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8,
-                  }}
-                >
-                  <UserPlus size={18} />
-                  Add Friends
-                </button>
               </motion.div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {friends.map((friend, i) => (
                   <FriendCard
                     key={friend.friendship_id}
@@ -350,10 +442,10 @@ const Friends = () => {
         {activeTab === 'leaderboard' && (
           <motion.div
             key="leaderboard"
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
           >
             <LeaderboardList
               leaderboard={leaderboard}
@@ -368,10 +460,10 @@ const Friends = () => {
         {activeTab === 'compare' && (
           <motion.div
             key="compare"
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
           >
             <CompareView
               friends={friends}
@@ -383,20 +475,13 @@ const Friends = () => {
         )}
       </AnimatePresence>
 
-      {/* Friend Search Modal */}
+      {/* Floating Centered Add Friend Modal */}
       <FriendSearchModal
         isOpen={showSearch}
         onClose={() => setShowSearch(false)}
         onSendRequest={sendFriendRequest}
         searchUsers={searchUsers}
       />
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.7; }
-        }
-      `}</style>
     </div>
   );
 };

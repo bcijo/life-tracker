@@ -404,3 +404,54 @@ export async function transcribeAudio(audioBlob, promptHint = '') {
     return data.text ? data.text.trim() : '';
 }
 
+/**
+ * AI Habit Match Analysis: Compares habits of two users to discover shared habits,
+ * synergized habits, and mutual challenge opportunities.
+ */
+export async function analyzeHabitMatch(myHabits, friendHabits, myName = 'You', friendName = 'Friend') {
+    const myHabitNames = (myHabits || []).map(h => ({ id: h.id, name: h.name, active_days: h.active_days }));
+    const friendHabitNames = (friendHabits || []).map(h => ({ id: h.id, name: h.name, active_days: h.active_days }));
+
+    const systemPrompt = `You are a concise AI habit matcher for LifeTracker.
+Analyze habits of: ${myName} and ${friendName}.
+Tasks:
+1. Suggest ONE clean, realistic mutual habit challenge neither tracks that fits their shared focus.
+2. Match similar habits they already track.
+
+Return ONLY a JSON object with this exact minimal structure:
+{
+  "compatibilityScore": 85,
+  "mutualSynergyHabit": {
+    "title": "Morning 15m Walk",
+    "category": "Health",
+    "frequency": "Daily"
+  },
+  "matches": [
+    {
+      "habitTitle": "Workout",
+      "category": "Fitness",
+      "myHabitId": "optional-id-or-null",
+      "friendHabitId": "optional-id-or-null",
+      "status": "both_tracking"
+    }
+  ]
+}
+
+Status must be: "both_tracking" | "you_need_to_add" | "friend_needs_to_add". Keep all titles concise (2-4 words max).`;
+
+    const userMessage = `${myName}'s habits: ${JSON.stringify(myHabitNames)}\n${friendName}'s habits: ${JSON.stringify(friendHabitNames)}`;
+
+    try {
+        const response = await callGroq([
+            { role: 'user', content: userMessage }
+        ], systemPrompt, true);
+
+        if (!response) return null;
+        return JSON.parse(response);
+    } catch (e) {
+        console.error('Error analyzing habit match:', e);
+        return null;
+    }
+}
+
+

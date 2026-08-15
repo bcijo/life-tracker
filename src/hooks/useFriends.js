@@ -9,22 +9,29 @@ const getLocalDateStr = (d = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
-export const computeScoreForUserHabits = (userHabits) => {
+export const computeScoreForUserHabits = (userHabits, startDateStr = null) => {
   if (!userHabits || userHabits.length === 0) {
-    return { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+    return { score: 0, completions: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
   }
 
   const now = new Date();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const thirtyDaysAgoStr = getLocalDateStr(thirtyDaysAgo);
   const todayStr = getLocalDateStr(now);
 
-  let totalCompletions30d = 0;
+  let fromDate;
+  if (startDateStr) {
+    fromDate = new Date(startDateStr);
+  } else {
+    // Default 30 days ago
+    fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - 30);
+  }
+  const fromDateStr = getLocalDateStr(fromDate);
+
+  let periodCompletions = 0;
   let allTimeCompletions = 0;
   let activeHabitCount = 0;
-  let totalActiveDays30d = 0;
-  let totalCompletedActiveDays30d = 0;
+  let totalActiveDaysInPeriod = 0;
+  let totalCompletedActiveDaysInPeriod = 0;
 
   for (const habit of userHabits) {
     if (habit.is_paused === true) continue;
@@ -36,19 +43,19 @@ export const computeScoreForUserHabits = (userHabits) => {
       activeHabitCount++;
     }
 
-    let habitCompletions30d = 0;
+    let habitPeriodCompletions = 0;
     for (const entry of history) {
       const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
       const status = typeof entry === 'string' ? 'completed' : entry.status;
 
       if (status === 'completed') {
         allTimeCompletions++;
-        if (date >= thirtyDaysAgoStr && date <= todayStr) {
-          habitCompletions30d++;
+        if (date >= fromDateStr && date <= todayStr) {
+          habitPeriodCompletions++;
         }
       }
     }
-    totalCompletions30d += habitCompletions30d;
+    periodCompletions += habitPeriodCompletions;
 
     const completedDates = new Set(
       history
@@ -56,50 +63,61 @@ export const computeScoreForUserHabits = (userHabits) => {
         .map(e => typeof e === 'string' ? e.split('T')[0] : e.date)
     );
 
-    const cursor = new Date(thirtyDaysAgo);
+    const cursor = new Date(fromDate);
     while (cursor <= now) {
       const dayOfWeek = cursor.getDay();
       if (activeDays.includes(dayOfWeek)) {
-        totalActiveDays30d++;
+        totalActiveDaysInPeriod++;
         const dateStr = getLocalDateStr(cursor);
         if (completedDates.has(dateStr)) {
-          totalCompletedActiveDays30d++;
+          totalCompletedActiveDaysInPeriod++;
         }
       }
       cursor.setDate(cursor.getDate() + 1);
     }
   }
 
-  const completionRate = totalActiveDays30d > 0
-    ? Math.round((totalCompletedActiveDays30d / totalActiveDays30d) * 100)
+  const completionRate = totalActiveDaysInPeriod > 0
+    ? Math.round((totalCompletedActiveDaysInPeriod / totalActiveDaysInPeriod) * 100)
     : 0;
 
-  const score = (totalCompletions30d * 10) + (allTimeCompletions * 2) + (activeHabitCount * 5);
+  const score = (periodCompletions * 10) + (allTimeCompletions * 2) + (activeHabitCount * 5);
 
   return {
     score,
-    completions_30d: totalCompletions30d,
+    completions: periodCompletions,
+    completions_30d: periodCompletions,
     active_habits: activeHabitCount,
     completion_rate: completionRate,
+    startDate: fromDateStr
   };
 };
 
-export const fetchScoreForUser = async (userId) => {
+export const fetchHabitsForUser = async (userId) => {
   try {
     const { data: habits, error } = await supabase
       .from('habits')
-      .select('history, active_days')
+      .select('id, name, history, active_days, is_paused')
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Error fetching habits for score:', error);
-      return { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+      console.error('Error fetching habits for user:', userId, error);
+      return [];
     }
+    return habits || [];
+  } catch (err) {
+    console.error('Error fetching habits for user:', userId, err);
+    return [];
+  }
+};
 
-    return computeScoreForUserHabits(habits || []);
+export const fetchScoreForUser = async (userId, startDateStr = null) => {
+  try {
+    const habits = await fetchHabitsForUser(userId);
+    return computeScoreForUserHabits(habits, startDateStr);
   } catch (err) {
     console.error('Error fetching score for user:', userId, err);
-    return { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+    return { score: 0, completions: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
   }
 };
 

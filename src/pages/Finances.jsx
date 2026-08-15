@@ -150,37 +150,6 @@ const Finances = () => {
                 {activeTab === 'shopping' && <ShoppingView />}
             </div>
 
-            {/* Mobile Floating Action Pill (visible on mobile only) */}
-            <div className="mobile-fab-container">
-                <motion.button
-                    whileHover={{ scale: 1.06 }}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={() => setShowGlobalAddModal(true)}
-                    className="mobile-fab-button btn-primary"
-                    style={{
-                        position: 'fixed',
-                        bottom: '86px',
-                        right: '20px',
-                        height: '46px',
-                        padding: '0 18px',
-                        borderRadius: '23px',
-                        color: '#fff',
-                        border: 'none',
-                        boxShadow: '0 8px 24px rgba(124, 58, 237, 0.45)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        zIndex: 99,
-                        fontWeight: '700',
-                        fontSize: '13px'
-                    }}
-                >
-                    <Plus size={18} strokeWidth={2.8} />
-                    <span>Expense</span>
-                </motion.button>
-            </div>
-
             {/* Global Quick Add Expense Modal */}
             <QuickAddExpenseModal
                 isOpen={showGlobalAddModal}
@@ -191,11 +160,6 @@ const Finances = () => {
             />
 
             <style>{`
-                @media (min-width: 768px) {
-                    .mobile-fab-container {
-                        display: none !important;
-                    }
-                }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(8px); }
                     to { opacity: 1; transform: translateY(0); }

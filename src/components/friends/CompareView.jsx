@@ -1,9 +1,152 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Swords, ChevronDown, Flame, Target, CheckCircle2, Award, Zap, ArrowRight, UserPlus } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Trophy, 
+  Swords, 
+  ChevronDown, 
+  Flame, 
+  Target, 
+  Layers, 
+  Sparkles, 
+  Plus, 
+  Check, 
+  RefreshCw, 
+  Lock,
+  Unlock,
+  Rocket
+} from 'lucide-react';
+import { 
+  format, 
+  parseISO, 
+  subDays, 
+  addDays, 
+  startOfWeek, 
+  differenceInDays 
+} from 'date-fns';
+import { fetchHabitsForUser } from '../../hooks/useFriends';
+import useHabits from '../../hooks/useHabits';
+import { analyzeHabitMatch } from '../../lib/groq';
+import AppLoader from '../common/AppLoader';
+
+const getLocalDateStr = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const computeDetailedCompareMetrics = (habits, mode = 'all_time') => {
+  const now = new Date();
+  const todayStr = getLocalDateStr(now);
+  const thirtyDaysAgoStr = getLocalDateStr(subDays(now, 30));
+
+  if (!habits || !Array.isArray(habits) || habits.length === 0) {
+    return {
+      score: 0,
+      completions: 0,
+      thirtyDayCompletions: 0,
+      consistencyRate: 0,
+      activeHabits: 0
+    };
+  }
+
+  let fromDateStr = thirtyDaysAgoStr;
+  if (mode === 'this_week') {
+    fromDateStr = getLocalDateStr(startOfWeek(now, { weekStartsOn: 1 }));
+  } else if (mode === 'all_time') {
+    fromDateStr = '2020-01-01';
+  }
+
+  const fromDate = parseISO(fromDateStr);
+
+  let periodCompletions = 0;
+  let thirtyDayCompletions = 0;
+  let allTimeCompletions = 0;
+  let activeHabitsCount = 0;
+  let scheduledDaysTotal = 0;
+  let completedDaysTotal = 0;
+
+  habits.forEach(habit => {
+    if (habit.is_paused === true) return;
+    activeHabitsCount++;
+
+    const history = habit.history || [];
+    const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
+
+    const completedDates = new Set();
+    history.forEach(entry => {
+      const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
+      const status = typeof entry === 'string' ? 'completed' : entry.status;
+      if (status === 'completed') {
+        allTimeCompletions++;
+        completedDates.add(date);
+
+        if (date >= thirtyDaysAgoStr && date <= todayStr) {
+          thirtyDayCompletions++;
+        }
+
+        if (date >= fromDateStr && date <= todayStr) {
+          periodCompletions++;
+        }
+      }
+    });
+
+    let cursor = new Date(fromDate);
+    while (cursor <= now) {
+      const dow = cursor.getDay();
+      if (activeDays.includes(dow)) {
+        scheduledDaysTotal++;
+        const dStr = getLocalDateStr(cursor);
+        if (completedDates.has(dStr)) {
+          completedDaysTotal++;
+        }
+      }
+      cursor = addDays(cursor, 1);
+    }
+  });
+
+  const consistencyRate = scheduledDaysTotal > 0 
+    ? Math.round((completedDaysTotal / scheduledDaysTotal) * 100) 
+    : 0;
+
+  let score = (thirtyDayCompletions * 10) + (allTimeCompletions * 2) + (activeHabitsCount * 5);
+  if (mode === 'this_week') {
+    score = (periodCompletions * 15) + (allTimeCompletions * 2) + (activeHabitsCount * 5) + (consistencyRate * 2);
+  }
+
+  return {
+    score,
+    completions: mode === 'all_time' ? (thirtyDayCompletions || periodCompletions) : periodCompletions,
+    thirtyDayCompletions,
+    consistencyRate,
+    activeHabits: activeHabitsCount
+  };
+};
 
 const CompareView = ({ friends, myScore, currentUserId, myProfile }) => {
+  const { habits: myContextHabits, addHabit: addHabitDb } = useHabits();
+
+  const [viewMode, setViewMode] = useState('arena'); // 'arena' | 'habit_match'
   const [selectedFriendId, setSelectedFriendId] = useState(friends?.[0]?.friendship_id || '');
+  const [compareMode, setCompareMode] = useState('all_time'); // 'all_time' | 'this_week'
+
+  const [friendHabits, setFriendHabits] = useState([]);
+  const [loadingFriendHabits, setLoadingFriendHabits] = useState(false);
+
+  // AI Habit Match state
+  const [aiMatchResult, setAiMatchResult] = useState(null);
+  const [loadingAiMatch, setLoadingAiMatch] = useState(false);
+  const [acceptedHabits, setAcceptedHabits] = useState(new Set());
+
+  // Privacy: explicitly approved habits to share
+  const [sharedHabitPermissions, setSharedHabitPermissions] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`shared_habits_${selectedFriendId}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   useEffect(() => {
     if (friends?.length > 0 && !selectedFriendId) {
@@ -13,156 +156,169 @@ const CompareView = ({ friends, myScore, currentUserId, myProfile }) => {
 
   const selectedFriend = friends?.find(f => f.friendship_id === selectedFriendId);
 
+  // Load friend's habits
+  const loadFriendHabits = useCallback(async () => {
+    if (!selectedFriend?.id) return;
+    setLoadingFriendHabits(true);
+    try {
+      const habits = await fetchHabitsForUser(selectedFriend.id);
+      setFriendHabits(habits || []);
+    } catch (err) {
+      console.error('Error fetching friend habits:', err);
+    } finally {
+      setLoadingFriendHabits(false);
+    }
+  }, [selectedFriend?.id]);
+
+  useEffect(() => {
+    loadFriendHabits();
+    setAiMatchResult(null);
+    try {
+      const saved = localStorage.getItem(`shared_habits_${selectedFriendId}`);
+      setSharedHabitPermissions(saved ? new Set(JSON.parse(saved)) : new Set());
+    } catch {
+      setSharedHabitPermissions(new Set());
+    }
+  }, [loadFriendHabits, selectedFriendId]);
+
+  const handleToggleShareHabit = (habitTitle) => {
+    setSharedHabitPermissions(prev => {
+      const next = new Set(prev);
+      if (next.has(habitTitle)) {
+        next.delete(habitTitle);
+      } else {
+        next.add(habitTitle);
+      }
+      try {
+        localStorage.setItem(`shared_habits_${selectedFriendId}`, JSON.stringify([...next]));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
+  const handleRunAiMatch = async () => {
+    if (loadingAiMatch) return;
+    setLoadingAiMatch(true);
+    try {
+      const friendDisplayName = selectedFriend?.display_name || selectedFriend?.username || 'Friend';
+      const myDisplayName = myProfile?.display_name || myProfile?.username || 'You';
+
+      const result = await analyzeHabitMatch(myContextHabits, friendHabits, myDisplayName, friendDisplayName);
+      if (result) setAiMatchResult(result);
+    } catch (err) {
+      console.error('Habit match AI error:', err);
+    } finally {
+      setLoadingAiMatch(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode === 'habit_match' && !aiMatchResult && !loadingAiMatch && myContextHabits.length > 0 && friendHabits.length > 0) {
+      handleRunAiMatch();
+    }
+  }, [viewMode, aiMatchResult, myContextHabits.length, friendHabits.length]);
+
+  const handleAcceptHabit = async (habitTitle) => {
+    if (acceptedHabits.has(habitTitle)) return;
+    try {
+      await addHabitDb(habitTitle, [0, 1, 2, 3, 4, 5, 6], 'morning');
+      setAcceptedHabits(prev => new Set([...prev, habitTitle]));
+      handleToggleShareHabit(habitTitle);
+      await loadFriendHabits();
+    } catch (err) {
+      console.error('Error adding matched habit:', err);
+    }
+  };
+
+  const myData = useMemo(() => {
+    if (myContextHabits && myContextHabits.length > 0) {
+      return computeDetailedCompareMetrics(myContextHabits, compareMode);
+    }
+    const score = myScore?.score || 0;
+    const comps = myScore?.completions_30d || 0;
+    const active = myScore?.active_habits || (myContextHabits?.length || 0);
+    const rate = myScore?.completion_rate || 0;
+    return {
+      score,
+      completions: comps,
+      consistencyRate: rate,
+      activeHabits: active
+    };
+  }, [myContextHabits, compareMode, myScore]);
+
+  const theirData = useMemo(() => {
+    if (friendHabits && friendHabits.length > 0) {
+      return computeDetailedCompareMetrics(friendHabits, compareMode);
+    }
+    const score = selectedFriend?.score || 0;
+    const comps = selectedFriend?.completions_30d || 0;
+    const active = selectedFriend?.active_habits || 0;
+    const rate = selectedFriend?.completion_rate || 0;
+    return {
+      score,
+      completions: comps,
+      consistencyRate: rate,
+      activeHabits: active
+    };
+  }, [friendHabits, compareMode, selectedFriend]);
+
   if (!friends || friends.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          textAlign: 'center',
-          padding: '60px 24px',
-          background: 'var(--glass-card-bg)',
-          borderRadius: '24px',
-          border: '1px solid var(--glass-card-border)',
-          backdropFilter: 'blur(16px)',
-          maxWidth: '480px',
-          margin: '20px auto',
-        }}
-      >
-        <div style={{
-          width: '72px',
-          height: '72px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.15))',
-          border: '1px solid rgba(168,85,247,0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 20px',
-          color: '#a855f7',
-        }}>
-          <Swords size={32} />
-        </div>
-        <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px' }}>
-          Head-to-Head Compare
-        </h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px', lineHeight: '1.5' }}>
-          Add friends to compare habit scores, 30-day streaks, and completion rates in real time!
-        </p>
-      </motion.div>
+      <div className="glass-card" style={{ textAlign: 'center', padding: '36px 20px', borderRadius: '18px' }}>
+        <Swords size={28} style={{ color: '#a855f7', marginBottom: '10px' }} />
+        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 4px 0' }}>Head-to-Head Arena</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>Add friends to compare habits and progress.</p>
+      </div>
     );
   }
 
   const me = myProfile || {};
-  const myData = myScore || { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
-  const theirData = selectedFriend || { score: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
-
-  const stats = [
-    {
-      id: 'score',
-      label: 'Total Score',
-      icon: Trophy,
-      myValue: myData.score || 0,
-      theirValue: theirData.score || 0,
-      color: '#a855f7',
-      gradient: 'linear-gradient(135deg, #a855f7, #ec4899)',
-      unit: 'pts',
-    },
-    {
-      id: 'completions_30d',
-      label: '30-Day Completions',
-      icon: Flame,
-      myValue: myData.completions_30d || 0,
-      theirValue: theirData.completions_30d || 0,
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-      unit: 'done',
-    },
-    {
-      id: 'completion_rate',
-      label: 'Completion Rate',
-      icon: Target,
-      myValue: myData.completion_rate || 0,
-      theirValue: theirData.completion_rate || 0,
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981, #06b6d4)',
-      unit: '%',
-      isPercent: true,
-    },
-    {
-      id: 'active_habits',
-      label: 'Active Habits',
-      icon: CheckCircle2,
-      myValue: myData.active_habits || 0,
-      theirValue: theirData.active_habits || 0,
-      color: '#6366f1',
-      gradient: 'linear-gradient(135deg, #6366f1, #a855f7)',
-      unit: 'habits',
-    },
-  ];
-
-  let myWins = 0;
-  let theirWins = 0;
-
-  stats.forEach(s => {
-    if (s.myValue > s.theirValue) myWins++;
-    else if (s.theirValue > s.myValue) theirWins++;
-  });
-
-  const getStatusText = () => {
-    if (myWins > theirWins) return { text: 'You are dominating the matchup! 👑', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.3)' };
-    if (theirWins > myWins) return { text: 'Friend is currently in the lead! 🏃', color: '#ec4899', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.3)' };
-    return { text: "It's a dead heat tie! ⚔️", color: '#a855f7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.3)' };
-  };
-
-  const matchStatus = getStatusText();
+  const totalMatchScore = Math.max(1, myData.score + theirData.score);
+  const myScoreShare = Math.round((myData.score / totalMatchScore) * 100);
+  const theirScoreShare = 100 - myScoreShare;
 
   const friendDisplayName = selectedFriend?.display_name || selectedFriend?.full_name || selectedFriend?.username || 'Friend';
   const friendInitial = friendDisplayName[0]?.toUpperCase() || 'F';
-  const myDisplayName = me.display_name || me.full_name || me.username || 'You';
-  const myInitial = myDisplayName[0]?.toUpperCase() || 'Y';
+  const myInitial = (me.display_name || me.username || 'You')[0]?.toUpperCase() || 'Y';
+
+  const mutualHabit = aiMatchResult?.mutualSynergyHabit || aiMatchResult?.mutualSynergyHabits?.[0];
+  const isMutualAccepted = mutualHabit && (acceptedHabits.has(mutualHabit.title) || myContextHabits.some(h => h.name.toLowerCase() === mutualHabit.title.toLowerCase()));
+
+  const isYouLeading = myData.score > theirData.score;
+  const isFriendLeading = theirData.score > myData.score;
+  const scoreDiff = Math.abs(myData.score - theirData.score);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '100px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '90px' }}>
       
-      {/* ── Friend Select Header ── */}
-      <div style={{
-        position: 'relative',
-        background: 'var(--glass-card-bg)',
-        backdropFilter: 'blur(16px)',
-        borderRadius: '20px',
-        border: '1px solid var(--glass-card-border)',
-        padding: '14px 18px',
+      {/* ── UNIFIED MINIMAL CONTROL BAR ── */}
+      <div className="glass-card" style={{
+        borderRadius: '16px',
+        padding: '8px 12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '12px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Swords size={18} style={{ color: '#a855f7' }} />
-          <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Opponent
-          </span>
-        </div>
-
-        <div style={{ position: 'relative', flex: 1, maxWidth: '240px' }}>
+        {/* Opponent Selector */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 0, flex: 1, maxWidth: '160px' }}>
           <select
             value={selectedFriendId}
             onChange={(e) => setSelectedFriendId(e.target.value)}
             style={{
               width: '100%',
-              padding: '10px 36px 10px 14px',
-              borderRadius: '14px',
-              background: 'var(--surface-elevated)',
+              padding: '6px 24px 6px 8px',
+              borderRadius: '8px',
+              background: 'var(--surface-input)',
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-primary)',
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: '700',
               appearance: 'none',
               outline: 'none',
-              cursor: 'pointer',
-              textOverflow: 'ellipsis',
+              cursor: 'pointer'
             }}
           >
             {friends.map(f => (
@@ -171,354 +327,493 @@ const CompareView = ({ friends, myScore, currentUserId, myProfile }) => {
               </option>
             ))}
           </select>
-          <ChevronDown size={18} style={{
-            position: 'absolute',
-            right: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--text-muted)',
-            pointerEvents: 'none',
-          }} />
+          <ChevronDown size={13} style={{ position: 'absolute', right: '7px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+        </div>
+
+        {/* View Mode & Timeframe Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* Timeframe Toggle */}
+          {viewMode === 'arena' && (
+            <button
+              type="button"
+              onClick={() => setCompareMode(m => m === 'all_time' ? 'this_week' : 'all_time')}
+              style={{
+                padding: '5px 8px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+                background: 'var(--surface-input)',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              {compareMode === 'all_time' ? 'Overall' : 'This Week'}
+            </button>
+          )}
+
+          {/* Mode Switcher */}
+          <button
+            type="button"
+            onClick={() => setViewMode(v => v === 'arena' ? 'habit_match' : 'arena')}
+            style={{
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: viewMode === 'habit_match' ? 'linear-gradient(135deg, #a855f7, #ec4899)' : 'var(--surface-elevated)',
+              color: viewMode === 'habit_match' ? '#fff' : 'var(--text-primary)',
+              fontSize: '11px',
+              fontWeight: '800',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              boxShadow: viewMode === 'habit_match' ? '0 2px 8px rgba(236,72,153,0.3)' : 'none'
+            }}
+          >
+            {viewMode === 'arena' ? (
+              <>
+                <Sparkles size={12} style={{ color: '#ec4899' }} />
+                <span>Habit Match</span>
+              </>
+            ) : (
+              <>
+                <Trophy size={12} />
+                <span>Battle Stats</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* ── Matchup Banner & VS Arena ── */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={selectedFriendId}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -15 }}
-          transition={{ duration: 0.3 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
-        >
-          {/* Match Status Banner */}
-          <div style={{
-            padding: '12px 18px',
-            borderRadius: '16px',
-            background: matchStatus.bg,
-            border: `1px solid ${matchStatus.border}`,
-            color: matchStatus.color,
-            textAlign: 'center',
-            fontSize: '14px',
-            fontWeight: '700',
-            letterSpacing: '0.02em',
-            boxShadow: `0 4px 20px ${matchStatus.bg}`,
+      {/* ── SUBVIEW 1: BATTLE ARENA (MINIMAL, AIRY & ELEGANT) ── */}
+      {viewMode === 'arena' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          
+          {/* Main Showdown Hero Card */}
+          <div className="glass-card" style={{
+            borderRadius: '18px',
+            padding: '16px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
           }}>
-            {matchStatus.text}
-          </div>
-
-          {/* Player Arena Header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
-            alignItems: 'center',
-            gap: '12px',
-            background: 'var(--glass-card-bg)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            border: '1px solid var(--glass-card-border)',
-            padding: '24px 20px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
-            position: 'relative',
-            overflow: 'hidden',
-          }}>
-            {/* Background Ambient Glow */}
+            {/* Top Leader Pill */}
             <div style={{
-              position: 'absolute',
-              top: '-50%',
-              left: '-20%',
-              width: '140%',
-              height: '200%',
-              background: 'radial-gradient(circle at 30% 50%, rgba(168,85,247,0.1) 0%, rgba(236,72,153,0.08) 50%, transparent 80%)',
-              pointerEvents: 'none',
-            }} />
+              textAlign: 'center',
+              fontSize: '11px',
+              fontWeight: '800',
+              padding: '3px 8px',
+              borderRadius: '8px',
+              background: isYouLeading ? 'rgba(34,197,94,0.1)' : isFriendLeading ? 'rgba(6,182,212,0.1)' : 'rgba(168,85,247,0.1)',
+              color: isYouLeading ? '#22c55e' : isFriendLeading ? '#06b6d4' : '#a855f7',
+              border: `1px solid ${isYouLeading ? 'rgba(34,197,94,0.2)' : isFriendLeading ? 'rgba(6,182,212,0.2)' : 'rgba(168,85,247,0.2)'}`
+            }}>
+              {isYouLeading ? `👑 You are leading by +${scoreDiff} pts` : isFriendLeading ? `🏃 ${friendDisplayName} is in the lead (+${scoreDiff} pts)` : '⚔️ Dead heat tie matchup'}
+            </div>
 
-            {/* Left Fighter: You */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', zIndex: 1 }}>
-              <div style={{
-                position: 'relative',
-                marginBottom: '10px',
-              }}>
+            {/* Fighter Avatars */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              {/* You */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <div style={{
-                  width: '64px',
-                  height: '64px',
+                  width: '46px',
+                  height: '46px',
                   borderRadius: '50%',
                   background: 'linear-gradient(135deg, #a855f7, #ec4899)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '24px',
+                  fontSize: '18px',
                   fontWeight: '800',
                   color: '#fff',
-                  boxShadow: '0 8px 24px rgba(168,85,247,0.35)',
-                  border: '3px solid var(--surface-elevated)',
+                  marginBottom: '3px',
+                  boxShadow: '0 4px 16px rgba(168,85,247,0.35)'
                 }}>
                   {myInitial}
                 </div>
-                {myWins > theirWins && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-6px',
-                    right: '-6px',
-                    background: '#f59e0b',
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid var(--surface-elevated)',
-                    boxShadow: '0 2px 8px rgba(245,158,11,0.4)',
-                  }}>
-                    <Trophy size={13} style={{ color: '#fff' }} />
-                  </div>
-                )}
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>You</span>
+                <span style={{ fontSize: '15px', fontWeight: '900', color: '#a855f7', fontFamily: 'monospace' }}>
+                  {myData.score} pts
+                </span>
               </div>
-              <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px' }}>
-                You
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '600', fontFamily: 'monospace' }}>
-                @{me.username || 'you'}
-              </span>
-              <div style={{
-                marginTop: '10px',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                background: 'rgba(168,85,247,0.15)',
-                border: '1px solid rgba(168,85,247,0.3)',
-                fontSize: '15px',
-                fontWeight: '800',
-                color: '#a855f7',
-                fontFamily: 'monospace',
-              }}>
-                {myData.score} pts
-              </div>
-            </div>
 
-            {/* Center VS Badge */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', zIndex: 1 }}>
+              {/* VS */}
               <div style={{
-                width: '44px',
-                height: '44px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
-                background: 'var(--surface-elevated)',
+                background: 'var(--surface-input)',
                 border: '1px solid var(--border-subtle)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                fontSize: '10px',
+                fontWeight: '900',
+                fontStyle: 'italic',
+                color: 'var(--text-muted)'
               }}>
-                <span style={{ fontSize: '14px', fontWeight: '900', fontStyle: 'italic', color: 'var(--text-muted)' }}>
-                  VS
-                </span>
+                VS
               </div>
-              <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Matchup
-              </span>
-            </div>
 
-            {/* Right Fighter: Friend */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', zIndex: 1 }}>
-              <div style={{
-                position: 'relative',
-                marginBottom: '10px',
-              }}>
+              {/* Friend */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <div style={{
-                  width: '64px',
-                  height: '64px',
+                  width: '46px',
+                  height: '46px',
                   borderRadius: '50%',
                   background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '24px',
+                  fontSize: '18px',
                   fontWeight: '800',
                   color: '#fff',
-                  boxShadow: '0 8px 24px rgba(6,182,212,0.35)',
-                  border: '3px solid var(--surface-elevated)',
+                  marginBottom: '3px',
+                  boxShadow: '0 4px 16px rgba(6,182,212,0.35)'
                 }}>
                   {friendInitial}
                 </div>
-                {theirWins > myWins && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-6px',
-                    right: '-6px',
-                    background: '#f59e0b',
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid var(--surface-elevated)',
-                    boxShadow: '0 2px 8px rgba(245,158,11,0.4)',
-                  }}>
-                    <Trophy size={13} style={{ color: '#fff' }} />
-                  </div>
-                )}
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {friendDisplayName}
+                </span>
+                <span style={{ fontSize: '15px', fontWeight: '900', color: '#06b6d4', fontFamily: 'monospace' }}>
+                  {theirData.score} pts
+                </span>
               </div>
-              <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>
-                {selectedFriend?.display_name || selectedFriend?.full_name || 'Friend'}
-              </span>
-              <span style={{ fontSize: '11px', color: '#06b6d4', fontWeight: '600', fontFamily: 'monospace' }}>
-                @{selectedFriend?.username || 'friend'}
-              </span>
-              <div style={{
-                marginTop: '10px',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                background: 'rgba(6,182,212,0.15)',
-                border: '1px solid rgba(6,182,212,0.3)',
-                fontSize: '15px',
-                fontWeight: '800',
-                color: '#06b6d4',
-                fontFamily: 'monospace',
-              }}>
-                {theirData.score} pts
+            </div>
+
+            {/* Dynamic Dual-End Filling Score Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700' }}>
+                <span style={{ color: '#a855f7' }}>{myScoreShare}% You</span>
+                <span style={{ color: '#06b6d4' }}>{theirScoreShare}% {friendDisplayName}</span>
+              </div>
+              <div style={{ position: 'relative', height: '6px', borderRadius: '3px', background: 'var(--surface-input)', overflow: 'hidden' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${myScoreShare}%` }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 100%)',
+                    borderRadius: myScoreShare === 100 ? '3px' : '3px 0 0 3px',
+                    boxShadow: myScoreShare > 0 ? '0 0 10px rgba(168,85,247,0.45)' : 'none'
+                  }}
+                />
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${theirScoreShare}%` }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(270deg, #06b6d4 0%, #3b82f6 100%)',
+                    borderRadius: theirScoreShare === 100 ? '3px' : '0 3px 3px 0',
+                    boxShadow: theirScoreShare > 0 ? '0 0 10px rgba(6,182,212,0.45)' : 'none'
+                  }}
+                />
               </div>
             </div>
           </div>
 
-          {/* ── Stat Category Comparison Breakdown ── */}
-          <div style={{
+          {/* ── CONSOLIDATED BREAKDOWN ROW ── */}
+          <div className="glass-card" style={{
+            borderRadius: '16px',
+            padding: '12px 14px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '14px',
+            gap: '8px'
           }}>
-            {stats.map((stat, i) => {
+            {[
+              { label: 'Check-ins', icon: Flame, color: '#f59e0b', myVal: myData.completions, theirVal: theirData.completions },
+              { label: 'Consistency', icon: Target, color: '#10b981', myVal: `${myData.consistencyRate}%`, theirVal: `${theirData.consistencyRate}%` },
+              { label: 'Active Habits', icon: Layers, color: '#6366f1', myVal: myData.activeHabits, theirVal: theirData.activeHabits }
+            ].map((stat, sIdx) => {
               const Icon = stat.icon;
-              const myNum = stat.myValue;
-              const theirNum = stat.theirValue;
-              const max = Math.max(myNum, theirNum) || 1;
-              const myWidth = (myNum / max) * 100;
-              const theirWidth = (theirNum / max) * 100;
-
-              const iWin = myNum > theirNum;
-              const friendWins = theirNum > myNum;
-              const isTie = myNum === theirNum;
-
               return (
-                <motion.div
-                  key={stat.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08 }}
+                <div
+                  key={sIdx}
                   style={{
-                    background: 'var(--glass-card-bg)',
-                    backdropFilter: 'blur(16px)',
-                    borderRadius: '20px',
-                    border: iWin 
-                      ? '1px solid rgba(168,85,247,0.35)' 
-                      : friendWins 
-                        ? '1px solid rgba(6,182,212,0.35)' 
-                        : '1px solid var(--glass-card-border)',
-                    padding: '18px 20px',
-                    boxShadow: iWin 
-                      ? '0 4px 20px rgba(168,85,247,0.08)' 
-                      : friendWins 
-                        ? '0 4px 20px rgba(6,182,212,0.08)' 
-                        : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    background: 'var(--surface-input)'
                   }}
                 >
-                  {/* Category Title */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '30px',
-                        height: '30px',
-                        borderRadius: '10px',
-                        background: `${stat.color}18`,
-                        border: `1px solid ${stat.color}30`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: stat.color,
-                      }}>
-                        <Icon size={16} />
-                      </div>
-                      <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                        {stat.label}
-                      </span>
-                    </div>
-
-                    {/* Winner Badge */}
-                    <div style={{ fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {iWin && (
-                        <span style={{ color: '#a855f7', background: 'rgba(168,85,247,0.12)', padding: '3px 8px', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.25)' }}>
-                          You Lead 👑
-                        </span>
-                      )}
-                      {friendWins && (
-                        <span style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.12)', padding: '3px 8px', borderRadius: '8px', border: '1px solid rgba(6,182,212,0.25)' }}>
-                          Friend Leads ⚡
-                        </span>
-                      )}
-                      {isTie && (
-                        <span style={{ color: 'var(--text-muted)', background: 'var(--surface-elevated)', padding: '3px 8px', borderRadius: '8px' }}>
-                          Tied
-                        </span>
-                      )}
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Icon size={14} color={stat.color} />
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                      {stat.label}
+                    </span>
                   </div>
 
-                  {/* Dual Bar Comparison */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    
-                    {/* You Bar */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
-                        <span style={{ color: iWin ? '#a855f7' : 'var(--text-secondary)' }}>You</span>
-                        <span style={{ color: iWin ? '#a855f7' : 'var(--text-primary)', fontWeight: '800', fontFamily: 'monospace' }}>
-                          {stat.isPercent ? `${myNum}%` : myNum.toLocaleString()} {stat.unit}
-                        </span>
-                      </div>
-                      <div style={{ height: '8px', borderRadius: '4px', background: 'var(--surface-elevated)', overflow: 'hidden' }}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.max(myWidth, 4)}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                          style={{
-                            height: '100%',
-                            background: iWin ? 'linear-gradient(90deg, #a855f7, #ec4899)' : 'rgba(255,255,255,0.2)',
-                            borderRadius: '4px',
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Friend Bar */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
-                        <span style={{ color: friendWins ? '#06b6d4' : 'var(--text-secondary)' }}>
-                          {selectedFriend?.display_name || selectedFriend?.username || 'Friend'}
-                        </span>
-                        <span style={{ color: friendWins ? '#06b6d4' : 'var(--text-primary)', fontWeight: '800', fontFamily: 'monospace' }}>
-                          {stat.isPercent ? `${theirNum}%` : theirNum.toLocaleString()} {stat.unit}
-                        </span>
-                      </div>
-                      <div style={{ height: '8px', borderRadius: '4px', background: 'var(--surface-elevated)', overflow: 'hidden' }}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.max(theirWidth, 4)}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                          style={{
-                            height: '100%',
-                            background: friendWins ? 'linear-gradient(90deg, #06b6d4, #3b82f6)' : 'rgba(255,255,255,0.2)',
-                            borderRadius: '4px',
-                          }}
-                        />
-                      </div>
-                    </div>
-
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '900', color: '#a855f7' }}>
+                      {stat.myVal}
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600' }}>vs</span>
+                    <span style={{ fontSize: '13px', fontWeight: '900', color: '#06b6d4' }}>
+                      {stat.theirVal}
+                    </span>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>
-        </motion.div>
-      </AnimatePresence>
+
+        </div>
+      )}
+
+      {/* ── SUBVIEW 2: HABIT MATCH (CLEAN & MINIMAL) ── */}
+      {viewMode === 'habit_match' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          
+          {/* Header Bar */}
+          <div className="glass-card" style={{
+            borderRadius: '14px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={15} style={{ color: '#ec4899' }} />
+              <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                Habit Match
+              </span>
+              {aiMatchResult?.compatibilityScore && (
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  background: 'rgba(236,72,153,0.15)',
+                  color: '#ec4899'
+                }}>
+                  {aiMatchResult.compatibilityScore}% Synergy
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRunAiMatch}
+              disabled={loadingAiMatch}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+                background: 'var(--surface-input)',
+                color: 'var(--text-primary)',
+                fontSize: '10px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={10} className={loadingAiMatch ? 'spin' : ''} />
+              <span>{loadingAiMatch ? 'Scanning...' : 'Re-Scan'}</span>
+            </button>
+          </div>
+
+          {loadingAiMatch ? (
+            <AppLoader variant="section" size="small" message="Scanning habit synergy..." />
+          ) : (
+            <>
+              {/* Mutual Quest Card */}
+              {mutualHabit && (
+                <div className="glass-card" style={{
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  background: 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(168,85,247,0.06) 100%)',
+                  border: '1px solid rgba(236,72,153,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px'
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Rocket size={13} style={{ color: '#ec4899' }} />
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                        {mutualHabit.title}
+                      </span>
+                      <span style={{ fontSize: '9px', fontWeight: '700', padding: '1px 5px', borderRadius: '4px', background: 'rgba(236,72,153,0.18)', color: '#ec4899' }}>
+                        Mutual Quest
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptHabit(mutualHabit.title)}
+                    disabled={isMutualAccepted}
+                    className={isMutualAccepted ? 'surface-input' : 'btn-primary'}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      border: 'none',
+                      cursor: isMutualAccepted ? 'default' : 'pointer',
+                      flexShrink: 0,
+                      color: isMutualAccepted ? '#10b981' : '#fff'
+                    }}
+                  >
+                    {isMutualAccepted ? (
+                      <>
+                        <Check size={12} strokeWidth={2.5} />
+                        <span>Tracking</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={12} strokeWidth={2.5} />
+                        <span>Track</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Matched Habits */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {aiMatchResult?.matches && aiMatchResult.matches.length > 0 ? (
+                  aiMatchResult.matches.map((match, idx) => {
+                    const isBoth = match.status === 'both_tracking';
+                    const isSharedByMe = sharedHabitPermissions.has(match.habitTitle);
+                    const isAcceptedByMe = acceptedHabits.has(match.habitTitle) || myContextHabits.some(h => h.name.toLowerCase() === match.habitTitle.toLowerCase());
+
+                    const myH = myContextHabits.find(h => (h.name && h.name.toLowerCase().includes(match.habitTitle.toLowerCase())));
+                    const friendH = friendHabits.find(h => (h.name && h.name.toLowerCase().includes(match.habitTitle.toLowerCase())));
+                    const myComps = myH?.history?.filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed').length || 0;
+                    const friendComps = friendH?.history?.filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed').length || 0;
+
+                    return (
+                      <div
+                        key={idx}
+                        className="glass-card"
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                              {match.habitTitle}
+                            </span>
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: '700',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: isBoth ? 'rgba(34,197,94,0.15)' : 'rgba(6,182,212,0.15)',
+                              color: isBoth ? '#22c55e' : '#06b6d4'
+                            }}>
+                              {isBoth ? 'Shared' : `Tracked by ${friendDisplayName}`}
+                            </span>
+                          </div>
+
+                          {isBoth ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleShareHabit(match.habitTitle)}
+                              style={{
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-subtle)',
+                                background: isSharedByMe ? 'rgba(34,197,94,0.12)' : 'var(--surface-input)',
+                                color: isSharedByMe ? '#22c55e' : 'var(--text-muted)',
+                                fontSize: '10px',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {isSharedByMe ? <Unlock size={11} /> : <Lock size={11} />}
+                              <span>{isSharedByMe ? 'Shared' : 'Private'}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAcceptHabit(match.habitTitle)}
+                              disabled={isAcceptedByMe}
+                              className={isAcceptedByMe ? 'surface-input' : 'btn-primary'}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '10px',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                border: 'none',
+                                cursor: isAcceptedByMe ? 'default' : 'pointer',
+                                color: isAcceptedByMe ? '#10b981' : '#fff'
+                              }}
+                            >
+                              {isAcceptedByMe ? <Check size={11} /> : <Plus size={11} />}
+                              <span>{isAcceptedByMe ? 'Tracking' : 'Add'}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Duel Bar if shared */}
+                        {isBoth && isSharedByMe && (
+                          <div style={{
+                            background: 'var(--surface-input)',
+                            padding: '5px 8px',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700' }}>
+                              <span style={{ color: '#a855f7' }}>You: {myComps}</span>
+                              <span style={{ color: '#06b6d4' }}>{friendDisplayName}: {friendComps}</span>
+                            </div>
+                            <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-elevated)', overflow: 'hidden', display: 'flex' }}>
+                              <div style={{ width: `${Math.round((myComps / (Math.max(1, myComps + friendComps))) * 100)}%`, background: '#a855f7' }} />
+                              <div style={{ width: `${Math.round((friendComps / (Math.max(1, myComps + friendComps))) * 100)}%`, background: '#06b6d4' }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="glass-card" style={{ padding: '16px', textAlign: 'center', borderRadius: '12px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Tap "Re-Scan" to match habits.</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
     </div>
   );

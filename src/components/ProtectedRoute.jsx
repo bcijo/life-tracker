@@ -6,7 +6,7 @@ const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
 
     if (loading) {
-        return <AppLoader variant="fullscreen" message="Securing your space..." />;
+        return <AppLoader variant="fullscreen" size="large" message="Securing your space..." />;
     }
 
     if (!user) {
