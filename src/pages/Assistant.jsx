@@ -469,10 +469,24 @@ const Assistant = () => {
                     height: calc(100vh - 80px);
                     position: relative;
                     width: 100%;
+                    overflow: hidden;
+                    margin: -24px;
+                    padding: 24px;
+                    width: calc(100% + 48px);
+                }
+                @media (min-width: 768px) {
+                    .ai-page {
+                        margin: -32px -40px;
+                        padding: 32px 40px;
+                        width: calc(100% + 80px);
+                    }
                 }
                 @media (max-width: 767px) {
                     .ai-page {
-                        height: calc(100vh - 150px);
+                        height: calc(100vh - 140px);
+                        margin: -16px;
+                        padding: 16px;
+                        width: calc(100% + 32px);
                     }
                 }
 
