@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
     LayoutGrid, BarChart3, Wallet, Target, ShoppingCart, 
     Plus, Sparkles 
@@ -52,20 +53,41 @@ const Finances = () => {
     ];
 
     return (
-        <div className="page-container finances-hub" style={{ paddingBottom: '110px', position: 'relative' }}>
+        <div className="page-container finances-hub" style={{ position: 'relative' }}>
             
             {/* Header */}
-            <header className="finances-header" style={{ marginBottom: '18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h1 style={{ fontSize: '28px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>
-                            Finances
-                        </h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '3px 0 0 0' }}>
-                            Track, forecast, and optimize your wealth
-                        </p>
-                    </div>
+            <header className="finances-header" style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                <div>
+                    <h1 style={{ fontSize: '28px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>
+                        Finances
+                    </h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '3px 0 0 0' }}>
+                        Track, forecast, and optimize your wealth
+                    </p>
                 </div>
+
+                <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowGlobalAddModal(true)}
+                    className="btn-primary"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 18px',
+                        borderRadius: '14px',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)',
+                        border: 'none',
+                        flexShrink: 0
+                    }}
+                >
+                    <Plus size={18} strokeWidth={2.5} />
+                    <span>Add Expense</span>
+                </motion.button>
             </header>
 
             {/* Segmented Tab Navigation */}
@@ -128,39 +150,36 @@ const Finances = () => {
                 {activeTab === 'shopping' && <ShoppingView />}
             </div>
 
-            {/* PERSISTENT FLOATING ACTION BUTTON (FAB) */}
-            <button
-                onClick={() => setShowGlobalAddModal(true)}
-                style={{
-                    position: 'fixed',
-                    bottom: '84px',
-                    right: '24px',
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '28px',
-                    background: 'var(--accent-gradient, linear-gradient(135deg, #4ecdc4, #556270))',
-                    color: '#fff',
-                    border: 'none',
-                    boxShadow: '0 8px 24px rgba(78, 205, 196, 0.45)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: 99,
-                    transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 12px 28px rgba(78, 205, 196, 0.6)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1) translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(78, 205, 196, 0.45)';
-                }}
-                title="Quick Add Expense"
-            >
-                <Plus size={26} strokeWidth={2.5} />
-            </button>
+            {/* Mobile Floating Action Pill (visible on mobile only) */}
+            <div className="mobile-fab-container">
+                <motion.button
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.94 }}
+                    onClick={() => setShowGlobalAddModal(true)}
+                    className="mobile-fab-button btn-primary"
+                    style={{
+                        position: 'fixed',
+                        bottom: '86px',
+                        right: '20px',
+                        height: '46px',
+                        padding: '0 18px',
+                        borderRadius: '23px',
+                        color: '#fff',
+                        border: 'none',
+                        boxShadow: '0 8px 24px rgba(124, 58, 237, 0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        zIndex: 99,
+                        fontWeight: '700',
+                        fontSize: '13px'
+                    }}
+                >
+                    <Plus size={18} strokeWidth={2.8} />
+                    <span>Expense</span>
+                </motion.button>
+            </div>
 
             {/* Global Quick Add Expense Modal */}
             <QuickAddExpenseModal
@@ -172,6 +191,11 @@ const Finances = () => {
             />
 
             <style>{`
+                @media (min-width: 768px) {
+                    .mobile-fab-container {
+                        display: none !important;
+                    }
+                }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(8px); }
                     to { opacity: 1; transform: translateY(0); }

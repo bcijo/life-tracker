@@ -111,7 +111,7 @@ const Todos = () => {
     );
 
     return (
-        <div className="page-container" style={{ paddingBottom: '80px' }}>
+        <div className="page-container">
             <header style={{ marginBottom: '24px' }}>
                 <h1>Tasks</h1>
                 <p style={{ opacity: 0.7 }}>{activeTodos.length} remaining</p>

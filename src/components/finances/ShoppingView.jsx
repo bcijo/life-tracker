@@ -186,7 +186,7 @@ const ShoppingView = () => {
     };
 
     if (cardsLoading) {
-        return <div className="page-container" style={{ paddingBottom: '90px' }}>Loading...</div>;
+        return <div className="page-container">Loading...</div>;
     }
 
     return (

@@ -235,7 +235,7 @@ const BillSplitter = () => {
 
     // ─── Render ────────────────────────────────────────────────────────────
     return (
-        <div className="page-container" style={{ paddingBottom: '90px' }}>
+        <div className="page-container">
 
             {/* ── Header ── */}
             <header style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>

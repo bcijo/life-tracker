@@ -114,7 +114,7 @@ const Expenses = () => {
     };
 
     return (
-        <div className="page-container" style={{ paddingBottom: '80px' }}>
+        <div className="page-container">
             <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1>Expenses</h1>

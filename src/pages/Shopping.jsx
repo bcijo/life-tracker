@@ -186,11 +186,11 @@ const Shopping = () => {
     };
 
     if (cardsLoading) {
-        return <div className="page-container" style={{ paddingBottom: '90px' }}>Loading...</div>;
+        return <div className="page-container">Loading...</div>;
     }
 
     return (
-        <div className="page-container" style={{ paddingBottom: '90px' }}>
+        <div className="page-container">
             <header style={{ marginBottom: '24px' }}>
                 <h1>Shopping List</h1>
                 <p style={{ opacity: 0.7 }}>{activeItems.length} items to buy</p>

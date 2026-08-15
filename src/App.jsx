@@ -16,6 +16,7 @@ import BillSplitter from './pages/BillSplitter'
 import Friends from './pages/Friends'
 import InviteLanding from './pages/InviteLanding'
 import Assistant from './pages/Assistant'
+import Journal from './pages/Journal'
 
 function App() {
     return (
@@ -44,6 +45,7 @@ function App() {
                         <Route path="friends" element={<Friends />} />
                         <Route path="todos" element={<Todos />} />
                         <Route path="split-bill" element={<BillSplitter />} />
+                        <Route path="journal" element={<Journal />} />
                         <Route path="shopping" element={<Navigate to="/finances/shopping" replace />} />
                         <Route path="expenses" element={<Navigate to="/finances/spend" replace />} />
                         <Route path="bank-accounts" element={<Navigate to="/finances/accounts" replace />} />

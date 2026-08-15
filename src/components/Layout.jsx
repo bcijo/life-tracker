@@ -15,8 +15,6 @@ const Layout = () => {
     { to: '/habits', label: 'Habits', icon: Activity },
     { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
     { to: '/friends', label: 'Friends', icon: Users },
-    { to: '/todos', label: 'Todos', icon: CheckSquare },
-    { to: '/split-bill', label: 'Split Bill', icon: Scissors },
   ];
 
   const mobileNavItems = [

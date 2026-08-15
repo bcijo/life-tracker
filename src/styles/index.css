@@ -336,7 +336,7 @@ body {
 
 @media (max-width: 767px) {
     .app-container {
-        padding-bottom: 90px;
+        padding-bottom: 0;
     }
 }
 
@@ -400,10 +400,16 @@ button:focus-visible {
    PAGE CONTAINER
    ============================================================ */
 .page-container {
-    padding: 16px 16px 100px;
-    max-width: 480px;
+    padding: 0;
+    max-width: 100%;
     margin: 0 auto;
     animation: page-fade-in 0.25s ease-out both;
+}
+
+@media (min-width: 768px) {
+    .page-container {
+        max-width: 1200px;
+    }
 }
 
 @keyframes page-fade-in {

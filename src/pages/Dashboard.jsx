@@ -8,7 +8,6 @@ import useTransactions from '../hooks/useTransactions';
 import useBudgets from '../hooks/useBudgets';
 import { useProfile } from '../hooks/useProfile';
 import { isToday, parseISO, format, subDays } from 'date-fns';
-import { JournalModal } from '../components/JournalModal';
 import { 
     TrendingUp, 
     CheckSquare, 
@@ -16,7 +15,8 @@ import {
     ArrowUpRight, 
     Calendar,
     Plus,
-    BookOpen
+    BookOpen,
+    Scissors
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -36,7 +36,6 @@ const Dashboard = () => {
     const { profile, updateProfile } = useProfile();
     const { budgets } = useBudgets();
 
-    const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
     const [nameInput, setNameInput] = useState('');
     const [savingName, setSavingName] = useState(false);
 
@@ -92,18 +91,18 @@ const Dashboard = () => {
     const dateFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
     return (
-        <div className="page-container" style={{ paddingBottom: '90px', position: 'relative' }}>
+        <div className="page-container" style={{ position: 'relative', overflow: 'hidden' }}>
             {/* Ambient Background Glowing Orbs */}
-            <div className="habit-orbs-container" style={{ zIndex: 0 }}>
+            <div className="habit-orbs-container" style={{ zIndex: 0, pointerEvents: 'none' }}>
                 <div style={{
-                    position: 'absolute', top: '10%', left: '-20%', width: '300px', height: '300px',
+                    position: 'absolute', top: '10%', left: '-10%', width: '300px', height: '300px',
                     borderRadius: '50%', background: 'radial-gradient(circle, rgba(102,126,234,0.15) 0%, transparent 70%)',
-                    filter: 'blur(40px)'
+                    filter: 'blur(40px)', pointerEvents: 'none'
                 }} />
                 <div style={{
-                    position: 'absolute', top: '40%', right: '-20%', width: '300px', height: '300px',
+                    position: 'absolute', top: '40%', right: '-10%', width: '300px', height: '300px',
                     borderRadius: '50%', background: 'radial-gradient(circle, rgba(236,72,153,0.12) 0%, transparent 70%)',
-                    filter: 'blur(40px)'
+                    filter: 'blur(40px)', pointerEvents: 'none'
                 }} />
             </div>
 
@@ -153,26 +152,28 @@ const Dashboard = () => {
                         )}
                     </div>
 
-                    <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setIsJournalModalOpen(true)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '10px 16px',
-                            borderRadius: '16px',
-                            background: 'var(--surface-elevated)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                        }}
-                    >
-                        <BookOpen size={17} style={{ color: 'var(--accent-primary)' }} />
-                        <span style={{ fontSize: '13px', fontWeight: '600' }}>Journal</span>
-                    </motion.button>
+                    <Link to="/journal" style={{ textDecoration: 'none' }}>
+                        <motion.div
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="hover-lift"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 16px',
+                                borderRadius: '16px',
+                                background: 'var(--surface-elevated)',
+                                border: '1px solid var(--border-subtle)',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                            }}
+                        >
+                            <BookOpen size={17} style={{ color: 'var(--accent-primary)' }} />
+                            <span style={{ fontSize: '13px', fontWeight: '600' }}>Journal</span>
+                        </motion.div>
+                    </Link>
                 </header>
 
                 {/* Grid Layout: Hero Stats & Features */}
@@ -263,36 +264,18 @@ const Dashboard = () => {
                         </div>
                     </Link>
 
-                    <Link to="/habits" style={{ textDecoration: 'none' }}>
+                    <Link to="/split-bill" style={{ textDecoration: 'none' }}>
                         <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(168,85,247,0.15)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Activity size={22} />
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(14,165,233,0.15)', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Scissors size={22} />
                             </div>
                             <div>
-                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Habits</h3>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>{habitsDoneToday}/{habitsActiveToday.length} completed today</p>
-                            </div>
-                        </div>
-                    </Link>
-
-                    <Link to="/finances" style={{ textDecoration: 'none' }}>
-                        <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(34,197,94,0.15)', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <TrendingUp size={22} />
-                            </div>
-                            <div>
-                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Finances</h3>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>₹{todayExpense} spent today</p>
+                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Split a Bill</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>Divide & share expenses</p>
                             </div>
                         </div>
                     </Link>
                 </div>
-
-                {/* Daily Journal Modal */}
-                <JournalModal
-                    isOpen={isJournalModalOpen}
-                    onClose={() => setIsJournalModalOpen(false)}
-                />
             </div>
             
             <style>{`
