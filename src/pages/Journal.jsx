@@ -9,36 +9,31 @@ import {
     Brain, 
     Check, 
     Loader2, 
-    History,
-    Compass,
-    ChevronRight,
-    X,
-    Clock,
-    Sun,
-    Layers,
-    Mic,
-    MicOff,
-    Square,
-    Volume2,
-    RotateCcw
+    History, 
+    Compass, 
+    X, 
+    Sun, 
+    Layers, 
+    Mic, 
+    Square 
 } from 'lucide-react';
 import { format, parseISO, subDays } from 'date-fns';
 import useJournal from '../hooks/useJournal';
 import { transcribeAudio } from '../lib/groq';
 
 const MOODS = [
-    { value: 1, emoji: '😞', label: 'Rough', color: '#ef4444', desc: 'A challenging day' },
-    { value: 2, emoji: '😐', label: 'Meh', color: '#f59e0b', desc: 'Could have been better' },
-    { value: 3, emoji: '🙂', label: 'Okay', color: '#3b82f6', desc: 'Normal & steady' },
-    { value: 4, emoji: '😊', label: 'Good', color: '#10b981', desc: 'Productive & happy' },
-    { value: 5, emoji: '🤩', label: 'Amazing', color: '#a855f7', desc: 'Full of wins & energy' }
+    { value: 1, emoji: '😞', label: 'Rough', color: '#ef4444' },
+    { value: 2, emoji: '😐', label: 'Meh', color: '#f59e0b' },
+    { value: 3, emoji: '🙂', label: 'Okay', color: '#3b82f6' },
+    { value: 4, emoji: '😊', label: 'Good', color: '#10b981' },
+    { value: 5, emoji: '🤩', label: 'Amazing', color: '#a855f7' }
 ];
 
 const PROMPT_TABS = [
-    { id: 'all', label: 'All', icon: Layers },
-    { id: 'how_was_today', label: 'Highlights', icon: Sun, color: '#6366f1', placeholder: 'What happened today? Notable moments, small wins, or accomplishments...' },
-    { id: 'on_your_mind', label: 'Thoughts', icon: Brain, color: '#ec4899', placeholder: 'Unload your mind... thoughts, emotions, ideas, or things you are grateful for...' },
-    { id: 'change_for_tomorrow', label: 'Tomorrow', icon: Compass, color: '#10b981', placeholder: 'What is one thing you will focus on or improve tomorrow?' }
+    { id: 'all', label: 'All', shortLabel: 'All', icon: Layers },
+    { id: 'how_was_today', label: 'Highlights', shortLabel: 'Wins', icon: Sun, color: '#6366f1', placeholder: 'What happened today? Notable moments, small wins, or accomplishments...' },
+    { id: 'on_your_mind', label: 'Thoughts', shortLabel: 'Thoughts', icon: Brain, color: '#ec4899', placeholder: 'Unload your mind... thoughts, emotions, ideas, or things you are grateful for...' },
+    { id: 'change_for_tomorrow', label: 'Tomorrow', shortLabel: 'Tomorrow', icon: Compass, color: '#10b981', placeholder: 'What is one thing you will focus on or improve tomorrow?' }
 ];
 
 const Journal = () => {
@@ -70,53 +65,59 @@ const Journal = () => {
     const timerIntervalRef = useRef(null);
     const speechRecognitionRef = useRef(null);
 
+    // Track dirty state & refs for unmount auto-saving
+    const [isDirty, setIsDirty] = useState(false);
+    const isDirtyRef = useRef(false);
+    const localEntryRef = useRef(localEntry);
+    const longIdleTimerRef = useRef(null);
+
     const todayDateStr = format(new Date(), 'yyyy-MM-dd');
     const todayFormatted = format(new Date(), 'EEEE, MMMM d');
 
-    // Sync state with fetched today's entry
+    // Sync state with fetched today's entry on load
     useEffect(() => {
         if (todayEntry) {
-            setLocalEntry({
+            const loaded = {
                 mood_score: todayEntry.mood_score || 3,
                 how_was_today: todayEntry.how_was_today || '',
                 on_your_mind: todayEntry.on_your_mind || '',
                 change_for_tomorrow: todayEntry.change_for_tomorrow || ''
-            });
+            };
+            setLocalEntry(loaded);
+            localEntryRef.current = loaded;
+            isDirtyRef.current = false;
+            setIsDirty(false);
         }
     }, [todayEntry]);
 
-    // Debounced auto-save (1.2s delay after user stops typing)
+    // Keep localEntryRef in sync
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (
-                localEntry.how_was_today || 
-                localEntry.on_your_mind || 
-                localEntry.change_for_tomorrow || 
-                localEntry.mood_score !== 3
-            ) {
-                saveEntry(localEntry);
-                setSavedNotice(true);
-                setTimeout(() => setSavedNotice(false), 2000);
-            }
-        }, 1200);
+        localEntryRef.current = localEntry;
+    }, [localEntry]);
 
-        return () => clearTimeout(timer);
-    }, [localEntry, saveEntry]);
-
-    // Cleanup recording resources on unmount
-    useEffect(() => {
-        return () => {
-            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-            if (speechRecognitionRef.current) speechRecognitionRef.current.stop();
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
-        };
-    }, []);
-
+    // Handle field updates & set dirty state
     const handleFieldChange = (field, value) => {
-        setLocalEntry(prev => ({ ...prev, [field]: value }));
+        setLocalEntry(prev => {
+            const next = { ...prev, [field]: value };
+            localEntryRef.current = next;
+            return next;
+        });
         updateField(field, value);
+        
+        isDirtyRef.current = true;
+        setIsDirty(true);
+
+        // Reset long-idle timer (45s)
+        if (longIdleTimerRef.current) clearTimeout(longIdleTimerRef.current);
+        longIdleTimerRef.current = setTimeout(async () => {
+            if (isDirtyRef.current) {
+                await saveEntry(localEntryRef.current);
+                isDirtyRef.current = false;
+                setIsDirty(false);
+                setSavedNotice(true);
+                setTimeout(() => setSavedNotice(false), 2500);
+            }
+        }, 45000);
     };
 
     const handleMoodSelect = (moodValue) => {
@@ -124,15 +125,54 @@ const Journal = () => {
     };
 
     const handleManualSave = async () => {
-        await saveEntry(localEntry);
+        if (longIdleTimerRef.current) clearTimeout(longIdleTimerRef.current);
+        await saveEntry(localEntryRef.current);
+        isDirtyRef.current = false;
+        setIsDirty(false);
         setManualSaveSuccess(true);
         setTimeout(() => setManualSaveSuccess(false), 2500);
     };
 
-    // ─── SPEECH TO TEXT / AUDIO RECORDING LOGIC ─────────────────────────────
+    // Autosave when user leaves the page or closes the tab
+    useEffect(() => {
+        const handleLeave = () => {
+            if (isDirtyRef.current) {
+                saveEntry(localEntryRef.current);
+                isDirtyRef.current = false;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden' && isDirtyRef.current) {
+                saveEntry(localEntryRef.current);
+                isDirtyRef.current = false;
+            }
+        };
+
+        window.addEventListener('pagehide', handleLeave);
+        window.addEventListener('beforeunload', handleLeave);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            if (isDirtyRef.current) {
+                saveEntry(localEntryRef.current);
+                isDirtyRef.current = false;
+            }
+            if (longIdleTimerRef.current) clearTimeout(longIdleTimerRef.current);
+            window.removeEventListener('pagehide', handleLeave);
+            window.removeEventListener('beforeunload', handleLeave);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (speechRecognitionRef.current) speechRecognitionRef.current.stop();
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [saveEntry]);
+
+    // ─── SPEECH TO TEXT WITH GROQ WHISPER LARGE V3 ──────────────────────────
     const startRecording = async (field) => {
         try {
-            // If already recording for another field, stop first
             if (isRecording) {
                 stopRecording();
                 return;
@@ -144,11 +184,9 @@ const Journal = () => {
             setRecordingSeconds(0);
             setVoiceFeedback('Listening...');
 
-            // 1. Request microphone permission
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
 
-            // 2. Select best supported audio format
             const mimeTypes = [
                 'audio/webm;codecs=opus',
                 'audio/webm',
@@ -170,15 +208,14 @@ const Journal = () => {
                 }
             };
 
-            mediaRecorder.start(250); // Slice chunks every 250ms
+            mediaRecorder.start(250);
             setIsRecording(true);
 
-            // 3. Start timer
             timerIntervalRef.current = setInterval(() => {
                 setRecordingSeconds(sec => sec + 1);
             }, 1000);
 
-            // 4. Start interim live Web Speech recognition if browser supports it
+            // Live speech preview if supported
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
                 try {
@@ -196,19 +233,19 @@ const Journal = () => {
                     };
 
                     recognition.onerror = (e) => {
-                        console.warn('[Live Speech Preview Warning]:', e.error);
+                        console.warn('[SpeechRecognition Warning]:', e.error);
                     };
 
                     recognition.start();
                     speechRecognitionRef.current = recognition;
                 } catch (e) {
-                    console.warn('SpeechRecognition init error:', e);
+                    console.warn('SpeechRecognition error:', e);
                 }
             }
 
         } catch (err) {
             console.error('Microphone error:', err);
-            alert('Microphone access is required to dictate your journal. Please allow microphone permissions in your browser.');
+            alert('Microphone access is required for dictation. Please allow microphone permissions in your browser settings.');
             setIsRecording(false);
             setRecordingField(null);
         }
@@ -217,7 +254,6 @@ const Journal = () => {
     const stopRecording = async () => {
         if (!mediaRecorderRef.current || !isRecording) return;
 
-        // Stop timer & interim recognition
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         if (speechRecognitionRef.current) {
             try { speechRecognitionRef.current.stop(); } catch (e) {}
@@ -225,13 +261,12 @@ const Journal = () => {
 
         setIsRecording(false);
         setIsTranscribing(true);
-        setVoiceFeedback('Transcribing with Groq Whisper Large V3...');
+        setVoiceFeedback('Transcribing with Whisper Large V3...');
 
         const currentField = recordingField;
 
         mediaRecorderRef.current.onstop = async () => {
             try {
-                // Stop audio tracks
                 if (streamRef.current) {
                     streamRef.current.getTracks().forEach(track => track.stop());
                 }
@@ -246,8 +281,7 @@ const Journal = () => {
                     return;
                 }
 
-                // Call Groq Whisper Large V3 API
-                const promptContext = "Daily personal reflection journal about events, feelings, habits, goals, accomplishments.";
+                const promptContext = "Personal reflection journal about daily highlights, thoughts, feelings, habits, goals, accomplishments.";
                 const transcribedText = await transcribeAudio(audioBlob, promptContext);
 
                 if (transcribedText && currentField) {
@@ -256,11 +290,12 @@ const Journal = () => {
                     
                     handleFieldChange(currentField, updatedContent);
                     
-                    // Trigger immediate database save
                     await saveEntry({
                         ...localEntry,
                         [currentField]: updatedContent
                     });
+                    isDirtyRef.current = false;
+                    setIsDirty(false);
 
                     setVoiceFeedback('Transcribed & Saved ✓');
                     setTimeout(() => setVoiceFeedback(''), 3000);
@@ -321,6 +356,7 @@ const Journal = () => {
                 date: d,
                 dateStr: dStr,
                 dayName: format(d, 'EEE'),
+                dayLetter: format(d, 'EEEEE'),
                 dayNum: format(d, 'd'),
                 isToday: i === 0,
                 entry,
@@ -333,60 +369,63 @@ const Journal = () => {
     const pastEntriesList = weekEntries.filter(e => e.date !== todayDateStr);
 
     return (
-        <div className="page-container" style={{ maxWidth: '840px', margin: '0 auto', position: 'relative' }}>
+        <div className="page-container journal-page-root" style={{ maxWidth: '840px', margin: '0 auto', position: 'relative' }}>
             
             {/* Header */}
-            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <header className="journal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                     <Link 
                         to="/" 
+                        className="journal-back-btn"
                         style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
                             justifyContent: 'center',
-                            width: '38px', 
-                            height: '38px', 
+                            width: '36px', 
+                            height: '36px', 
                             borderRadius: '12px',
                             background: 'var(--surface-input)',
                             border: '1px solid var(--border-subtle)',
                             color: 'var(--text-primary)',
-                            textDecoration: 'none'
+                            textDecoration: 'none',
+                            flexShrink: 0
                         }}
                     >
                         <ArrowLeft size={18} />
                     </Link>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <h1 style={{ fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+                            <h1 className="journal-title" style={{ fontSize: '20px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px', whiteSpace: 'nowrap' }}>
                                 Daily Journal
                             </h1>
-                            <span style={{ 
-                                padding: '2px 8px', 
-                                borderRadius: '10px', 
-                                fontSize: '11px', 
+                            <span className="journal-status-badge" style={{ 
+                                padding: '2px 7px', 
+                                borderRadius: '8px', 
+                                fontSize: '10px', 
                                 fontWeight: '700',
+                                whiteSpace: 'nowrap',
                                 background: saving 
                                     ? 'rgba(234, 179, 8, 0.15)' 
-                                    : (savedNotice || manualSaveSuccess) 
-                                        ? 'var(--success-bg)' 
-                                        : 'var(--surface-input)',
+                                    : isDirty
+                                        ? 'rgba(245, 158, 11, 0.15)'
+                                        : 'var(--success-bg)',
                                 color: saving 
                                     ? '#eab308' 
-                                    : (savedNotice || manualSaveSuccess) 
-                                        ? 'var(--success)' 
-                                        : 'var(--text-muted)'
+                                    : isDirty
+                                        ? '#f59e0b'
+                                        : 'var(--success)'
                             }}>
-                                {saving ? 'Saving...' : (savedNotice || manualSaveSuccess) ? 'Saved ✓' : 'Auto-saved'}
+                                {saving ? 'Saving...' : isDirty ? 'Unsaved' : (savedNotice ? 'Auto-saved ✓' : 'Saved ✓')}
                             </span>
                         </div>
-                        <p style={{ margin: 0, marginTop: '2px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Calendar size={12} />
+                        <p style={{ margin: 0, marginTop: '1px', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                            <Calendar size={11} />
                             {todayFormatted}
                         </p>
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                     {/* Quick Dictation Header Pill */}
                     <motion.button
                         whileHover={{ scale: 1.03 }}
@@ -397,21 +436,22 @@ const Journal = () => {
                             if (isRecording) stopRecording();
                             else startRecording(field);
                         }}
+                        className="journal-header-btn"
                         style={{
-                            padding: '8px 14px',
+                            padding: '7px 12px',
                             borderRadius: '12px',
                             border: isRecording ? '1.5px solid #ef4444' : '1px solid var(--border-subtle)',
                             background: isRecording ? 'rgba(239, 68, 68, 0.15)' : 'var(--surface-input)',
                             color: isRecording ? '#ef4444' : 'var(--text-primary)',
-                            fontSize: '13px',
+                            fontSize: '12px',
                             fontWeight: '700',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
+                            gap: '5px',
                             cursor: 'pointer'
                         }}
                     >
-                        {isRecording ? <Square size={14} /> : <Mic size={14} style={{ color: 'var(--accent-primary)' }} />}
+                        {isRecording ? <Square size={13} /> : <Mic size={13} style={{ color: 'var(--accent-primary)' }} />}
                         <span>{isRecording ? formatTimer(recordingSeconds) : 'Speak'}</span>
                     </motion.button>
 
@@ -420,26 +460,26 @@ const Journal = () => {
                         whileTap={{ scale: 0.97 }}
                         onClick={handleManualSave}
                         disabled={saving}
-                        className="btn-primary"
+                        className="btn-primary journal-header-btn"
                         style={{
-                            padding: '8px 16px',
-                            fontSize: '13px',
+                            padding: '7px 14px',
+                            fontSize: '12px',
                             fontWeight: '700',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
+                            gap: '5px',
                             borderRadius: '12px',
                             cursor: 'pointer',
                             flexShrink: 0
                         }}
                     >
-                        {saving ? <Loader2 size={15} className="spin" /> : <Check size={15} />}
+                        {saving ? <Loader2 size={13} className="spin" /> : <Check size={13} />}
                         <span>{manualSaveSuccess ? 'Saved!' : 'Save'}</span>
                     </motion.button>
                 </div>
             </header>
 
-            {/* LIVE ACTIVE RECORDING BANNER (Floating feedback) */}
+            {/* LIVE ACTIVE RECORDING BANNER */}
             <AnimatePresence>
                 {(isRecording || isTranscribing || voiceFeedback) && (
                     <motion.div
@@ -452,47 +492,47 @@ const Journal = () => {
                                 : 'var(--surface-elevated)',
                             border: isRecording ? '1.5px solid #ef4444' : '1px solid var(--glass-border)',
                             borderRadius: '16px',
-                            padding: '14px 18px',
+                            padding: '12px 16px',
                             marginBottom: '16px',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '8px',
+                            gap: '6px',
                             boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
                         }}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {isRecording && (
                                     <span style={{
-                                        width: '10px',
-                                        height: '10px',
+                                        width: '8px',
+                                        height: '8px',
                                         borderRadius: '50%',
                                         background: '#ef4444',
                                         display: 'inline-block',
                                         animation: 'pulse-record 1.2s infinite'
                                     }} />
                                 )}
-                                {isTranscribing && <Loader2 size={16} className="spin" style={{ color: 'var(--accent-primary)' }} />}
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                {isTranscribing && <Loader2 size={14} className="spin" style={{ color: 'var(--accent-primary)' }} />}
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                     {isRecording 
-                                        ? `Recording for ${recordingField === 'how_was_today' ? 'Highlights' : recordingField === 'on_your_mind' ? 'Thoughts' : "Tomorrow's Focus"} (${formatTimer(recordingSeconds)})`
+                                        ? `Recording for ${recordingField === 'how_was_today' ? 'Highlights' : recordingField === 'on_your_mind' ? 'Thoughts' : 'Tomorrow'} (${formatTimer(recordingSeconds)})`
                                         : voiceFeedback || 'Ready'}
                                 </span>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 {isRecording && (
                                     <>
                                         <button
                                             type="button"
                                             onClick={cancelRecording}
                                             style={{
-                                                padding: '5px 10px',
-                                                borderRadius: '8px',
+                                                padding: '4px 8px',
+                                                borderRadius: '6px',
                                                 border: '1px solid var(--border-subtle)',
                                                 background: 'transparent',
                                                 color: 'var(--text-muted)',
-                                                fontSize: '12px',
+                                                fontSize: '11px',
                                                 cursor: 'pointer'
                                             }}
                                         >
@@ -503,17 +543,17 @@ const Journal = () => {
                                             onClick={stopRecording}
                                             className="btn-primary"
                                             style={{
-                                                padding: '6px 14px',
-                                                borderRadius: '10px',
-                                                fontSize: '12px',
+                                                padding: '5px 12px',
+                                                borderRadius: '8px',
+                                                fontSize: '11px',
                                                 fontWeight: '700',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '6px',
+                                                gap: '4px',
                                                 cursor: 'pointer'
                                             }}
                                         >
-                                            <Check size={14} />
+                                            <Check size={12} />
                                             <span>Done</span>
                                         </button>
                                     </>
@@ -521,16 +561,15 @@ const Journal = () => {
                             </div>
                         </div>
 
-                        {/* Live streaming interim preview if talking */}
                         {interimText && (
                             <p style={{
-                                fontSize: '13px',
+                                fontSize: '12px',
                                 color: 'var(--text-secondary)',
                                 fontStyle: 'italic',
                                 margin: 0,
                                 background: 'rgba(0,0,0,0.15)',
-                                padding: '8px 12px',
-                                borderRadius: '10px'
+                                padding: '6px 10px',
+                                borderRadius: '8px'
                             }}>
                                 "{interimText}"
                             </p>
@@ -540,15 +579,15 @@ const Journal = () => {
             </AnimatePresence>
 
             {/* 7-Day Visual Streak Strip */}
-            <div style={{
+            <div className="journal-streak-strip" style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                gap: '8px',
+                gap: '6px',
                 background: 'var(--surface-input)',
-                padding: '10px 12px',
-                borderRadius: '18px',
+                padding: '8px 10px',
+                borderRadius: '16px',
                 border: '1px solid var(--border-subtle)',
-                marginBottom: '20px',
+                marginBottom: '16px',
                 overflowX: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'none'
@@ -566,10 +605,11 @@ const Journal = () => {
                                     setSelectedPastEntry(item.entry);
                                 }
                             }}
+                            className="journal-day-node"
                             style={{
-                                flex: '1 0 40px',
-                                minWidth: '40px',
-                                padding: '6px 4px',
+                                flex: '1 0 36px',
+                                minWidth: '36px',
+                                padding: '5px 2px',
                                 borderRadius: '12px',
                                 border: item.isToday 
                                     ? '1.5px solid var(--accent-primary)' 
@@ -577,7 +617,7 @@ const Journal = () => {
                                         ? '1.5px solid var(--text-primary)' 
                                         : '1px solid transparent',
                                 background: item.isToday 
-                                    ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' 
+                                    ? 'color-mix(in srgb, var(--accent-primary) 14%, transparent)' 
                                     : isSelected 
                                         ? 'var(--surface-elevated)' 
                                         : 'transparent',
@@ -586,22 +626,23 @@ const Journal = () => {
                                 alignItems: 'center',
                                 gap: '3px',
                                 cursor: item.entry || item.isToday ? 'pointer' : 'default',
-                                opacity: item.entry || item.isToday ? 1 : 0.45,
+                                opacity: item.entry || item.isToday ? 1 : 0.4,
                                 transition: 'all 0.15s ease'
                             }}
                         >
                             <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>
-                                {item.dayName}
+                                <span className="desktop-text">{item.dayName}</span>
+                                <span className="mobile-text">{item.dayLetter}</span>
                             </span>
                             <div style={{
-                                width: '28px',
-                                height: '28px',
+                                width: '26px',
+                                height: '26px',
                                 borderRadius: '50%',
                                 background: item.mood ? `color-mix(in srgb, ${item.mood.color} 20%, transparent)` : 'var(--surface-input)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: item.mood ? '16px' : '11px',
+                                fontSize: item.mood ? '15px' : '11px',
                                 fontWeight: '700',
                                 color: item.isToday ? 'var(--accent-primary)' : 'var(--text-secondary)'
                             }}>
@@ -613,36 +654,36 @@ const Journal = () => {
             </div>
 
             {loading ? (
-                <div style={{ padding: '50px 0', textAlign: 'center', color: 'var(--accent-primary)' }}>
-                    <Loader2 className="spin" size={32} style={{ margin: '0 auto 10px' }} />
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading journal...</p>
+                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--accent-primary)' }}>
+                    <Loader2 className="spin" size={30} style={{ margin: '0 auto 8px' }} />
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading journal...</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     
-                    {/* Past Entry Viewer Card (if clicked from streak strip) */}
+                    {/* Past Entry Viewer Card */}
                     {selectedPastEntry && (
                         <motion.div 
-                            initial={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0, y: -8 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="glass-card"
                             style={{ 
-                                padding: '18px 20px', 
+                                padding: '14px 16px', 
                                 border: '1.5px solid var(--accent-primary)',
                                 background: 'var(--surface-elevated)',
                                 position: 'relative'
                             }}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '18px' }}>
                                         {MOODS.find(m => m.value === selectedPastEntry.mood_score)?.emoji || '📝'}
                                     </span>
                                     <div>
-                                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700' }}>
+                                        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700' }}>
                                             Memory from {format(parseISO(selectedPastEntry.date), 'EEEE, MMMM d')}
                                         </h3>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                                             {MOODS.find(m => m.value === selectedPastEntry.mood_score)?.label}
                                         </span>
                                     </div>
@@ -653,8 +694,8 @@ const Journal = () => {
                                         background: 'var(--surface-input)',
                                         border: 'none',
                                         borderRadius: '50%',
-                                        width: '28px',
-                                        height: '28px',
+                                        width: '26px',
+                                        height: '26px',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -662,52 +703,51 @@ const Journal = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    <X size={14} />
+                                    <X size={13} />
                                 </button>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                                 {selectedPastEntry.how_was_today && (
                                     <div>
-                                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Highlights</span>
-                                        <p style={{ margin: '2px 0 0 0', color: 'var(--text-primary)', lineHeight: '1.5' }}>{selectedPastEntry.how_was_today}</p>
+                                        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Highlights</span>
+                                        <p style={{ margin: '2px 0 0 0', color: 'var(--text-primary)', lineHeight: '1.4' }}>{selectedPastEntry.how_was_today}</p>
                                     </div>
                                 )}
                                 {selectedPastEntry.on_your_mind && (
                                     <div>
-                                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Thoughts</span>
-                                        <p style={{ margin: '2px 0 0 0', color: 'var(--text-primary)', lineHeight: '1.5' }}>{selectedPastEntry.on_your_mind}</p>
+                                        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Thoughts</span>
+                                        <p style={{ margin: '2px 0 0 0', color: 'var(--text-primary)', lineHeight: '1.4' }}>{selectedPastEntry.on_your_mind}</p>
                                     </div>
                                 )}
                                 {selectedPastEntry.change_for_tomorrow && (
                                     <div>
-                                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tomorrow's Focus</span>
-                                        <p style={{ margin: '2px 0 0 0', color: 'var(--text-primary)', lineHeight: '1.5' }}>{selectedPastEntry.change_for_tomorrow}</p>
+                                        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tomorrow</span>
+                                        <p style={{ margin: '2px 0 0 0', color: 'var(--text-primary)', lineHeight: '1.4' }}>{selectedPastEntry.change_for_tomorrow}</p>
                                     </div>
                                 )}
                             </div>
                         </motion.div>
                     )}
 
-                    {/* REDESIGNED MOOD SELECTOR: Horizontal, Fluid, No Vertical Distortion */}
-                    <div className="glass-card" style={{ padding: '20px 16px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '0 4px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Sparkles size={15} style={{ color: 'var(--accent-primary)' }} />
-                                How's your mood today?
+                    {/* MOOD SELECTOR: Beautiful, Horizontal, Perfectly Spaced */}
+                    <div className="glass-card journal-mood-card" style={{ padding: '16px 14px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 2px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <Sparkles size={14} style={{ color: 'var(--accent-primary)' }} />
+                                <span>How's your mood?</span>
                             </span>
                             
-                            {/* Live Active Mood Badge */}
                             <span style={{
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 fontWeight: '700',
-                                padding: '3px 10px',
-                                borderRadius: '12px',
+                                padding: '2px 8px',
+                                borderRadius: '10px',
                                 background: `color-mix(in srgb, ${selectedMoodObj.color} 18%, transparent)`,
                                 color: selectedMoodObj.color,
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '5px'
+                                gap: '4px'
                             }}>
                                 <span>{selectedMoodObj.emoji}</span>
                                 <span>{selectedMoodObj.label}</span>
@@ -715,12 +755,12 @@ const Journal = () => {
                         </div>
 
                         {/* Fluid 5-Emoji Bubble Row */}
-                        <div style={{ 
+                        <div className="journal-mood-bubbles" style={{ 
                             display: 'flex', 
-                            justifyContent: 'space-around', 
+                            justifyContent: 'space-between', 
                             alignItems: 'center', 
-                            gap: '8px',
-                            padding: '4px 0'
+                            gap: '6px',
+                            padding: '2px 0'
                         }}>
                             {MOODS.map(mood => {
                                 const isSelected = localEntry.mood_score === mood.value;
@@ -728,25 +768,26 @@ const Journal = () => {
                                     <motion.button
                                         key={mood.value}
                                         type="button"
-                                        whileHover={{ scale: 1.15 }}
+                                        whileHover={{ scale: 1.12 }}
                                         whileTap={{ scale: 0.92 }}
                                         onClick={() => handleMoodSelect(mood.value)}
+                                        className={`mood-bubble-btn ${isSelected ? 'selected' : ''}`}
                                         style={{
                                             flex: '1',
-                                            maxWidth: '68px',
-                                            height: '56px',
-                                            borderRadius: '20px',
-                                            border: isSelected ? `2.5px solid ${mood.color}` : '1px solid var(--border-subtle)',
+                                            maxWidth: '60px',
+                                            height: '50px',
+                                            borderRadius: '16px',
+                                            border: isSelected ? `2px solid ${mood.color}` : '1px solid var(--border-subtle)',
                                             background: isSelected 
-                                                ? `color-mix(in srgb, ${mood.color} 22%, transparent)` 
+                                                ? `color-mix(in srgb, ${mood.color} 20%, transparent)` 
                                                 : 'var(--surface-input)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            fontSize: '28px',
+                                            fontSize: '24px',
                                             cursor: 'pointer',
                                             transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-                                            boxShadow: isSelected ? `0 6px 18px color-mix(in srgb, ${mood.color} 28%, transparent)` : 'none'
+                                            boxShadow: isSelected ? `0 4px 14px color-mix(in srgb, ${mood.color} 25%, transparent)` : 'none'
                                         }}
                                         title={mood.label}
                                     >
@@ -758,13 +799,13 @@ const Journal = () => {
                     </div>
 
                     {/* FOCUS TAB SWITCHER */}
-                    <div style={{
+                    <div className="journal-tabs-bar" style={{
                         display: 'flex',
                         background: 'var(--surface-input)',
-                        padding: '4px',
-                        borderRadius: '16px',
+                        padding: '3px',
+                        borderRadius: '14px',
                         border: '1px solid var(--border-subtle)',
-                        gap: '4px',
+                        gap: '3px',
                         overflowX: 'auto',
                         WebkitOverflowScrolling: 'touch',
                         scrollbarWidth: 'none'
@@ -779,32 +820,34 @@ const Journal = () => {
                                     key={tab.id}
                                     type="button"
                                     onClick={() => setActiveTab(tab.id)}
+                                    className={`journal-tab-item ${isTabActive ? 'active' : ''}`}
                                     style={{
                                         flex: '1 0 auto',
-                                        padding: '8px 12px',
-                                        borderRadius: '12px',
+                                        padding: '7px 10px',
+                                        borderRadius: '11px',
                                         border: 'none',
                                         background: isTabActive ? 'var(--surface-elevated)' : 'transparent',
                                         color: isTabActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                        fontSize: '12px',
+                                        fontSize: '11px',
                                         fontWeight: isTabActive ? '700' : '500',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px',
+                                        gap: '5px',
                                         cursor: 'pointer',
-                                        boxShadow: isTabActive ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                                        boxShadow: isTabActive ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                                         transition: 'all 0.15s ease',
                                         whiteSpace: 'nowrap',
                                         position: 'relative'
                                     }}
                                 >
-                                    <Icon size={14} color={isTabActive ? (tab.color || 'var(--accent-primary)') : 'currentColor'} />
-                                    <span>{tab.label}</span>
+                                    <Icon size={13} color={isTabActive ? (tab.color || 'var(--accent-primary)') : 'currentColor'} />
+                                    <span className="desktop-text">{tab.label}</span>
+                                    <span className="mobile-text">{tab.shortLabel}</span>
                                     {hasContent && (
                                         <span style={{
-                                            width: '5px',
-                                            height: '5px',
+                                            width: '4px',
+                                            height: '4px',
                                             borderRadius: '50%',
                                             background: tab.color || 'var(--accent-primary)'
                                         }} />
@@ -814,30 +857,31 @@ const Journal = () => {
                         })}
                     </div>
 
-                    {/* REFLECTION CARDS WITH DEDICATED MIC BUTTONS */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* REFLECTION PROMPT CARDS */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         
-                        {/* Section 1: Highlights & Summary */}
+                        {/* Section 1: Highlights */}
                         {(activeTab === 'all' || activeTab === 'how_was_today') && (
                             <motion.div 
                                 layout
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="glass-card" 
+                                className="glass-card journal-prompt-card" 
                                 style={{ 
-                                    padding: '18px 20px', 
+                                    padding: '16px 18px', 
                                     borderLeft: '4px solid #6366f1',
                                     border: isRecording && recordingField === 'how_was_today' ? '1.5px solid #ef4444' : undefined,
                                     borderLeftWidth: '4px'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Sun size={16} style={{ color: '#6366f1' }} />
-                                        Daily Highlights & Summary
+                                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Sun size={15} style={{ color: '#6366f1' }} />
+                                        <span className="desktop-text">Daily Highlights & Summary</span>
+                                        <span className="mobile-text">Highlights</span>
                                     </label>
                                     
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -848,7 +892,7 @@ const Journal = () => {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '4px',
-                                                padding: '4px 8px',
+                                                padding: '3px 8px',
                                                 borderRadius: '8px',
                                                 border: isRecording && recordingField === 'how_was_today' ? '1px solid #ef4444' : '1px solid var(--border-subtle)',
                                                 background: isRecording && recordingField === 'how_was_today' ? 'rgba(239, 68, 68, 0.15)' : 'var(--surface-input)',
@@ -859,52 +903,53 @@ const Journal = () => {
                                             }}
                                             title="Dictate with Whisper"
                                         >
-                                            {isRecording && recordingField === 'how_was_today' ? <Square size={12} /> : <Mic size={12} />}
-                                            <span>{isRecording && recordingField === 'how_was_today' ? 'Stop' : 'Voice'}</span>
+                                            {isRecording && recordingField === 'how_was_today' ? <Square size={11} /> : <Mic size={11} />}
+                                            <span className="desktop-text">{isRecording && recordingField === 'how_was_today' ? 'Stop' : 'Voice'}</span>
                                         </button>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                            {localEntry.how_was_today?.length || 0} chars
+                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                            {localEntry.how_was_today?.length || 0}c
                                         </span>
                                     </div>
                                 </div>
                                 <textarea
-                                    placeholder="What happened today? Notable moments, key accomplishments, or pleasant surprises (or tap Voice to speak)..."
+                                    placeholder="What happened today? Notable moments or small wins..."
                                     value={localEntry.how_was_today}
                                     onChange={(e) => handleFieldChange('how_was_today', e.target.value)}
                                     className="surface-input styled-input"
                                     style={{
                                         width: '100%',
-                                        minHeight: activeTab === 'how_was_today' ? '180px' : '90px',
+                                        minHeight: activeTab === 'how_was_today' ? '170px' : '85px',
                                         resize: 'vertical',
                                         borderRadius: '12px',
-                                        fontSize: '14px',
-                                        lineHeight: '1.6'
+                                        fontSize: '13px',
+                                        lineHeight: '1.5'
                                     }}
                                 />
                             </motion.div>
                         )}
 
-                        {/* Section 2: Brain Dump & Thoughts */}
+                        {/* Section 2: Thoughts */}
                         {(activeTab === 'all' || activeTab === 'on_your_mind') && (
                             <motion.div 
                                 layout
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="glass-card" 
+                                className="glass-card journal-prompt-card" 
                                 style={{ 
-                                    padding: '18px 20px', 
+                                    padding: '16px 18px', 
                                     borderLeft: '4px solid #ec4899',
                                     border: isRecording && recordingField === 'on_your_mind' ? '1.5px solid #ef4444' : undefined,
                                     borderLeftWidth: '4px'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Brain size={16} style={{ color: '#ec4899' }} />
-                                        Thoughts & Brain Dump
+                                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Brain size={15} style={{ color: '#ec4899' }} />
+                                        <span className="desktop-text">Thoughts & Brain Dump</span>
+                                        <span className="mobile-text">Thoughts</span>
                                     </label>
                                     
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -915,7 +960,7 @@ const Journal = () => {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '4px',
-                                                padding: '4px 8px',
+                                                padding: '3px 8px',
                                                 borderRadius: '8px',
                                                 border: isRecording && recordingField === 'on_your_mind' ? '1px solid #ef4444' : '1px solid var(--border-subtle)',
                                                 background: isRecording && recordingField === 'on_your_mind' ? 'rgba(239, 68, 68, 0.15)' : 'var(--surface-input)',
@@ -926,52 +971,53 @@ const Journal = () => {
                                             }}
                                             title="Dictate with Whisper"
                                         >
-                                            {isRecording && recordingField === 'on_your_mind' ? <Square size={12} /> : <Mic size={12} />}
-                                            <span>{isRecording && recordingField === 'on_your_mind' ? 'Stop' : 'Voice'}</span>
+                                            {isRecording && recordingField === 'on_your_mind' ? <Square size={11} /> : <Mic size={11} />}
+                                            <span className="desktop-text">{isRecording && recordingField === 'on_your_mind' ? 'Stop' : 'Voice'}</span>
                                         </button>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                            {localEntry.on_your_mind?.length || 0} chars
+                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                            {localEntry.on_your_mind?.length || 0}c
                                         </span>
                                     </div>
                                 </div>
                                 <textarea
-                                    placeholder="Unload your mind... thoughts, ideas, gratitude, worries, or freeform feelings (or tap Voice to speak)..."
+                                    placeholder="Unload your mind... thoughts, ideas, gratitude, or feelings..."
                                     value={localEntry.on_your_mind}
                                     onChange={(e) => handleFieldChange('on_your_mind', e.target.value)}
                                     className="surface-input styled-input"
                                     style={{
                                         width: '100%',
-                                        minHeight: activeTab === 'on_your_mind' ? '180px' : '90px',
+                                        minHeight: activeTab === 'on_your_mind' ? '170px' : '85px',
                                         resize: 'vertical',
                                         borderRadius: '12px',
-                                        fontSize: '14px',
-                                        lineHeight: '1.6'
+                                        fontSize: '13px',
+                                        lineHeight: '1.5'
                                     }}
                                 />
                             </motion.div>
                         )}
 
-                        {/* Section 3: Tomorrow's Vision */}
+                        {/* Section 3: Tomorrow's Focus */}
                         {(activeTab === 'all' || activeTab === 'change_for_tomorrow') && (
                             <motion.div 
                                 layout
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="glass-card" 
+                                className="glass-card journal-prompt-card" 
                                 style={{ 
-                                    padding: '18px 20px', 
+                                    padding: '16px 18px', 
                                     borderLeft: '4px solid #10b981',
                                     border: isRecording && recordingField === 'change_for_tomorrow' ? '1.5px solid #ef4444' : undefined,
                                     borderLeftWidth: '4px'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Compass size={16} style={{ color: '#10b981' }} />
-                                        Tomorrow's Focus & Vision
+                                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Compass size={15} style={{ color: '#10b981' }} />
+                                        <span className="desktop-text">Tomorrow's Focus & Vision</span>
+                                        <span className="mobile-text">Tomorrow</span>
                                     </label>
                                     
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -982,7 +1028,7 @@ const Journal = () => {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '4px',
-                                                padding: '4px 8px',
+                                                padding: '3px 8px',
                                                 borderRadius: '8px',
                                                 border: isRecording && recordingField === 'change_for_tomorrow' ? '1px solid #ef4444' : '1px solid var(--border-subtle)',
                                                 background: isRecording && recordingField === 'change_for_tomorrow' ? 'rgba(239, 68, 68, 0.15)' : 'var(--surface-input)',
@@ -993,26 +1039,26 @@ const Journal = () => {
                                             }}
                                             title="Dictate with Whisper"
                                         >
-                                            {isRecording && recordingField === 'change_for_tomorrow' ? <Square size={12} /> : <Mic size={12} />}
-                                            <span>{isRecording && recordingField === 'change_for_tomorrow' ? 'Stop' : 'Voice'}</span>
+                                            {isRecording && recordingField === 'change_for_tomorrow' ? <Square size={11} /> : <Mic size={11} />}
+                                            <span className="desktop-text">{isRecording && recordingField === 'change_for_tomorrow' ? 'Stop' : 'Voice'}</span>
                                         </button>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                            {localEntry.change_for_tomorrow?.length || 0} chars
+                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                            {localEntry.change_for_tomorrow?.length || 0}c
                                         </span>
                                     </div>
                                 </div>
                                 <textarea
-                                    placeholder="What is one thing you will prioritize, do differently, or achieve tomorrow (or tap Voice to speak)..."
+                                    placeholder="What is one thing you will prioritize or achieve tomorrow..."
                                     value={localEntry.change_for_tomorrow}
                                     onChange={(e) => handleFieldChange('change_for_tomorrow', e.target.value)}
                                     className="surface-input styled-input"
                                     style={{
                                         width: '100%',
-                                        minHeight: activeTab === 'change_for_tomorrow' ? '180px' : '85px',
+                                        minHeight: activeTab === 'change_for_tomorrow' ? '170px' : '80px',
                                         resize: 'vertical',
                                         borderRadius: '12px',
-                                        fontSize: '14px',
-                                        lineHeight: '1.6'
+                                        fontSize: '13px',
+                                        lineHeight: '1.5'
                                     }}
                                 />
                             </motion.div>
@@ -1021,13 +1067,13 @@ const Journal = () => {
 
                     {/* RECENT ENTRIES LIST */}
                     {pastEntriesList.length > 0 && (
-                        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <History size={16} style={{ color: 'var(--accent-primary)' }} />
-                                <h2 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>Recent Entries</h2>
+                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <History size={15} style={{ color: 'var(--accent-primary)' }} />
+                                <h2 style={{ fontSize: '14px', fontWeight: '700', margin: 0 }}>Recent Entries</h2>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                                 {pastEntriesList.slice(0, 4).map(entry => {
                                     const moodObj = MOODS.find(m => m.value === entry.mood_score) || MOODS[2];
                                     const entryDate = parseISO(entry.date);
@@ -1039,21 +1085,21 @@ const Journal = () => {
                                             onClick={() => setSelectedPastEntry(entry)}
                                             className="glass-card hover-lift"
                                             style={{
-                                                padding: '14px 16px',
+                                                padding: '12px 14px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                gap: '8px'
+                                                gap: '6px'
                                             }}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <span style={{ fontSize: '18px' }}>{moodObj.emoji}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                    <span style={{ fontSize: '16px' }}>{moodObj.emoji}</span>
                                                     <span style={{ fontSize: '12px', fontWeight: '700' }}>{dateStr}</span>
                                                 </div>
                                                 <span style={{
                                                     fontSize: '10px',
-                                                    padding: '2px 6px',
+                                                    padding: '1px 5px',
                                                     borderRadius: '6px',
                                                     background: `color-mix(in srgb, ${moodObj.color} 15%, transparent)`,
                                                     color: moodObj.color,
@@ -1064,7 +1110,7 @@ const Journal = () => {
                                             </div>
 
                                             <p style={{
-                                                fontSize: '12px',
+                                                fontSize: '11px',
                                                 color: 'var(--text-secondary)',
                                                 margin: 0,
                                                 overflow: 'hidden',
@@ -1090,6 +1136,47 @@ const Journal = () => {
                     0% { transform: scale(0.95); opacity: 0.8; }
                     50% { transform: scale(1.3); opacity: 1; }
                     100% { transform: scale(0.95); opacity: 0.8; }
+                }
+
+                /* Mobile vs Tablet/Desktop responsive styling */
+                @media (min-width: 768px) {
+                    .mobile-text {
+                        display: none !important;
+                    }
+                    .desktop-text {
+                        display: inline !important;
+                    }
+                }
+
+                @media (max-width: 767px) {
+                    .desktop-text {
+                        display: none !important;
+                    }
+                    .mobile-text {
+                        display: inline !important;
+                    }
+                    .journal-title {
+                        font-size: 18px !important;
+                    }
+                    .journal-prompt-card {
+                        padding: 14px 14px !important;
+                    }
+                    .journal-mood-card {
+                        padding: 14px 12px !important;
+                    }
+                    .mood-bubble-btn {
+                        height: 44px !important;
+                        max-width: 48px !important;
+                        font-size: 20px !important;
+                        border-radius: 14px !important;
+                    }
+                    .journal-streak-strip {
+                        padding: 6px 8px !important;
+                    }
+                    .journal-day-node {
+                        min-width: 32px !important;
+                        padding: 4px 1px !important;
+                    }
                 }
             `}</style>
         </div>
