@@ -1,28 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Wallet, CreditCard, ShoppingCart, LayoutGrid } from 'lucide-react';
+import { 
+    LayoutGrid, BarChart3, Wallet, Target, ShoppingCart, 
+    Plus, Sparkles 
+} from 'lucide-react';
 import ExpensesView from '../components/finances/ExpensesView';
+import AnalyticsView from '../components/finances/AnalyticsView';
 import AccountsView from '../components/finances/AccountsView';
+import BudgetsView from '../components/finances/BudgetsView';
 import ShoppingView from '../components/finances/ShoppingView';
+import QuickAddExpenseModal from '../components/finances/QuickAddExpenseModal';
 
 import useTransactions from '../hooks/useTransactions';
-import useBankAccounts from '../hooks/useBankAccounts';
 import useExpenseCards from '../hooks/useExpenseCards';
 
 const Finances = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Determine active tab from URL or default to 'spend'
+    // Determine active tab from URL
     const getTabFromPath = () => {
+        if (location.pathname.includes('/finances/analytics')) return 'analytics';
         if (location.pathname.includes('/finances/accounts')) return 'accounts';
+        if (location.pathname.includes('/finances/budgets')) return 'budgets';
         if (location.pathname.includes('/finances/shopping')) return 'shopping';
-        return 'spend';
+        return 'overview';
     };
 
     const [activeTab, setActiveTab] = useState(getTabFromPath());
-    const [isBalanceHidden, setIsBalanceHidden] = useState(true);
-    const [showAnalytics, setShowAnalytics] = useState(false);
+    const [showGlobalAddModal, setShowGlobalAddModal] = useState(false);
+
+    const { transactions, addTransaction } = useTransactions();
+    const { cards, fetchSubcategories } = useExpenseCards();
 
     useEffect(() => {
         setActiveTab(getTabFromPath());
@@ -30,199 +39,142 @@ const Finances = () => {
 
     const handleTabChange = (tab) => {
         setActiveTab(tab);
-        if (tab === 'spend') navigate('/finances');
+        if (tab === 'overview') navigate('/finances');
         else navigate(`/finances/${tab}`);
     };
 
-    // Global Financial State for Header
-    const { getTotalBalance } = useBankAccounts();
-    const { transactions } = useTransactions();
-    
-    // Calculate Monthly Spend
-    const currentMonth = new Date().getMonth();
-    const monthlySpend = transactions
-        .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === currentMonth)
-        .reduce((acc, t) => acc + parseFloat(t.amount), 0);
-        
-    const monthlyRecurringSpend = transactions
-        .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === currentMonth && t.description?.includes('(Recurring)'))
-        .reduce((acc, t) => acc + parseFloat(t.amount), 0);
-
-    const monthlySpendExcludingRecurring = monthlySpend - monthlyRecurringSpend;
+    const TABS = [
+        { id: 'overview', label: 'Overview', icon: LayoutGrid },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+        { id: 'accounts', label: 'Accounts', icon: Wallet },
+        { id: 'budgets', label: 'Budgets', icon: Target },
+        { id: 'shopping', label: 'Shopping', icon: ShoppingCart },
+    ];
 
     return (
-        <div className="page-container finances-hub" style={{ paddingBottom: '100px' }}>
-            {/* Unified Header */}
-            <header className="finances-header" style={{ marginBottom: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div className="page-container finances-hub" style={{ paddingBottom: '110px', position: 'relative' }}>
+            
+            {/* Header */}
+            <header className="finances-header" style={{ marginBottom: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '4px' }}>Finances</h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Manage your wealth effortlessly</p>
-                    </div>
-                </div>
-
-                {/* Global Financial Summary Cards */}
-                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch', margin: '0 -20px', padding: '0 20px 8px 20px' }}>
-                    <div 
-                        className="glass-card summary-card" 
-                        onClick={() => setIsBalanceHidden(!isBalanceHidden)}
-                        style={{ 
-                            flex: '0 0 auto', 
-                            width: '160px', 
-                            padding: '16px', 
-                            background: 'linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(72, 187, 120, 0.05))',
-                            border: '1px solid rgba(72, 187, 120, 0.2)',
-                            borderLeft: '4px solid var(--success)',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Wallet size={14} /> Net Balance
-                        </div>
-                        <div style={{ 
-                            fontSize: '24px', 
-                            fontWeight: '700', 
-                            color: 'var(--text-primary)',
-                            filter: isBalanceHidden ? 'blur(8px)' : 'none',
-                            transition: 'filter 0.3s ease'
-                        }}>
-                            ₹{Math.round(getTotalBalance()).toLocaleString('en-IN')}
-                        </div>
-                    </div>
-                    
-                    <div 
-                        className="glass-card summary-card" 
-                        onClick={() => {
-                            handleTabChange('spend');
-                            setShowAnalytics(true);
-                        }}
-                        style={{ 
-                            flex: '0 0 auto', 
-                            width: '180px', 
-                            padding: '16px', 
-                            background: 'linear-gradient(135deg, rgba(245, 101, 101, 0.1), rgba(245, 101, 101, 0.05))',
-                            border: '1px solid rgba(245, 101, 101, 0.2)',
-                            borderLeft: '4px solid var(--danger)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between'
-                        }}
-                    >
-                        <div>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <CreditCard size={14} /> Spent this Month
-                            </div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                ₹{Math.round(monthlySpend).toLocaleString('en-IN')}
-                            </div>
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', fontWeight: '600' }}>
-                            Excl. recurring: ₹{Math.round(monthlySpendExcludingRecurring).toLocaleString('en-IN')}
-                        </div>
+                        <h1 style={{ fontSize: '28px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>
+                            Finances
+                        </h1>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '3px 0 0 0' }}>
+                            Track, forecast, and optimize your wealth
+                        </p>
                     </div>
                 </div>
             </header>
 
-            {/* Segmented Control */}
+            {/* Segmented Tab Navigation */}
             <div style={{
                 display: 'flex',
                 background: 'var(--surface-input)',
                 padding: '4px',
                 borderRadius: '16px',
-                marginBottom: '24px',
+                marginBottom: '22px',
                 position: 'sticky',
                 top: '70px',
                 zIndex: 90,
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid var(--glass-border)'
+                border: '1px solid var(--glass-border)',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none'
             }}>
-                <button 
-                    onClick={() => handleTabChange('spend')}
-                    style={{
-                        flex: 1,
-                        padding: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        border: 'none',
-                        background: activeTab === 'spend' ? 'var(--glass-card-bg)' : 'transparent',
-                        color: activeTab === 'spend' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        borderRadius: '12px',
-                        fontWeight: activeTab === 'spend' ? '600' : '500',
-                        fontSize: '14px',
-                        boxShadow: activeTab === 'spend' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <LayoutGrid size={16} /> Overview
-                </button>
-                <button 
-                    onClick={() => handleTabChange('accounts')}
-                    style={{
-                        flex: 1,
-                        padding: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        border: 'none',
-                        background: activeTab === 'accounts' ? 'var(--glass-card-bg)' : 'transparent',
-                        color: activeTab === 'accounts' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        borderRadius: '12px',
-                        fontWeight: activeTab === 'accounts' ? '600' : '500',
-                        fontSize: '14px',
-                        boxShadow: activeTab === 'accounts' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <Wallet size={16} /> Accounts
-                </button>
-                <button 
-                    onClick={() => handleTabChange('shopping')}
-                    style={{
-                        flex: 1,
-                        padding: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        border: 'none',
-                        background: activeTab === 'shopping' ? 'var(--glass-card-bg)' : 'transparent',
-                        color: activeTab === 'shopping' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        borderRadius: '12px',
-                        fontWeight: activeTab === 'shopping' ? '600' : '500',
-                        fontSize: '14px',
-                        boxShadow: activeTab === 'shopping' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <ShoppingCart size={16} /> Shopping
-                </button>
+                {TABS.map(tab => {
+                    const isActive = activeTab === tab.id;
+                    const Icon = tab.icon;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => handleTabChange(tab.id)}
+                            style={{
+                                flex: '1 0 auto',
+                                minWidth: '70px',
+                                padding: '10px 12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                border: 'none',
+                                background: isActive ? 'var(--glass-card-bg)' : 'transparent',
+                                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                borderRadius: '12px',
+                                fontWeight: isActive ? '700' : '500',
+                                fontSize: '13px',
+                                boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.06)' : 'none',
+                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            <Icon size={16} color={isActive ? 'var(--accent-primary, #4ecdc4)' : 'currentColor'} />
+                            <span>{tab.label}</span>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Tab Content with Animation Wrapper */}
-            <div className="tab-content-wrapper" style={{ animation: 'fadeIn 0.4s ease' }}>
-                {activeTab === 'spend' && <ExpensesView showAnalytics={showAnalytics} setShowAnalytics={setShowAnalytics} />}
+            {/* Tab Views */}
+            <div className="tab-content-wrapper" style={{ animation: 'fadeIn 0.35s ease' }}>
+                {activeTab === 'overview' && <ExpensesView />}
+                {activeTab === 'analytics' && <AnalyticsView transactions={transactions} categories={cards} />}
                 {activeTab === 'accounts' && <AccountsView />}
+                {activeTab === 'budgets' && <BudgetsView />}
                 {activeTab === 'shopping' && <ShoppingView />}
             </div>
+
+            {/* PERSISTENT FLOATING ACTION BUTTON (FAB) */}
+            <button
+                onClick={() => setShowGlobalAddModal(true)}
+                style={{
+                    position: 'fixed',
+                    bottom: '84px',
+                    right: '24px',
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '28px',
+                    background: 'var(--accent-gradient, linear-gradient(135deg, #4ecdc4, #556270))',
+                    color: '#fff',
+                    border: 'none',
+                    boxShadow: '0 8px 24px rgba(78, 205, 196, 0.45)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 99,
+                    transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 12px 28px rgba(78, 205, 196, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(78, 205, 196, 0.45)';
+                }}
+                title="Quick Add Expense"
+            >
+                <Plus size={26} strokeWidth={2.5} />
+            </button>
+
+            {/* Global Quick Add Expense Modal */}
+            <QuickAddExpenseModal
+                isOpen={showGlobalAddModal}
+                onClose={() => setShowGlobalAddModal(false)}
+                cards={cards}
+                onAddExpense={addTransaction}
+                fetchSubcategories={fetchSubcategories}
+            />
+
             <style>{`
                 @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
+                    from { opacity: 0; transform: translateY(8px); }
                     to { opacity: 1; transform: translateY(0); }
-                }
-                .summary-card {
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
-                }
-                .summary-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
                 }
             `}</style>
         </div>

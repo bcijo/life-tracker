@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Building2, Wallet, CreditCard, RefreshCw, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Plus, Building2, Wallet, CreditCard, RefreshCw, Trash2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import Modal from '../Modal';
 import CurrencyInput from '../CurrencyInput';
 import useBankAccounts from '../../hooks/useBankAccounts';
 import useTransactions from '../../hooks/useTransactions';
 import useExpenseCards from '../../hooks/useExpenseCards';
-import WeeklySummary from '../WeeklySummary';
 
 const ACCOUNT_TYPES = [
-    { id: 'savings', label: 'Savings Account', icon: Building2, color: '#48bb78' },
-    { id: 'credit', label: 'Credit Card', icon: CreditCard, color: '#f56565' },
-    { id: 'wallet', label: 'Digital Wallet', icon: Wallet, color: '#4ecdc4' },
+    { id: 'savings', label: 'Savings Account', icon: Building2, color: '#48bb78', category: 'asset' },
+    { id: 'wallet', label: 'Digital Wallet', icon: Wallet, color: '#4ecdc4', category: 'asset' },
+    { id: 'credit', label: 'Credit Card', icon: CreditCard, color: '#f56565', category: 'liability' },
 ];
 
 // Format number with Indian numbering system (1,00,000 format)
@@ -73,15 +72,50 @@ const AccountsView = () => {
 
     const accountToUpdate = bankAccounts.find(a => a.id === showUpdateModal);
 
+    // Calculate Assets vs Liabilities
+    const totalAssets = bankAccounts
+        .filter(a => a.account_type !== 'credit')
+        .reduce((sum, a) => sum + (parseFloat(a.current_balance) || 0), 0);
+
+    const totalLiabilities = bankAccounts
+        .filter(a => a.account_type === 'credit')
+        .reduce((sum, a) => sum + (parseFloat(a.current_balance) || 0), 0);
+
     return (
         <div className="finances-subview" style={{ animation: 'fadeIn 0.3s ease' }}>
+            {/* Assets vs Liabilities Breakdown */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: '12px',
+                marginBottom: '20px'
+            }}>
+                <div className="glass-card" style={{ padding: '16px', borderLeft: '4px solid var(--success)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ArrowDownLeft size={14} color="var(--success)" /> Total Assets
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        ₹{formatIndianNumber(totalAssets)}
+                    </div>
+                </div>
+
+                <div className="glass-card" style={{ padding: '16px', borderLeft: '4px solid var(--danger)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ArrowUpRight size={14} color="var(--danger)" /> Total Dues / Credit
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        ₹{formatIndianNumber(totalLiabilities)}
+                    </div>
+                </div>
+            </div>
+
             {/* Action Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Your Accounts</h2>
                 <button
                     onClick={() => setShowAddForm(true)}
                     style={{
-                        background: 'var(--accent-gradient)',
+                        background: 'var(--accent-gradient, #4ecdc4)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: '12px',
@@ -97,11 +131,6 @@ const AccountsView = () => {
                 >
                     <Plus size={16} /> Add Account
                 </button>
-            </div>
-
-            {/* Weekly Summary */}
-            <div style={{ marginBottom: '24px' }}>
-                <WeeklySummary transactions={transactions} categories={cards} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

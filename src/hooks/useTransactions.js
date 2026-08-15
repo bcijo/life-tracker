@@ -16,6 +16,14 @@ function useTransactions() {
         return await insert(newTransaction);
     };
 
+    const updateTransaction = async (id, updates) => {
+        const payload = { ...updates };
+        if (payload.amount !== undefined) {
+            payload.amount = parseFloat(payload.amount);
+        }
+        return await update(id, payload);
+    };
+
     const deleteTransaction = async (id) => {
         return await remove(id);
     };
@@ -25,6 +33,7 @@ function useTransactions() {
         loading,
         error,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
     };
 }

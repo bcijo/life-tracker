@@ -5,7 +5,6 @@ import CurrencyInput from '../components/CurrencyInput';
 import useBankAccounts from '../hooks/useBankAccounts';
 import useTransactions from '../hooks/useTransactions';
 import useExpenseCards from '../hooks/useExpenseCards';
-import WeeklySummary from '../components/WeeklySummary';
 
 const ACCOUNT_TYPES = [
     { id: 'savings', label: 'Savings Account', icon: Building2, color: '#48bb78' },
@@ -99,9 +98,6 @@ const BankAccounts = () => {
                     <Plus size={24} />
                 </button>
             </header>
-
-            {/* Weekly Summary */}
-            <WeeklySummary transactions={transactions} categories={cards} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {bankAccounts.map(account => (
