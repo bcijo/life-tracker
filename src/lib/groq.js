@@ -353,3 +353,54 @@ Return only valid JSON, no markdown fences, no extra text. Example structure:
         return { restaurant_name: null, items: [], charges: [], discounts: [] };
     }
 }
+
+// 4. Speech-to-Text Transcription via Groq Whisper Large V3
+const AUDIO_TRANSCRIPTION_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const WHISPER_MODEL = 'whisper-large-v3';
+
+/**
+ * Transcribes an audio blob using Groq's whisper-large-v3 model.
+ * @param {Blob} audioBlob - Audio recording blob (webm, mp4, wav, ogg, etc.)
+ * @param {string} [promptHint] - Optional context to guide vocabulary and punctuation
+ * @returns {Promise<string>} - Transcribed text
+ */
+export async function transcribeAudio(audioBlob, promptHint = '') {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error('VITE_GROQ_API_KEY is missing');
+    }
+
+    const mimeType = audioBlob.type || 'audio/webm';
+    let ext = 'webm';
+    if (mimeType.includes('mp4') || mimeType.includes('m4a')) ext = 'm4a';
+    else if (mimeType.includes('ogg')) ext = 'ogg';
+    else if (mimeType.includes('wav')) ext = 'wav';
+    else if (mimeType.includes('mp3') || mimeType.includes('mpeg')) ext = 'mp3';
+
+    const formData = new FormData();
+    formData.append('file', audioBlob, `recording.${ext}`);
+    formData.append('model', WHISPER_MODEL);
+    formData.append('response_format', 'json');
+    formData.append('temperature', '0.0');
+    if (promptHint) {
+        formData.append('prompt', promptHint);
+    }
+
+    const response = await fetch(AUDIO_TRANSCRIPTION_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        console.error('[Groq Whisper Error]:', response.status, errText);
+        throw new Error(`Whisper transcription failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text ? data.text.trim() : '';
+}
+
