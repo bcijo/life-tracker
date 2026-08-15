@@ -1,22 +1,30 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, Activity, Wallet, Scissors, Users } from 'lucide-react';
+import { Home, Sparkles, Activity, Wallet, Users, CheckSquare, Scissors } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
-import AskAI from './AskAI';
 import '../styles/index.css';
 
 const Layout = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  const navItems = [
+  const desktopNavItems = [
     { to: '/', label: 'Home', icon: Home },
-    { to: '/todos', label: 'Todos', icon: CheckSquare },
+    { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
     { to: '/habits', label: 'Habits', icon: Activity },
     { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
     { to: '/friends', label: 'Friends', icon: Users },
+    { to: '/todos', label: 'Todos', icon: CheckSquare },
     { to: '/split-bill', label: 'Split Bill', icon: Scissors },
+  ];
+
+  const mobileNavItems = [
+    { to: '/', label: 'Home', icon: Home },
+    { to: '/habits', label: 'Habits', icon: Activity },
+    { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
+    { to: '/assistant', label: 'AI', icon: Sparkles },
+    { to: '/friends', label: 'Friends', icon: Users },
   ];
 
   return (
@@ -30,7 +38,7 @@ const Layout = () => {
         </div>
 
         <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {navItems.map((item) => {
+          {desktopNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.matchPrefix 
               ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
@@ -49,7 +57,7 @@ const Layout = () => {
           })}
         </nav>
 
-        {/* Sidebar Footer with Profile & AI */}
+        {/* Sidebar Footer with Profile */}
         <div style={{ padding: '12px', borderTop: '1px solid var(--glass-border)' }}>
           <ProfileMenu variant="sidebar" />
         </div>
@@ -71,9 +79,9 @@ const Layout = () => {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation (visible < 768px) */}
+      {/* Mobile Bottom Navigation (visible < 768px - exactly 5 items) */}
       <nav className="bottom-nav glass-panel">
-        {navItems.slice(0, 5).map((item) => {
+        {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchPrefix 
             ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
@@ -91,8 +99,6 @@ const Layout = () => {
           );
         })}
       </nav>
-
-      <AskAI />
 
       <style>{`
         /* Desktop Sidebar Navigation */

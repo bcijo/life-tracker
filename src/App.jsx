@@ -15,6 +15,7 @@ import Finances from './pages/Finances'
 import BillSplitter from './pages/BillSplitter'
 import Friends from './pages/Friends'
 import InviteLanding from './pages/InviteLanding'
+import Assistant from './pages/Assistant'
 
 function App() {
     return (
@@ -36,14 +37,16 @@ function App() {
                         </ProtectedRoute>
                     }>
                         <Route index element={<Dashboard />} />
-                        <Route path="todos" element={<Todos />} />
+                        <Route path="assistant" element={<Assistant />} />
+                        <Route path="ai" element={<Navigate to="/assistant" replace />} />
                         <Route path="habits" element={<Habits />} />
                         <Route path="finances/*" element={<Finances />} />
+                        <Route path="friends" element={<Friends />} />
+                        <Route path="todos" element={<Todos />} />
+                        <Route path="split-bill" element={<BillSplitter />} />
                         <Route path="shopping" element={<Navigate to="/finances/shopping" replace />} />
                         <Route path="expenses" element={<Navigate to="/finances/spend" replace />} />
                         <Route path="bank-accounts" element={<Navigate to="/finances/accounts" replace />} />
-                        <Route path="friends" element={<Friends />} />
-                        <Route path="split-bill" element={<BillSplitter />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
