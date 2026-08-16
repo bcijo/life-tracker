@@ -43,13 +43,16 @@ function useHabits() {
     };
 
     const addHabit = async (name, activeDays = ALL_DAYS, timeOfDay = 'morning') => {
-        const todayStr = getLocalDateStr(new Date());
+        // IMPORTANT: Only insert columns that exist in the DB schema.
+        // tracking_start_date and is_paused were added in migrations that may not have been applied.
+        // - tracking_start_date: calculateSuccessRate falls back to created_at when absent
+        // - is_paused: defaults to false behavior when the field is undefined/absent
+        // Run the migration SQL from lib/add_tracking_start_date_migration.sql to enable full features.
         const newHabit = {
             name,
-            history: [], // Will store { date: 'YYYY-MM-DD', status: 'completed' | 'failed' }
+            history: [],
             active_days: activeDays,
-            time_of_day: timeOfDay, // 'morning' or 'evening'
-            tracking_start_date: todayStr,
+            time_of_day: timeOfDay,
         };
         return await insert(newHabit);
     };
