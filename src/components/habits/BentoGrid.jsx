@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Flame, Trophy, Zap, CheckCircle2 } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, isToday, isFuture, getDay } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, getDay } from 'date-fns';
+import { getLocalDateStr } from '../../hooks/useHabits';
 
 /**
  * BentoGrid — Gamified stats dashboard for the Habits page
@@ -15,9 +16,10 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
   if (!habits || habits.length === 0) return null;
 
   // ── 1. ON FIRE: longest current streak across all habits ──────────────────
-  const longestStreak = habits.reduce((max, h) => Math.max(max, calculateStreak(h)), 0);
+  const activeHabits = habits.filter(h => !h.is_paused);
+  const longestStreak = activeHabits.reduce((max, h) => Math.max(max, calculateStreak(h)), 0);
   // Which habit has the longest streak (for sub-label)
-  const onFireHabit = habits.reduce((best, h) => {
+  const onFireHabit = activeHabits.reduce((best, h) => {
     const s = calculateStreak(h);
     return s > (best ? calculateStreak(best) : -1) ? h : best;
   }, null);
@@ -28,16 +30,16 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
   // ── 3. THIS WEEK: completed / total expected habit-days ──────────────────
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
-  const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: today }); // only up to today
 
   let weekCompleted = 0;
   let weekExpected = 0;
   for (const day of weekDays) {
-    const dateStr = format(day, 'yyyy-MM-dd');
+    const dateStr = getLocalDateStr(day);
     const dow = getDay(day);
-    for (const habit of habits) {
+    for (const habit of activeHabits) {
       if ((habit.active_days || [0,1,2,3,4,5,6]).includes(dow)) {
         weekExpected++;
         if (getStatusForDate(habit, dateStr) === 'completed') weekCompleted++;
@@ -49,23 +51,23 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
   let weekTotal = 0;
   for (const day of allWeekDays) {
     const dow = getDay(day);
-    for (const habit of habits) {
+    for (const habit of activeHabits) {
       if ((habit.active_days || [0,1,2,3,4,5,6]).includes(dow)) weekTotal++;
     }
   }
   const weekPct = weekExpected > 0 ? Math.round((weekCompleted / weekExpected) * 100) : 0;
 
   // ── 4. TODAY ─────────────────────────────────────────────────────────────
-  const activeTodayHabits = habits.filter((h) => isTodayActive(h));
+  const activeTodayHabits = habits.filter((h) => !h.is_paused && isTodayActive(h));
   const completedToday = activeTodayHabits.filter((h) => getTodayStatus(h) === 'completed').length;
   const todayPct = activeTodayHabits.length > 0 ? Math.round((completedToday / activeTodayHabits.length) * 100) : 0;
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const cardBase = {
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
     borderRadius: 24,
     display: 'flex',
     flexDirection: 'column',
@@ -98,7 +100,7 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
           >
             <Flame
               size={26}
-              color={longestStreak >= 7 ? '#f97316' : longestStreak >= 3 ? '#f59e0b' : '#64748b'}
+              color={longestStreak >= 7 ? '#f97316' : longestStreak >= 3 ? '#f59e0b' : 'var(--text-muted)'}
               fill={longestStreak > 0 ? (longestStreak >= 7 ? 'rgba(249,115,22,0.25)' : 'rgba(245,158,11,0.2)') : 'none'}
             />
           </motion.div>
@@ -107,7 +109,7 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             style={{
               fontSize: 42, fontWeight: 800, lineHeight: 1, marginTop: 6,
               fontFamily: "'JetBrains Mono', monospace",
-              color: longestStreak >= 7 ? '#f97316' : longestStreak >= 3 ? '#f59e0b' : 'rgba(255,255,255,0.6)',
+              color: longestStreak >= 7 ? '#f97316' : longestStreak >= 3 ? '#f59e0b' : 'var(--text-primary)',
             }}
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -116,14 +118,14 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             {longestStreak}
           </motion.span>
 
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 600, marginTop: 5, letterSpacing: '0.06em' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, marginTop: 5, letterSpacing: '0.06em' }}>
             DAY STREAK
           </span>
 
           {/* Sub-label showing which habit */}
           {onFireHabit && longestStreak > 0 && (
             <span style={{
-              fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 4,
+              fontSize: 9, color: 'var(--text-secondary)', marginTop: 4,
               maxWidth: '90%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {onFireHabit.name}
@@ -164,7 +166,7 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             animate={{ rotate: 0, scale: 1 }}
             transition={{ delay: 0.4, type: 'spring', stiffness: 300 }}
           >
-            <Trophy size={24} color={checkinStreak > 0 ? '#a855f7' : '#475569'} />
+            <Trophy size={24} color={checkinStreak > 0 ? '#a855f7' : 'var(--text-muted)'} />
           </motion.div>
 
           <motion.span
@@ -172,7 +174,7 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             style={{
               fontSize: 42, fontWeight: 800, lineHeight: 1, marginTop: 6,
               fontFamily: "'JetBrains Mono', monospace",
-              color: checkinStreak === 0 ? 'rgba(255,255,255,0.35)' : undefined,
+              color: checkinStreak === 0 ? 'var(--text-muted)' : undefined,
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -181,11 +183,11 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             {checkinStreak}
           </motion.span>
 
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 600, marginTop: 5, letterSpacing: '0.06em' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, marginTop: 5, letterSpacing: '0.06em' }}>
             CHECKIN STREAK
           </span>
 
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 3 }}>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>
             consecutive days tracking
           </span>
         </motion.div>
@@ -216,13 +218,13 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             >
               {weekCompleted}
             </motion.span>
-            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 18, fontFamily: 'monospace' }}>/{weekTotal}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 18, fontFamily: 'monospace' }}>/{weekTotal}</span>
           </div>
 
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 }}>THIS WEEK</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>THIS WEEK</span>
 
           {/* Progress bar */}
-          <div style={{ width: '100%', marginTop: 8, height: 4, borderRadius: 9999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+          <div style={{ width: '100%', marginTop: 8, height: 4, borderRadius: 9999, background: 'var(--surface-input, rgba(255,255,255,0.05))', overflow: 'hidden' }}>
             <motion.div
               style={{ height: '100%', borderRadius: 9999, background: 'linear-gradient(90deg, #06b6d4, #3b82f6)' }}
               initial={{ width: 0 }}
@@ -230,7 +232,7 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
               transition={{ delay: 0.6, duration: 0.9, ease: 'easeOut' }}
             />
           </div>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>{weekPct}% complete</span>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4 }}>{weekPct}% complete</span>
         </motion.div>
 
         {/* ── CARD 4: TODAY ── */}
@@ -253,13 +255,13 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
             >
               {completedToday}
             </motion.span>
-            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 18, fontFamily: 'monospace' }}>/{activeTodayHabits.length}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 18, fontFamily: 'monospace' }}>/{activeTodayHabits.length}</span>
           </div>
 
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 }}>TODAY</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>TODAY</span>
 
           {/* Completion arc */}
-          <div style={{ width: '100%', marginTop: 8, height: 4, borderRadius: 9999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+          <div style={{ width: '100%', marginTop: 8, height: 4, borderRadius: 9999, background: 'var(--surface-input, rgba(255,255,255,0.05))', overflow: 'hidden' }}>
             <motion.div
               style={{
                 height: '100%', borderRadius: 9999,
@@ -280,7 +282,7 @@ export function BentoGrid({ habits, calculateSuccessRate, calculateStreak, isTod
               animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>
+            <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
               {todayPct === 100 ? 'all done! 🎉' : 'live'}
             </span>
           </div>

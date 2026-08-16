@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, BarChart2, CalendarDays, Check } from 'lucide-react';
-import useHabits from '../hooks/useHabits';
+import useHabits, { parseLocalDate, getLocalDateStr } from '../hooks/useHabits';
 import HabitAnalytics from '../components/HabitAnalytics';
 import { format, subDays, parse, isToday as isDateToday, getDay } from 'date-fns';
 import { GradientOrbs } from '../components/habits/GradientOrbs';
@@ -46,7 +46,9 @@ const Habits = () => {
     const [showPaused, setShowPaused] = useState(true);
     const [celebratingId, setCelebratingId] = useState(null);
     const [completedPulse, setCompletedPulse] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [selectedDate, setSelectedDate] = useState(() => getLocalDateStr(new Date()));
+
+    const isViewingToday = selectedDate === getLocalDateStr(new Date());
 
     const handleToggle = (id, newStatus) => {
         setHabitStatus(id, selectedDate, newStatus);
@@ -107,23 +109,41 @@ const Habits = () => {
     };
 
     const calculateStreak = (habit) => {
-        if (!habit.history || habit.history.length === 0) return 0;
+        if (!habit || !habit.history || habit.history.length === 0) return 0;
         const activeDays = habit.active_days || ALL_DAYS;
         let streak = 0;
         const today = new Date();
+        
         for (let i = 0; i <= 365; i++) {
             const checkDate = subDays(today, i);
-            const dateStr = format(checkDate, 'yyyy-MM-dd');
+            const dateStr = getLocalDateStr(checkDate);
             // Respect global tracking start date
             if (trackingStartDate && dateStr < trackingStartDate) break;
+            if (habit.tracking_start_date && dateStr < habit.tracking_start_date) break;
+            
             const dayOfWeek = checkDate.getDay();
-            if (!activeDays.includes(dayOfWeek)) continue;
+            if (!activeDays.includes(dayOfWeek)) continue; // Scheduled rest day
+            
             const status = getStatusForDate(habit, dateStr);
-            if (status === 'completed') streak++;
-            else if (status === 'failed') break;
-            else if (i > 0) {
-                if (habit.is_paused) continue;
+            if (status === 'completed') {
+                streak++;
+            } else if (status === 'failed') {
+                if (i === 0) {
+                    // If today is marked failed, today is not completed
+                    break;
+                }
                 break;
+            } else {
+                // Neutral (unmarked)
+                if (i === 0) {
+                    // Today not logged yet, continue to count yesterday's active streak
+                    continue;
+                } else if (habit.is_paused) {
+                    // Paused habit preserves streak up to last active log
+                    break;
+                } else {
+                    break;
+                }
             }
         }
         return streak;
@@ -134,17 +154,15 @@ const Habits = () => {
     };
 
     const isDateActive = (habit) => {
-        const date = parse(selectedDate, 'yyyy-MM-dd', new Date());
-        const dayOfWeek = getDay(date);
+        const date = parseLocalDate(selectedDate);
+        const dayOfWeek = date.getDay();
         const activeDays = habit.active_days || ALL_DAYS;
         return activeDays.includes(dayOfWeek);
     };
 
-    const isViewingToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
-
     // Stats for the actual today (used by BentoGrid, HabitDetailModal)
     const getTodayStatus = (habit) => {
-        return getStatusForDate(habit, format(new Date(), 'yyyy-MM-dd'));
+        return getStatusForDate(habit, getLocalDateStr(new Date()));
     };
 
     const getSuccessRate = (habit) => {
@@ -156,11 +174,10 @@ const Habits = () => {
     const sortedHabits = habits;
 
     const today = new Date();
-    const todayStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
     const accentColor = '#a855f7';
 
     return (
-        <div className="page-container" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="page-container" style={{ position: 'relative', zIndex: 1, maxWidth: 1080, margin: '0 auto', width: '100%' }}>
             {/* Ambient orbs (only visible in dark theme) */}
             <GradientOrbs />
 
@@ -190,13 +207,13 @@ const Habits = () => {
                     {/* Date pill */}
                     <div style={{
                         padding: '6px 12px', borderRadius: 9999,
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        background: 'var(--surface-input, rgba(255,255,255,0.04))',
+                        border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
                         backdropFilter: 'blur(12px)',
                         display: 'flex', alignItems: 'center', gap: 6,
                     }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary, rgba(255,255,255,0.7))', fontFamily: 'monospace' }}>
                             {format(today, 'MMM d')}
                         </span>
                     </div>
@@ -258,16 +275,16 @@ const Habits = () => {
                             }}
                         >
                             <CalendarDays size={14} color="#a855f7" style={{ flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>Track from:</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>Track from:</span>
                             <input
                                 type="date"
                                 value={trackingDateInput}
                                 onChange={e => setTrackingDateInput(e.target.value)}
-                                max={format(new Date(), 'yyyy-MM-dd')}
+                                max={getLocalDateStr(new Date())}
                                 style={{
-                                    flex: 1, background: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
-                                    color: '#fff', padding: '5px 8px', fontSize: 12, outline: 'none',
+                                    flex: 1, background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.12))', borderRadius: 8,
+                                    color: 'var(--text-primary, #fff)', padding: '5px 8px', fontSize: 12, outline: 'none',
                                 }}
                             />
                             <button onClick={saveTrackingDate}
@@ -276,7 +293,7 @@ const Habits = () => {
                             </button>
                             {trackingStartDate && (
                                 <button onClick={clearTrackingDate}
-                                    style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer' }}>
+                                    style={{ padding: '5px 10px', borderRadius: 8, background: 'var(--surface-input, rgba(255,255,255,0.06))', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
                                     Clear
                                 </button>
                             )}
@@ -287,20 +304,20 @@ const Habits = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => { setTrackingDateInput(trackingStartDate || format(new Date(), 'yyyy-MM-dd')); setEditingTrackingDate(true); }}
+                            onClick={() => { setTrackingDateInput(trackingStartDate || getLocalDateStr(new Date())); setEditingTrackingDate(true); }}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 7,
                                 padding: '7px 12px', borderRadius: 10,
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.06)',
-                                color: 'rgba(255,255,255,0.45)', fontSize: 11,
+                                background: 'var(--surface-input, rgba(255,255,255,0.03))',
+                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+                                color: 'var(--text-muted)', fontSize: 11,
                                 cursor: 'pointer', width: '100%',
                             }}
                         >
-                            <CalendarDays size={13} color={trackingStartDate ? '#a855f7' : 'rgba(255,255,255,0.3)'} />
+                            <CalendarDays size={13} color={trackingStartDate ? '#a855f7' : 'var(--text-muted)'} />
                             {trackingStartDate
-                                ? <><span style={{ color: '#a855f7', fontWeight: 600 }}>Tracking from</span> &nbsp;{format(new Date(trackingStartDate + 'T00:00:00'), 'MMM d, yyyy')} &nbsp;<span style={{ color: 'rgba(255,255,255,0.25)' }}>· tap to edit</span></>
-                                : <span>Set a global tracking start date &nbsp;<span style={{ color: 'rgba(255,255,255,0.25)' }}>· tap to set</span></span>
+                                ? <><span style={{ color: '#a855f7', fontWeight: 600 }}>Tracking from</span> &nbsp;{format(parseLocalDate(trackingStartDate), 'MMM d, yyyy')} &nbsp;<span style={{ color: 'var(--text-muted)' }}>· tap to edit</span></>
+                                : <span>Set a global tracking start date &nbsp;<span style={{ color: 'var(--text-muted)' }}>· tap to set</span></span>
                             }
                         </motion.button>
                     )}
@@ -330,7 +347,7 @@ const Habits = () => {
                         style={{
                             overflow: 'hidden',
                             marginBottom: 20,
-                            background: 'rgba(255,255,255,0.04)',
+                            background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
                             backdropFilter: 'blur(20px)',
                             WebkitBackdropFilter: 'blur(20px)',
                             border: '1px solid rgba(168,85,247,0.25)',
@@ -348,9 +365,9 @@ const Habits = () => {
                             autoFocus
                             style={{
                                 width: '100%', padding: '12px 14px', marginBottom: 14,
-                                border: '1px solid rgba(255,255,255,0.10)',
+                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.10))',
                                 borderRadius: 12,
-                                background: 'rgba(255,255,255,0.05)',
+                                background: 'var(--surface-input, rgba(255,255,255,0.05))',
                                 color: 'var(--text-primary)',
                                 fontSize: 14, outline: 'none',
                                 fontFamily: 'inherit',
@@ -358,7 +375,7 @@ const Habits = () => {
                         />
 
                         {/* Time of day */}
-                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 8 }}>Time of Day</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Time of Day</p>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
                             {[
                                 { val: 'morning', label: '☀️ Morning', color: '#f59e0b' },
@@ -370,9 +387,9 @@ const Habits = () => {
                                     onClick={() => setNewHabitTimeOfDay(val)}
                                     style={{
                                         flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                                        background: newHabitTimeOfDay === val ? `${color}22` : 'rgba(255,255,255,0.04)',
-                                        border: newHabitTimeOfDay === val ? `1.5px solid ${color}` : '1px solid rgba(255,255,255,0.08)',
-                                        color: newHabitTimeOfDay === val ? color : 'rgba(255,255,255,0.4)',
+                                        background: newHabitTimeOfDay === val ? `${color}22` : 'var(--surface-input, rgba(255,255,255,0.04))',
+                                        border: newHabitTimeOfDay === val ? `1.5px solid ${color}` : '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                                        color: newHabitTimeOfDay === val ? color : 'var(--text-muted)',
                                         cursor: 'pointer', transition: 'all 0.15s',
                                     }}
                                 >
@@ -382,7 +399,7 @@ const Habits = () => {
                         </div>
 
                         {/* Active days */}
-                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 8 }}>Active Days</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Active Days</p>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 6 }}>
                             {DAY_LABELS.map((label, idx) => {
                                 const active = selectedDays.includes(idx);
@@ -394,9 +411,9 @@ const Habits = () => {
                                         onClick={() => toggleDay(idx)}
                                         style={{
                                             width: 38, height: 38, borderRadius: 10, fontSize: 11, fontWeight: 700,
-                                            background: active ? `${color}22` : 'rgba(255,255,255,0.04)',
-                                            border: active ? `1.5px solid ${color}` : '1px solid rgba(255,255,255,0.08)',
-                                            color: active ? color : 'rgba(255,255,255,0.3)',
+                                            background: active ? `${color}22` : 'var(--surface-input, rgba(255,255,255,0.04))',
+                                            border: active ? `1.5px solid ${color}` : '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                                            color: active ? color : 'var(--text-muted)',
                                             cursor: 'pointer', transition: 'all 0.15s',
                                         }}
                                     >
@@ -405,7 +422,7 @@ const Habits = () => {
                                 );
                             })}
                         </div>
-                        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginBottom: 14 }}>
+                        <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 14 }}>
                             {selectedDays.length === 7 ? 'Every day' :
                                 selectedDays.length === 5 && !selectedDays.includes(0) && !selectedDays.includes(6) ? 'Weekdays only' :
                                     selectedDays.length === 2 && selectedDays.includes(0) && selectedDays.includes(6) ? 'Weekends only' :
@@ -464,7 +481,7 @@ const Habits = () => {
                     transition={{ delay: 0.3 }}
                 >
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {isViewingToday ? 'Today' : format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'EEE, MMM d')}
+                        {isViewingToday ? 'Today' : format(parseLocalDate(selectedDate), 'EEE, MMM d')}
                     </h2>
                     <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
@@ -480,9 +497,9 @@ const Habits = () => {
                         style={{
                             marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
                             padding: '4px 10px', borderRadius: 8,
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600,
+                            background: 'var(--surface-input, rgba(255,255,255,0.05))',
+                            border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                            color: 'var(--text-secondary, rgba(255,255,255,0.6))', fontSize: 11, fontWeight: 600,
                             cursor: 'pointer',
                         }}
                     >
@@ -588,10 +605,10 @@ const Habits = () => {
                     }}
                 >
                     <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
-                    <h3 style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginBottom: 8 }}>
+                    <h3 style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 8 }}>
                         No habits yet
                     </h3>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                         Tap the + button to start building your first habit
                     </p>
                 </motion.div>
@@ -602,12 +619,13 @@ const Habits = () => {
                 {selectedHabitId && (
                     <HabitDetailModal
                         habit={habits.find((h) => h.id === selectedHabitId)}
-                        todayStatus={getTodayStatus(habits.find((h) => h.id === selectedHabitId))}
+                        todayStatus={getDateStatus(habits.find((h) => h.id === selectedHabitId))}
+                        selectedDate={selectedDate}
                         streak={calculateStreak(habits.find((h) => h.id === selectedHabitId))}
                         successRate={getSuccessRate(habits.find((h) => h.id === selectedHabitId))}
-                        isActiveToday={isTodayActive(habits.find((h) => h.id === selectedHabitId))}
+                        isActiveToday={isDateActive(habits.find((h) => h.id === selectedHabitId))}
                         getStatusForDate={getStatusForDate}
-                        onToggle={(id, newStatus) => setHabitStatus(id, null, newStatus)}
+                        onToggle={(id, newStatus) => setHabitStatus(id, selectedDate, newStatus)}
                         onDelete={deleteHabitDb}
                         onSaveEditDays={updateHabitDays}
                         onTimeOfDayChange={updateHabitTimeOfDay}
@@ -615,13 +633,15 @@ const Habits = () => {
                         onCalendarClick={(id, dateStr) => {
                             const habit = habits.find((h) => h.id === id);
                             const current = getStatusForDate(habit, dateStr);
-                            const nextStatus = current === 'completed' ? 'failed' : 'completed';
+                            // 3-state cycle: null -> completed -> failed -> null
+                            const nextStatus = current === null ? 'completed' : current === 'completed' ? 'failed' : null;
                             setHabitStatus(id, dateStr, nextStatus);
                         }}
                         onClose={() => setSelectedHabitId(null)}
                     />
                 )}
             </AnimatePresence>
+
             {/* Reorder overlay */}
             <AnimatePresence>
                 {showReorder && (

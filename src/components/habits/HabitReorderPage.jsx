@@ -17,19 +17,19 @@ function HabitRow({ habit, onToggleSection }) {
         style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '13px 14px', borderRadius: 16, marginBottom: 8,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
+          border: '1px solid var(--border-subtle, rgba(255,255,255,0.07))',
           cursor: 'grab', userSelect: 'none',
           borderLeft: `3px solid ${accentColor}`,
         }}
       >
         {/* Drag handle */}
-        <GripVertical size={16} color="rgba(255,255,255,0.2)" style={{ flexShrink: 0 }} />
+        <GripVertical size={16} color="var(--text-muted, rgba(255,255,255,0.2))" style={{ flexShrink: 0 }} />
 
         {/* Habit name */}
         <span style={{
           flex: 1, fontSize: 15, fontWeight: 600,
-          color: 'rgba(255,255,255,0.88)',
+          color: 'var(--text-primary, rgba(255,255,255,0.88))',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {habit.name}
@@ -106,7 +106,7 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
       transition={{ type: 'spring', stiffness: 340, damping: 30 }}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        zIndex: 100, background: '#0b1120',
+        zIndex: 100, background: 'var(--bg-solid, #0b1120)',
         display: 'flex', flexDirection: 'column', overflowY: 'auto',
       }}
     >
@@ -116,8 +116,8 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
         padding: '20px 20px 16px', flexShrink: 0,
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>Reorder Habits</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary, #fff)' }}>Reorder Habits</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
             Drag to reorder · tap badge to move between sections
           </p>
         </div>
@@ -126,8 +126,8 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
             onClick={onClose}
             style={{
               width: 40, height: 40, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.06)', border: 'none',
-              color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--surface-elevated, rgba(255,255,255,0.06))', border: 'none',
+              color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
           >
@@ -161,7 +161,7 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
             <div style={{
               padding: '20px', textAlign: 'center',
               border: '1px dashed rgba(245,158,11,0.2)', borderRadius: 14,
-              color: 'rgba(255,255,255,0.2)', fontSize: 13, marginBottom: 8,
+              color: 'var(--text-muted)', fontSize: 13, marginBottom: 8,
             }}>
               No morning habits · tap a badge below to move one here
             </div>
@@ -185,7 +185,7 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
               <div style={{
                 padding: '20px', textAlign: 'center',
                 border: '1px dashed rgba(168,85,247,0.2)', borderRadius: 14,
-                color: 'rgba(255,255,255,0.2)', fontSize: 13,
+                color: 'var(--text-muted)', fontSize: 13,
               }}>
                 No evening habits · tap a badge above to move one here
               </div>

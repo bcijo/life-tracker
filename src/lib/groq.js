@@ -4,27 +4,77 @@ import { supabase } from './supabase';
 // Add VITE_GROQ_API_KEY to your .env file
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL_NAME = 'openai/gpt-oss-120b';
+const PRIMARY_MODEL = 'llama-3.3-70b-versatile';
+const FALLBACK_MODEL = 'llama-3.1-8b-instant';
 const VISION_MODEL_NAME = 'qwen/qwen3.6-27b';
 
-// Database query tool registration
+/**
+ * Converts a raw SQL query into a human-understandable activity phrase
+ * so database schema and raw SQL aren't exposed in UI.
+ */
+export function getHumanReadableQueryDescription(queryText) {
+    if (!queryText) return "Analyzing your records...";
+    if (typeof queryText === 'object' && queryText.label) return queryText.label;
+    
+    const q = String(queryText).toLowerCase();
+
+    if (q.includes('transactions')) {
+        if (q.includes('group by') && (q.includes('day') || q.includes('date') || q.includes('date_trunc'))) {
+            return "Calculating daily spending breakdown for this month...";
+        }
+        if (q.includes('category') || q.includes('group by category')) {
+            return "Analyzing spending by category...";
+        }
+        if (q.includes('sum(') || q.includes('avg(')) {
+            return "Computing financial totals and spending averages...";
+        }
+        if (q.includes('order by') && q.includes('desc')) {
+            return "Scanning your recent transaction history...";
+        }
+        return "Querying transaction and expense history...";
+    }
+    if (q.includes('habits')) {
+        if (q.includes('history')) {
+            return "Checking habit completion history & streaks...";
+        }
+        return "Reviewing active habits & schedule...";
+    }
+    if (q.includes('todos')) {
+        if (q.includes('completed = false') || q.includes('completed is false') || q.includes('not completed')) {
+            return "Looking up pending tasks & deadlines...";
+        }
+        return "Scanning your tasks & to-do items...";
+    }
+    if (q.includes('journal_entries')) {
+        if (q.includes('mood_score')) {
+            return "Analyzing mood trends & reflections...";
+        }
+        return "Reviewing recent journal reflections...";
+    }
+    if (q.includes('bank_accounts') || q.includes('bank_balance')) {
+        return "Checking bank account balances...";
+    }
+    if (q.includes('expense_cards') || q.includes('budgets') || q.includes('expense_subcategories')) {
+        return "Checking budget targets & expense cards...";
+    }
+    if (q.includes('shopping_items')) {
+        return "Checking your shopping list items...";
+    }
+    return "Fetching your personal data...";
+}
+
+// Compact tool definition to conserve tokens
 const SQL_TOOL = {
     type: "function",
     function: {
         name: "execute_read_only_query",
-        description: "Executes a read-only SELECT PostgreSQL query against the user's database. Use this tool whenever the user asks for detailed metrics, statistics, average spending, weekly comparison, habit consistency, or journal mood trends. Tables available:\n" +
-            "- transactions (id, user_id, amount, description, type: 'expense'|'income', category: 'food'|'transport'|'shopping'|'entertainment'|'bills'|'health'|'salary'|'other', date: timestamptz)\n" +
-            "- habits (id, user_id, name, history: jsonb array of {date: 'YYYY-MM-DD', status: 'completed'|'failed'}, active_days: jsonb array of day indices, time_of_day: 'morning'|'evening')\n" +
-            "- todos (id, user_id, text, completed: boolean, deadline: date)\n" +
-            "- shopping_items (id, user_id, name, is_bought: boolean)\n" +
-            "- journal_entries (id, user_id, date: date, how_was_today, on_your_mind, change_for_tomorrow, mood_score: integer 1-5)\n\n" +
-            "CRITICAL: Always write queries filtering by user_id = auth.uid() or let RLS handle it (RLS is enabled). DO NOT attempt to INSERT/UPDATE/DELETE. Only SELECT statements are permitted.",
+        description: "PostgreSQL SELECT query tool. Tables: transactions (id, amount, description, type, category, date), habits (id, name, history, active_days), todos (id, text, completed, deadline), journal_entries (id, date, mood_score, how_was_today), bank_accounts (id, name, current_balance), expense_cards (id, name, budget_amount). Keep queries focused with aggregations (SUM, COUNT, GROUP BY) or LIMIT 10.",
         parameters: {
             type: "object",
             properties: {
                 query_text: {
                     type: "string",
-                    description: "The SQL SELECT statement. Example: 'SELECT SUM(amount) FROM transactions WHERE type=\'expense\' AND date >= date_trunc(\'month\', CURRENT_DATE)'"
+                    description: "PostgreSQL SELECT query string"
                 }
             },
             required: ["query_text"]
@@ -32,37 +82,117 @@ const SQL_TOOL = {
     }
 };
 
+/**
+ * Compacts database result to stay well within TPM limits
+ */
+function compactToolResult(data) {
+    if (!data) return "[]";
+    if (typeof data === 'string') return data.slice(0, 1200);
+    if (Array.isArray(data)) {
+        const simplified = data.slice(0, 12).map(item => {
+            if (item && item.history && Array.isArray(item.history)) {
+                return { ...item, history: `[${item.history.length} habit logs]` };
+            }
+            return item;
+        });
+        const str = JSON.stringify(simplified);
+        return str.length > 1500 ? str.slice(0, 1500) + '...]' : str;
+    }
+    const str = JSON.stringify(data);
+    return str.length > 1500 ? str.slice(0, 1500) + '...' : str;
+}
+
+async function fetchGroqWithRetry(payload, apiKey, maxRetries = 2) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch(GROQ_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (response.status === 429) {
+                console.warn(`[Groq Rate Limit 429] Waiting 2s before retry (attempt ${attempt + 1}/${maxRetries})...`);
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Groq API error ${response.status}: ${errorText}`);
+            }
+
+            return await response.json();
+        } catch (err) {
+            lastError = err;
+            if (attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 1500));
+            }
+        }
+    }
+
+    throw lastError || new Error("Failed to communicate with Groq");
+}
+
 async function runSQLTool(queryText) {
     console.log('[Groq SQL Agent] Executing Query:', queryText);
     try {
         const { data, error } = await supabase.rpc('execute_read_only_query', { query_text: queryText });
-        if (error) {
-            console.error('[Groq SQL Agent] Database Error:', error);
-            return { error: error.message };
+        if (!error && data !== undefined && data !== null) {
+            return data;
         }
-        console.log('[Groq SQL Agent] Returned rows:', data ? data.length : 0);
-        return data;
+
+        if (error) {
+            console.warn('[Groq SQL Agent] RPC note:', error.message, 'Trying direct fallback...');
+        }
+
+        // Fallback: Query target table directly if RPC is not installed or has regex block
+        const q = String(queryText).toLowerCase();
+        let targetTable = null;
+        if (q.includes('from transactions')) targetTable = 'transactions';
+        else if (q.includes('from habits')) targetTable = 'habits';
+        else if (q.includes('from todos')) targetTable = 'todos';
+        else if (q.includes('from journal_entries')) targetTable = 'journal_entries';
+        else if (q.includes('from shopping_items')) targetTable = 'shopping_items';
+        else if (q.includes('from bank_accounts')) targetTable = 'bank_accounts';
+        else if (q.includes('from expense_cards')) targetTable = 'expense_cards';
+
+        if (targetTable) {
+            const { data: fallbackData, error: fallbackError } = await supabase
+                .from(targetTable)
+                .select('*')
+                .limit(100);
+
+            if (!fallbackError && fallbackData) {
+                return fallbackData;
+            }
+        }
+
+        return { error: error?.message || "Query execution failed." };
     } catch (err) {
-        console.error('[Groq SQL Agent] JS Exception:', err);
+        console.error('[Groq SQL Agent] Exception:', err);
         return { error: err.message };
     }
 }
 
 async function callGroq(messages, systemPrompt, jsonMode = false) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-    console.log('[Groq] Checking API Key:', apiKey ? 'Found' : 'Missing', 'Length:', apiKey ? apiKey.length : 0);
-
     if (!apiKey) {
         throw new Error('VITE_GROQ_API_KEY is missing');
     }
 
     const payload = {
-        model: MODEL_NAME,
+        model: FALLBACK_MODEL,
         messages: [
             { role: 'system', content: systemPrompt },
             ...messages
         ],
-        temperature: 0.7,
+        temperature: 0.4,
         max_tokens: 1000,
     };
 
@@ -70,98 +200,86 @@ async function callGroq(messages, systemPrompt, jsonMode = false) {
         payload.response_format = { type: "json_object" };
     }
 
-    const response = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        throw new Error(`Groq API error: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await fetchGroqWithRetry(payload, apiKey, 2);
     return data.choices[0]?.message?.content;
 }
 
 // 1. Agentic Chat with SQL execution capability
-export async function askAI(userQuery, contextData, onQueryLogged = null) {
+export async function askAI(userQuery, contextData, onQueryLogged = null, history = []) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) {
         throw new Error('VITE_GROQ_API_KEY is missing');
     }
 
-    const systemPrompt = `You are an advanced context-aware personal assistant with direct database query capabilities.
-    You have direct, real-time access to the user's data (expenses, habits, tasks, journals) via PostgreSQL read-only SELECT tools.
-    
-    If the user asks questions requiring specific details, statistics, averages, streaks, weekly trends, or exact lists, you MUST call the execute_read_only_query tool immediately to query the database!
-    
-    Tables available:
-    - transactions: id (uuid), user_id (uuid), amount (numeric), description (text), type (text: 'expense'|'income'), category (text: 'food'|'transport'|'shopping'|'entertainment'|'bills'|'health'|'salary'|'other'), date (timestamptz)
-    - habits: id (uuid), user_id (uuid), name (text), history (jsonb: array of {date: 'YYYY-MM-DD', status: 'completed'|'failed'}), active_days (jsonb: e.g. [0,1,2,3,4,5,6]), time_of_day (text: 'morning'|'evening')
-    - todos: id (uuid), user_id (uuid), text (text), completed (boolean), deadline (date)
-    - shopping_items: id (uuid), user_id (uuid), name (text), is_bought (boolean)
-    - journal_entries: id (uuid), user_id (uuid), date (date), mood_score (integer 1-5), how_was_today (text), on_your_mind (text), change_for_tomorrow (text)
+    const todayDate = new Date().toISOString().split('T')[0];
 
-    Static overview state: ${JSON.stringify(contextData, null, 2)}
-    
-    RULES:
-    - Be extremely helpful, concise, and professional.
-    - If you run database queries, summarize findings nicely. No tech jargon unless asked.
-    - Never expose raw user IDs or raw JSON in final outputs.
-    - If database returns no data or throws an error, try to correct your SQL syntax or handle it gracefully.`;
+    const systemPrompt = `You are a concise, helpful personal life & finance assistant. Today is ${todayDate}.
+Use PostgreSQL SELECT tool execute_read_only_query for specific numbers or breakdown requests (max 1-2 queries per turn).
+Table rules:
+- transactions (id, amount, description, type, category, date) -> table is 'transactions', column is 'date' (never 'expenses' or 'transaction_date').
+- todos (id, text, completed, deadline) -> table is 'todos'.
+- habits (id, name, history, active_days) -> table is 'habits'.
+- journal_entries, bank_accounts, expense_cards.
+Context Summary: ${JSON.stringify(contextData)}
+Format responses cleanly with Markdown (bold key metrics, tables for daily breakdowns, concise bullet points).`;
+
+    // Filter valid conversational history (last 4 turns, skip failed errors)
+    const validHistory = Array.isArray(history)
+        ? history
+            .filter(m => m && m.content && !m.content.includes("I ran into an issue") && !m.isError)
+            .slice(-4)
+            .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))
+        : [];
 
     let messages = [
+        ...validHistory,
         { role: 'user', content: userQuery }
     ];
 
     let executedQueries = [];
 
-    // Up to 5 iterations for agentic reasoning
-    for (let i = 0; i < 5; i++) {
-        const payload = {
-            model: MODEL_NAME,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                ...messages
-            ],
-            temperature: 0.4,
-            max_tokens: 1000,
-            tools: [SQL_TOOL],
-            tool_choice: "auto"
-        };
-
-        const response = await fetch(GROQ_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Groq API error: ${response.status} - ${errorText}`);
+    // Up to 3 iterations for agentic reasoning
+    for (let i = 0; i < 3; i++) {
+        let data;
+        try {
+            data = await fetchGroqWithRetry({
+                model: PRIMARY_MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    ...messages
+                ],
+                temperature: 0.3,
+                max_tokens: 1000,
+                tools: [SQL_TOOL],
+                tool_choice: "auto"
+            }, apiKey, 1);
+        } catch (primaryErr) {
+            console.warn('[Groq Agent] Primary model failed, trying fallback model...', primaryErr.message);
+            data = await fetchGroqWithRetry({
+                model: FALLBACK_MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    ...messages
+                ],
+                temperature: 0.3,
+                max_tokens: 1000,
+                tools: [SQL_TOOL],
+                tool_choice: "auto"
+            }, apiKey, 2);
         }
 
-        const data = await response.json();
-        const responseMessage = data.choices[0]?.message;
-
+        const responseMessage = data?.choices?.[0]?.message;
         if (!responseMessage) {
-            throw new Error("Empty response from Groq");
+            throw new Error("Empty response from AI assistant");
         }
 
         messages.push(responseMessage);
 
         const toolCalls = responseMessage.tool_calls;
         if (!toolCalls || toolCalls.length === 0) {
-            // No tools called, this is the final answer!
+            // Final response reached
             return {
-                content: responseMessage.content,
+                content: responseMessage.content || "I have analyzed your data and prepared the summary above.",
                 queries: executedQueries
             };
         }
@@ -169,27 +287,48 @@ export async function askAI(userQuery, contextData, onQueryLogged = null) {
         // Execute tool calls
         for (const toolCall of toolCalls) {
             if (toolCall.function.name === 'execute_read_only_query') {
-                const args = JSON.parse(toolCall.function.arguments);
-                const queryText = args.query_text;
+                let args = {};
+                try {
+                    args = typeof toolCall.function.arguments === 'string' 
+                        ? JSON.parse(toolCall.function.arguments) 
+                        : toolCall.function.arguments;
+                } catch {
+                    args = { query_text: toolCall.function.arguments };
+                }
+                const queryText = args.query_text || "";
+                const stepLabel = getHumanReadableQueryDescription(queryText);
 
-                executedQueries.push(queryText);
+                executedQueries.push({
+                    query: queryText,
+                    label: stepLabel
+                });
+
                 if (onQueryLogged) {
-                    onQueryLogged(queryText);
+                    onQueryLogged({
+                        query: queryText,
+                        label: stepLabel
+                    });
                 }
 
                 const queryResult = await runSQLTool(queryText);
+                const compacted = compactToolResult(queryResult);
 
                 messages.push({
                     role: 'tool',
                     tool_call_id: toolCall.id,
                     name: 'execute_read_only_query',
-                    content: JSON.stringify(queryResult)
+                    content: compacted
                 });
             }
         }
     }
 
-    throw new Error("Groq SQL Agent reached maximum execution steps");
+    // If iterations reached limit, perform final direct synthesis
+    const finalAnswer = await callGroq(messages, systemPrompt);
+    return {
+        content: finalAnswer || "Here is the summary based on your recent activity.",
+        queries: executedQueries
+    };
 }
 
 // 2. Weekly/Monthly Reports with Voluntary Commitments

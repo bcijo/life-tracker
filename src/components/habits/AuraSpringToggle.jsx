@@ -14,19 +14,21 @@ export function AuraSpringToggle({ status, onToggle }) {
 
   const handleDragEnd = (_, info) => {
     setIsDragging(false);
-    if (info.offset.x > 12 && !isCompleted) {
+    if (info.offset.x > 12) {
       onToggle('completed');
-    } else if (info.offset.x < -12 && !isFailed) {
+    } else if (info.offset.x < -12) {
       onToggle('failed');
     }
   };
 
   const handleClick = () => {
-    // If not completed, mark as completed. If completed, mark as failed.
-    if (!isCompleted) {
-      onToggle('completed');
+    // If neutral (null) -> completed
+    // If completed -> uncheck to null
+    // If failed -> completed
+    if (isCompleted) {
+      onToggle(null);
     } else {
-      onToggle('failed');
+      onToggle('completed');
     }
   };
 
@@ -34,9 +36,9 @@ export function AuraSpringToggle({ status, onToggle }) {
     ? 'linear-gradient(135deg, #22c55e, #10b981)'
     : isFailed
     ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-    : 'rgba(255,255,255,0.08)';
+    : 'var(--surface-input, rgba(255,255,255,0.08))';
 
-  const knobColor = isCompleted ? '#ffffff' : isFailed ? '#ffffff' : 'rgba(255,255,255,0.2)';
+  const knobColor = isCompleted ? '#ffffff' : isFailed ? '#ffffff' : 'var(--text-muted, rgba(255,255,255,0.25))';
 
   return (
     <motion.div
@@ -50,12 +52,13 @@ export function AuraSpringToggle({ status, onToggle }) {
         width: 52,
         height: 30,
         background: bgColor,
-        border: isCompleted || isFailed ? 'none' : '1px solid rgba(255,255,255,0.12)',
+        border: isCompleted || isFailed ? 'none' : '1px solid var(--border-subtle, rgba(255,255,255,0.12))',
         padding: 3,
         flexShrink: 0,
       }}
       animate={{ scale: isDragging ? 0.93 : 1 }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      title={isCompleted ? 'Completed (Tap to undo)' : isFailed ? 'Failed (Tap to mark done)' : 'Tap to complete (or drag left for failed)'}
     >
       {/* Glow when completed */}
       {isCompleted && (
@@ -104,11 +107,11 @@ export function AuraSpringToggle({ status, onToggle }) {
             ? '0 2px 8px rgba(34,197,94,0.4)'
             : isFailed
             ? '0 2px 8px rgba(239,68,68,0.4)'
-            : '0 1px 4px rgba(0,0,0,0.2)',
+            : '0 1px 4px rgba(0,0,0,0.15)',
           touchAction: 'pan-y',
         }}
         drag="x"
-        dragConstraints={{ left: 0, right: 22 }}
+        dragConstraints={{ left: -10, right: 22 }}
         dragElastic={0.15}
         dragMomentum={false}
         onDragStart={() => setIsDragging(true)}

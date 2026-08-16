@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Bot, Database, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
-import { askAI } from '../lib/groq';
+import { MessageCircle, Send, X, Bot, Database, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { askAI, getHumanReadableQueryDescription } from '../lib/groq';
 import useLifeContext from '../hooks/useLifeContext';
+import MarkdownRenderer from './MarkdownRenderer';
 
 const AskAI = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -37,7 +38,7 @@ const AskAI = () => {
         try {
             const response = await askAI(userMessage, contextData, (query) => {
                 setCurrentQueryLogs(prev => [...prev, query]);
-            });
+            }, messages);
             
             setMessages(prev => [...prev, { 
                 role: 'assistant', 
@@ -191,10 +192,14 @@ const AskAI = () => {
                                     textAlign: 'left'
                                 }}
                             >
-                                {msg.content}
+                                {msg.role === 'assistant' ? (
+                                    <MarkdownRenderer content={msg.content} />
+                                ) : (
+                                    msg.content
+                                )}
                             </div>
                             
-                            {/* COLLAPSIBLE SQL QUERY LOGS */}
+                            {/* COLLAPSIBLE SOURCES LOGS */}
                             {msg.queries && msg.queries.length > 0 && (
                                 <div style={{ alignSelf: 'flex-start', width: '100%' }}>
                                     <button
@@ -214,30 +219,34 @@ const AskAI = () => {
                                         }}
                                     >
                                         <Database size={12} />
-                                        <span>Queries Executed ({msg.queries.length})</span>
+                                        <span>Sources Analyzed ({msg.queries.length})</span>
                                         {openQueryIndex === idx ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                     </button>
                                     
                                     {openQueryIndex === idx && (
                                         <div style={{
                                             marginTop: '6px',
-                                            padding: '10px',
+                                            padding: '8px 12px',
                                             borderRadius: '8px',
-                                            background: 'rgba(0,0,0,0.04)',
-                                            border: '1px dashed var(--border-subtle)',
-                                            fontFamily: 'monospace',
-                                            fontSize: '11px',
+                                            background: 'var(--glass-card-bg)',
+                                            border: '1px solid var(--border-subtle)',
+                                            fontSize: '11.5px',
                                             color: 'var(--text-secondary)',
                                             textAlign: 'left',
-                                            whiteSpace: 'pre-wrap',
                                             maxHeight: '150px',
                                             overflowY: 'auto'
                                         }}>
-                                            {msg.queries.map((q, qIdx) => (
-                                                <div key={qIdx} style={{ marginBottom: qIdx < msg.queries.length - 1 ? '8px' : 0 }}>
-                                                    <span style={{ color: 'var(--accent-secondary)' }}>Query #{qIdx+1}:</span> {q}
-                                                </div>
-                                            ))}
+                                            {msg.queries.map((q, qIdx) => {
+                                                const label = typeof q === 'object' && q?.label 
+                                                    ? q.label 
+                                                    : getHumanReadableQueryDescription(q);
+                                                return (
+                                                    <div key={qIdx} style={{ marginBottom: qIdx < msg.queries.length - 1 ? '4px' : 0, display: 'flex', gap: '6px' }}>
+                                                        <span style={{ color: 'var(--accent-primary)' }}>✦</span>
+                                                        <span>{label}</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -245,7 +254,7 @@ const AskAI = () => {
                         </div>
                     ))}
                     
-                    {/* Real-time Query Running Log inside Loading state */}
+                    {/* Real-time Human-Readable Thinking Log inside Loading state */}
                     {loading && (
                         <div style={{
                             alignSelf: 'flex-start',
@@ -267,34 +276,29 @@ const AskAI = () => {
                                 gap: '8px'
                             }}>
                                 <Bot size={16} className="spin" style={{ color: 'var(--accent-primary)' }} />
-                                <span>AI is gathering details...</span>
+                                <span>AI is analyzing your data...</span>
                             </div>
 
                             {currentQueryLogs.length > 0 && (
                                 <div style={{
                                     alignSelf: 'flex-start',
-                                    display: 'flex',
-                                    flexDirection: 'column',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
                                     gap: '6px',
-                                    padding: '10px 12px',
-                                    borderRadius: '12px',
-                                    background: '#1a1b26',
-                                    border: '1px solid #2f344d',
-                                    color: '#73daca',
-                                    fontFamily: 'monospace',
-                                    fontSize: '11px',
-                                    maxWidth: '380px',
-                                    boxShadow: '0 6px 16px rgba(0,0,0,0.1)'
+                                    padding: '6px 12px',
+                                    borderRadius: '999px',
+                                    background: 'rgba(102, 126, 234, 0.08)',
+                                    border: '1px solid rgba(102, 126, 234, 0.18)',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '11.5px',
+                                    fontWeight: '500',
+                                    maxWidth: '380px'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#c0caf5', borderBottom: '1px solid #2f344d', paddingBottom: '4px', marginBottom: '4px' }}>
-                                        <Terminal size={12} />
-                                        <span style={{ fontWeight: '600' }}>Active SQL Logs</span>
-                                    </div>
-                                    {currentQueryLogs.map((q, qIdx) => (
-                                        <div key={qIdx} style={{ whiteSpace: 'pre-wrap', color: '#9ece6a' }}>
-                                            <span style={{ color: '#e0af68' }}>&gt;</span> {q}
-                                        </div>
-                                    ))}
+                                    <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} />
+                                    <span>
+                                        {currentQueryLogs[currentQueryLogs.length - 1]?.label ||
+                                         getHumanReadableQueryDescription(currentQueryLogs[currentQueryLogs.length - 1])}
+                                    </span>
                                 </div>
                             )}
                         </div>

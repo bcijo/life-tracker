@@ -61,14 +61,15 @@ export function HabitCard({
       <motion.div
         className="habit-glass-card"
         animate={isCelebrating
-          ? { borderColor: ['rgba(255,255,255,0.06)', 'rgba(34,197,94,0.7)', 'rgba(255,255,255,0.06)'] }
-          : { borderColor: 'rgba(255,255,255,0.06)' }
+          ? { borderColor: ['var(--border-subtle, rgba(255,255,255,0.06))', 'rgba(34,197,94,0.7)', 'var(--border-subtle, rgba(255,255,255,0.06))'] }
+          : { borderColor: 'var(--border-subtle, rgba(255,255,255,0.06))' }
         }
         transition={{ duration: 0.8 }}
         style={{
           borderRadius: 20,
           position: 'relative',
-          border: `1px solid rgba(255,255,255,0.06)`,
+          border: `1px solid var(--border-subtle, rgba(255,255,255,0.06))`,
+          background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
           opacity: habit.is_paused ? 0.75 : 1,
         }}
       >
@@ -117,7 +118,7 @@ export function HabitCard({
 
               {/* Habit name */}
               <h3 style={{
-                margin: 0, fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.92)',
+                margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)',
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>
                 {habit.name}
@@ -125,7 +126,7 @@ export function HabitCard({
 
               {/* Success rate */}
               <span style={{
-                fontSize: 10, color: 'rgba(255,255,255,0.28)',
+                fontSize: 10, color: 'var(--text-muted)',
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 {habit.is_paused
@@ -160,10 +161,10 @@ export function HabitCard({
               ) : (
                 <div style={{
                   width: 52, height: 30, borderRadius: 9999,
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px dashed rgba(255,255,255,0.1)',
+                  background: 'var(--surface-input, rgba(255,255,255,0.03))',
+                  border: '1px dashed var(--border-subtle, rgba(255,255,255,0.1))',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 9, color: 'rgba(255,255,255,0.2)',
+                  fontSize: 9, color: 'var(--text-muted)',
                 }}>
                   rest
                 </div>
@@ -175,14 +176,14 @@ export function HabitCard({
           <div
             style={{
               marginTop: 14, paddingTop: 12,
-              borderTop: '1px solid rgba(255,255,255,0.04)',
+              borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.04))',
               display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
             {weeklyStatus.map((dayStatus, i) => {
               const isActive = dayStatus.isActive;
               const s = dayStatus.status;
-              let bg = 'rgba(255,255,255,0.06)';
+              let bg = 'var(--border-subtle, rgba(255,255,255,0.06))';
               if (s === 'completed') bg = '#22c55e';
               else if (s === 'failed') bg = '#ef4444';
               else if (!isActive) bg = 'transparent';
@@ -193,7 +194,7 @@ export function HabitCard({
                     style={{
                       width: 6, height: 6, borderRadius: '50%',
                       background: bg,
-                      border: !isActive ? '1px dashed rgba(255,255,255,0.1)' : 'none',
+                      border: !isActive ? '1px dashed var(--border-subtle, rgba(255,255,255,0.1))' : 'none',
                       opacity: dayStatus.isFuture ? 0.3 : 1
                     }}
                     initial={{ scale: 0 }}

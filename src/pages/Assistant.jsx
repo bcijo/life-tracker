@@ -8,10 +8,15 @@ import {
     ChevronDown, 
     ChevronUp, 
     Terminal, 
-    ArrowRight
+    ArrowRight,
+    Plus,
+    Mic,
+    Square,
+    Loader2
 } from 'lucide-react';
-import { askAI } from '../lib/groq';
+import { askAI, transcribeAudio, getHumanReadableQueryDescription } from '../lib/groq';
 import useLifeContext from '../hooks/useLifeContext';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 /* ─── Follow-up suggestion pools by topic ─── */
 const FOLLOW_UPS = {
@@ -163,10 +168,20 @@ const Assistant = () => {
     const [currentQueryLogs, setCurrentQueryLogs] = useState([]);
     const [openQueryIndex, setOpenQueryIndex] = useState(null);
 
+    // Voice dictation state
+    const [isRecording, setIsRecording] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+
     const contextData = useLifeContext();
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const scrollContainerRef = useRef(null);
+
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const streamRef = useRef(null);
+    const timerIntervalRef = useRef(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -182,6 +197,99 @@ const Assistant = () => {
         } catch {}
     }, [messages]);
 
+    // Clean up recording on unmount
+    useEffect(() => {
+        return () => {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
+
+    // ─── VOICE DICTATION HANDLERS ───
+    const startRecording = async () => {
+        try {
+            if (isRecording) {
+                stopRecording();
+                return;
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+
+            const mimeTypes = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/mp4',
+                'audio/ogg',
+                'audio/wav'
+            ];
+            const supportedMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+            const mediaRecorder = supportedMime 
+                ? new MediaRecorder(stream, { mimeType: supportedMime }) 
+                : new MediaRecorder(stream);
+
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    audioChunksRef.current.push(e.data);
+                }
+            };
+
+            mediaRecorder.start(250);
+            setIsRecording(true);
+            setRecordingDuration(0);
+
+            timerIntervalRef.current = setInterval(() => {
+                setRecordingDuration(sec => sec + 1);
+            }, 1000);
+
+        } catch (err) {
+            console.error('Microphone error:', err);
+            alert('Microphone access is required for voice input.');
+            setIsRecording(false);
+        }
+    };
+
+    const stopRecording = () => {
+        if (!mediaRecorderRef.current || !isRecording) return;
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        setIsRecording(false);
+
+        mediaRecorderRef.current.onstop = async () => {
+            try {
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(track => track.stop());
+                }
+
+                const mimeType = mediaRecorderRef.current.mimeType || 'audio/webm';
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
+                if (audioBlob.size > 500) {
+                    setIsTranscribing(true);
+                    const text = await transcribeAudio(
+                        audioBlob,
+                        "Questions or prompts about expenses, tasks, habits, and budgets"
+                    );
+                    if (text) {
+                        setInput(prev => (prev ? `${prev} ${text}` : text));
+                        inputRef.current?.focus();
+                    }
+                }
+            } catch (err) {
+                console.error('Voice transcription error:', err);
+            } finally {
+                setIsTranscribing(false);
+                setRecordingDuration(0);
+            }
+        };
+
+        mediaRecorderRef.current.stop();
+    };
+
     const handleSend = async (textToSend) => {
         const queryText = (textToSend || input).trim();
         if (!queryText || loading) return;
@@ -194,7 +302,7 @@ const Assistant = () => {
         try {
             const response = await askAI(queryText, contextData, (query) => {
                 setCurrentQueryLogs(prev => [...prev, query]);
-            });
+            }, messages);
 
             const followUps = pickFollowUps(response.content, queryText);
 
@@ -208,7 +316,9 @@ const Assistant = () => {
             console.error('AI Error:', error);
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: "I ran into an issue processing your request. Please check your connection and try again.",
+                isError: true,
+                failedQuery: queryText,
+                content: "I ran into a temporary rate limit or network delay. You can retry now or ask something else.",
                 followUps: ["Give me a quick overview of everything", "Summarize my financial health this month", "What should I focus on?"],
             }]);
         } finally {
@@ -219,9 +329,20 @@ const Assistant = () => {
     };
 
     const handleClear = () => {
+        if (isRecording) {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            setIsRecording(false);
+            setIsTranscribing(false);
+            setRecordingDuration(0);
+        }
         setMessages([]);
         sessionStorage.removeItem('lifetracker_ai_chat');
         setOpenQueryIndex(null);
+        setInput('');
+        inputRef.current?.focus();
     };
 
     const toggleQueries = (idx) => {
@@ -233,20 +354,6 @@ const Assistant = () => {
     /* ─── RENDER ─── */
     return (
         <div className="ai-page">
-            {/* Clear button — top right */}
-            {!isEmpty && (
-                <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="ai-clear-btn"
-                    onClick={handleClear}
-                    title="Clear conversation"
-                >
-                    <RotateCcw size={14} />
-                    <span>New chat</span>
-                </motion.button>
-            )}
-
             {/* ─── Scrollable conversation area ─── */}
             <div className="ai-scroll-area" ref={scrollContainerRef}>
 
@@ -320,42 +427,70 @@ const Assistant = () => {
                             ) : (
                                 <div className="ai-msg-ai-block">
                                     <div className="ai-msg-ai-content">
-                                        {msg.content}
+                                        <MarkdownRenderer content={msg.content} />
+                                        {msg.isError && msg.failedQuery && (
+                                            <button
+                                                className="ai-retry-btn"
+                                                onClick={() => handleSend(msg.failedQuery)}
+                                                style={{
+                                                    marginTop: '10px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    padding: '6px 12px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                    background: 'rgba(239, 68, 68, 0.1)',
+                                                    color: '#f87171',
+                                                    fontSize: '12px',
+                                                    fontWeight: '500',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <RotateCcw size={12} />
+                                                <span>Retry</span>
+                                            </button>
+                                        )}
                                     </div>
 
-                                    {/* SQL queries collapsible */}
+                                    {/* Analyzed sources collapsible */}
                                     {msg.queries && msg.queries.length > 0 && (
-                                        <div className="ai-sql-section">
+                                        <div className="ai-sources-section">
                                             <button
-                                                className="ai-sql-toggle"
+                                                className="ai-sources-toggle"
                                                 onClick={() => toggleQueries(idx)}
                                             >
                                                 <Database size={12} />
-                                                <span>{msg.queries.length} {msg.queries.length === 1 ? 'query' : 'queries'} executed</span>
+                                                <span>{msg.queries.length} {msg.queries.length === 1 ? 'source' : 'sources'} analyzed</span>
                                                 {openQueryIndex === idx ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                             </button>
 
                                             <AnimatePresence>
                                                 {openQueryIndex === idx && (
                                                     <motion.div
-                                                        className="ai-sql-panel"
+                                                        className="ai-sources-panel"
                                                         initial={{ height: 0, opacity: 0 }}
                                                         animate={{ height: 'auto', opacity: 1 }}
                                                         exit={{ height: 0, opacity: 0 }}
                                                         transition={{ duration: 0.25 }}
                                                     >
-                                                        <div className="ai-sql-inner">
-                                                            {msg.queries.map((q, qIdx) => (
-                                                                <motion.div
-                                                                    key={qIdx}
-                                                                    className="ai-sql-entry"
-                                                                    initial={{ opacity: 0, x: -8 }}
-                                                                    animate={{ opacity: 1, x: 0 }}
-                                                                    transition={{ delay: qIdx * 0.06 }}
-                                                                >
-                                                                    <span className="ai-sql-prefix">{'>'}</span> {q}
-                                                                </motion.div>
-                                                            ))}
+                                                        <div className="ai-sources-inner">
+                                                            {msg.queries.map((q, qIdx) => {
+                                                                const label = typeof q === 'object' && q?.label 
+                                                                    ? q.label 
+                                                                    : getHumanReadableQueryDescription(q);
+                                                                return (
+                                                                    <motion.div
+                                                                        key={qIdx}
+                                                                        className="ai-sources-entry"
+                                                                        initial={{ opacity: 0, x: -8 }}
+                                                                        animate={{ opacity: 1, x: 0 }}
+                                                                        transition={{ delay: qIdx * 0.05 }}
+                                                                    >
+                                                                        <span className="ai-sources-bullet">✦</span> {label}
+                                                                    </motion.div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     </motion.div>
                                                 )}
@@ -402,31 +537,21 @@ const Assistant = () => {
                             <OrbitalDots />
                             <ThinkingText />
 
-                            {/* Live SQL terminal */}
+                            {/* Human-understandable faded thinking activity indicator */}
                             <AnimatePresence>
                                 {currentQueryLogs.length > 0 && (
                                     <motion.div
-                                        className="ai-live-terminal"
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.3 }}
+                                        className="ai-faded-activity"
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -6 }}
+                                        transition={{ duration: 0.25 }}
                                     >
-                                        <div className="ai-live-terminal-header">
-                                            <Terminal size={11} />
-                                            <span>Live SQL</span>
-                                        </div>
-                                        {currentQueryLogs.map((q, qIdx) => (
-                                            <motion.div
-                                                key={qIdx}
-                                                className="ai-live-terminal-line"
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: qIdx * 0.05 }}
-                                            >
-                                                <span className="ai-sql-prefix">{'>'}</span> {q}
-                                            </motion.div>
-                                        ))}
+                                        <Sparkles size={13} className="ai-activity-sparkle" />
+                                        <span className="ai-activity-text">
+                                            {currentQueryLogs[currentQueryLogs.length - 1]?.label ||
+                                             getHumanReadableQueryDescription(currentQueryLogs[currentQueryLogs.length - 1])}
+                                        </span>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -442,19 +567,73 @@ const Assistant = () => {
                 className="ai-input-bar"
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             >
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask anything about your data..."
-                    disabled={loading}
-                    className="ai-input"
-                />
+                {/* Plus / New Chat button on the left */}
+                <motion.button
+                    type="button"
+                    onClick={handleClear}
+                    className="ai-new-chat-btn"
+                    title="Start new chat"
+                    disabled={loading || isRecording || isTranscribing}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label="New chat"
+                >
+                    <Plus size={20} />
+                </motion.button>
+
+                {/* Input container with dynamic state */}
+                <div className="ai-input-container">
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder={
+                            isRecording 
+                                ? `Listening (${recordingDuration}s)... tap mic to stop` 
+                                : isTranscribing 
+                                ? "Transcribing your voice..." 
+                                : "Ask anything about your data..."
+                        }
+                        disabled={loading || isTranscribing}
+                        className={`ai-input ${isRecording ? 'ai-input-recording' : ''}`}
+                    />
+
+                    {/* Recording active badge */}
+                    {isRecording && (
+                        <div className="ai-recording-badge">
+                            <span className="ai-recording-dot" />
+                            <span>{recordingDuration}s</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Mic button */}
+                <motion.button
+                    type="button"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={loading || isTranscribing}
+                    className={`ai-mic-btn ${isRecording ? 'recording' : ''} ${isTranscribing ? 'transcribing' : ''}`}
+                    title={isRecording ? "Stop recording" : isTranscribing ? "Transcribing..." : "Voice input"}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label="Voice input"
+                >
+                    {isTranscribing ? (
+                        <Loader2 size={18} className="ai-spin" />
+                    ) : isRecording ? (
+                        <Square size={16} />
+                    ) : (
+                        <Mic size={18} />
+                    )}
+                </motion.button>
+
+                {/* Send button */}
                 <button
                     type="submit"
-                    disabled={!input.trim() || loading}
-                    className={`ai-send-btn ${input.trim() && !loading ? 'active' : ''}`}
+                    disabled={!input.trim() || loading || isRecording || isTranscribing}
+                    className={`ai-send-btn ${input.trim() && !loading && !isRecording && !isTranscribing ? 'active' : ''}`}
+                    title="Send message"
                 >
                     <Send size={18} />
                 </button>
@@ -488,30 +667,6 @@ const Assistant = () => {
                         padding: 16px;
                         width: calc(100% + 32px);
                     }
-                }
-
-                /* ── Clear button ── */
-                .ai-clear-btn {
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    z-index: 10;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 14px;
-                    border: none;
-                    background: transparent;
-                    color: var(--text-muted);
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    border-radius: 8px;
-                    transition: all 0.2s ease;
-                }
-                .ai-clear-btn:hover {
-                    color: var(--text-primary);
-                    background: var(--glass-card-bg);
                 }
 
                 /* ── Scroll area ── */
@@ -632,24 +787,23 @@ const Assistant = () => {
                     max-width: 95%;
                 }
                 .ai-msg-ai-content {
-                    padding: 16px 0 8px 16px;
+                    padding: 8px 0 8px 16px;
                     border-left: 3px solid var(--accent-primary);
                     font-size: 15px;
                     line-height: 1.7;
                     color: var(--text-primary);
-                    white-space: pre-wrap;
                     word-break: break-word;
                 }
 
-                /* ── SQL section ── */
-                .ai-sql-section {
-                    margin-top: 6px;
+                /* ── Sources section (Human Friendly) ── */
+                .ai-sources-section {
+                    margin-top: 8px;
                     padding-left: 16px;
                 }
-                .ai-sql-toggle {
+                .ai-sources-toggle {
                     display: inline-flex;
                     align-items: center;
-                    gap: 5px;
+                    gap: 6px;
                     background: none;
                     border: none;
                     color: var(--text-muted);
@@ -659,26 +813,32 @@ const Assistant = () => {
                     padding: 4px 0;
                     transition: color 0.2s;
                 }
-                .ai-sql-toggle:hover { color: var(--accent-primary); }
-                .ai-sql-panel { overflow: hidden; }
-                .ai-sql-inner {
+                .ai-sources-toggle:hover { color: var(--accent-primary); }
+                .ai-sources-panel { overflow: hidden; }
+                .ai-sources-inner {
                     margin-top: 6px;
-                    padding: 10px 12px;
+                    padding: 8px 12px;
                     border-radius: 10px;
-                    background: #141520;
-                    border: 1px solid #232538;
-                    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-                    font-size: 11.5px;
-                    color: #9ece6a;
+                    background: var(--glass-card-bg);
+                    border: 1px solid var(--border-subtle);
+                    font-size: 12px;
+                    color: var(--text-secondary);
                     max-height: 180px;
                     overflow-y: auto;
+                    backdrop-filter: blur(8px);
                 }
-                .ai-sql-entry {
+                .ai-sources-entry {
                     margin-bottom: 4px;
-                    white-space: pre-wrap;
                     line-height: 1.5;
+                    display: flex;
+                    align-items: baseline;
+                    gap: 6px;
                 }
-                .ai-sql-prefix { color: #e0af68; font-weight: 700; }
+                .ai-sources-bullet {
+                    color: var(--accent-primary);
+                    font-size: 9px;
+                    flex-shrink: 0;
+                }
 
                 /* ── Follow-up suggestions ── */
                 .ai-followups {
@@ -718,8 +878,8 @@ const Assistant = () => {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 16px;
-                    padding: 32px 20px;
+                    gap: 14px;
+                    padding: 28px 20px;
                 }
 
                 /* Orbital dots */
@@ -761,46 +921,80 @@ const Assistant = () => {
                     50%      { opacity: 0.25; transform: scale(1.15); }
                 }
 
-                /* Live terminal in thinking */
-                .ai-live-terminal {
-                    width: 100%;
-                    max-width: 480px;
-                    overflow: hidden;
-                    border-radius: 10px;
-                    background: #141520;
-                    border: 1px solid #232538;
-                    font-family: 'Consolas', 'Monaco', monospace;
-                    font-size: 11.5px;
-                    color: #9ece6a;
-                    padding: 10px 14px;
-                }
-                .ai-live-terminal-header {
-                    display: flex;
+                /* Faded Activity Line in Thinking */
+                .ai-faded-activity {
+                    display: inline-flex;
                     align-items: center;
-                    gap: 5px;
-                    color: #bb9af7;
-                    font-weight: 700;
-                    font-size: 11px;
-                    margin-bottom: 6px;
-                    padding-bottom: 5px;
-                    border-bottom: 1px solid #232538;
+                    gap: 8px;
+                    padding: 6px 14px;
+                    border-radius: 999px;
+                    background: rgba(102, 126, 234, 0.08);
+                    border: 1px solid rgba(102, 126, 234, 0.15);
+                    color: var(--text-muted);
+                    font-size: 12.5px;
+                    font-weight: 500;
+                    letter-spacing: -0.01em;
+                    animation: fadeInPulse 2s ease-in-out infinite;
                 }
-                .ai-live-terminal-line {
-                    white-space: pre-wrap;
-                    margin-bottom: 3px;
-                    line-height: 1.5;
+                .ai-activity-sparkle {
+                    color: var(--accent-primary);
+                    opacity: 0.8;
+                    flex-shrink: 0;
+                }
+                .ai-activity-text {
+                    opacity: 0.9;
+                }
+
+                @keyframes fadeInPulse {
+                    0%, 100% { opacity: 0.75; transform: scale(0.99); }
+                    50%      { opacity: 1;    transform: scale(1); }
                 }
 
                 /* ── Input bar ── */
                 .ai-input-bar {
                     display: flex;
+                    align-items: center;
                     gap: 10px;
                     padding: 16px 4px 4px;
                     flex-shrink: 0;
                 }
-                .ai-input {
+
+                .ai-new-chat-btn {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 16px;
+                    border: 1px solid var(--glass-card-border);
+                    background: var(--glass-card-bg);
+                    color: var(--text-muted);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    flex-shrink: 0;
+                }
+                .ai-new-chat-btn:hover:not(:disabled) {
+                    color: var(--text-primary);
+                    border-color: var(--accent-primary);
+                    background: var(--surface-elevated);
+                    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.2);
+                }
+                .ai-new-chat-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
+                .ai-input-container {
                     flex: 1;
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .ai-input {
+                    width: 100%;
                     padding: 14px 18px;
+                    padding-right: 70px;
                     border-radius: 16px;
                     border: 1px solid var(--glass-card-border);
                     background: var(--glass-card-bg);
@@ -817,8 +1011,69 @@ const Assistant = () => {
                 .ai-input::placeholder {
                     color: var(--text-muted);
                 }
+                .ai-input.ai-input-recording {
+                    border-color: var(--danger) !important;
+                    box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.2) !important;
+                }
+
+                .ai-recording-badge {
+                    position: absolute;
+                    right: 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    background: rgba(245, 101, 101, 0.15);
+                    color: var(--danger);
+                    font-size: 12px;
+                    font-weight: 700;
+                    pointer-events: none;
+                }
+
+                .ai-recording-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--danger);
+                    animation: pulse-recording 1.2s ease-in-out infinite;
+                }
+
+                .ai-mic-btn {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 16px;
+                    border: 1px solid var(--glass-card-border);
+                    background: var(--glass-card-bg);
+                    color: var(--text-muted);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    flex-shrink: 0;
+                }
+                .ai-mic-btn:hover:not(:disabled) {
+                    color: var(--accent-primary);
+                    border-color: var(--accent-primary);
+                    background: var(--surface-elevated);
+                }
+                .ai-mic-btn.recording {
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    color: #ffffff;
+                    border-color: #ef4444;
+                    animation: pulse-mic 1.5s infinite;
+                    box-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
+                }
+                .ai-mic-btn.transcribing {
+                    color: var(--accent-primary);
+                    border-color: var(--accent-primary);
+                    background: var(--surface-elevated);
+                }
+
                 .ai-send-btn {
-                    width: 50px;
+                    width: 48px;
+                    height: 48px;
                     border-radius: 16px;
                     border: 1px solid var(--glass-card-border);
                     background: var(--glass-card-bg);
@@ -839,6 +1094,25 @@ const Assistant = () => {
                 }
                 .ai-send-btn.active:hover {
                     box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+                }
+
+                .ai-spin {
+                    animation: spin 1s linear infinite;
+                }
+
+                @keyframes pulse-recording {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.4; transform: scale(0.85); }
+                }
+
+                @keyframes pulse-mic {
+                    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+                    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+                }
+
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
             `}</style>
         </div>

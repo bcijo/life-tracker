@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { format, subDays, getDay, isToday as isDateToday } from 'date-fns';
+import { getLocalDateStr } from '../../hooks/useHabits';
 
 export function WeeklySummary({ habits, getStatusForDate, selectedDate, onSelectDate }) {
   if (!habits || habits.length === 0) return null;
@@ -13,8 +14,8 @@ export function WeeklySummary({ habits, getStatusForDate, selectedDate, onSelect
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 }}
       style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.04)',
+        background: 'var(--surface-elevated, rgba(255,255,255,0.02))',
+        border: '1px solid var(--border-subtle, rgba(255,255,255,0.04))',
         borderRadius: 16,
         padding: '12px',
         marginBottom: 20,
@@ -24,13 +25,13 @@ export function WeeklySummary({ habits, getStatusForDate, selectedDate, onSelect
         overflowX: 'auto',
       }}
     >
-      {last7Days.map((day, i) => {
-        const dateStr = format(day, 'yyyy-MM-dd');
+      {last7Days.map((day) => {
+        const dateStr = getLocalDateStr(day);
         const dow = getDay(day);
         const isToday = isDateToday(day);
         const isSelected = dateStr === selectedDate;
 
-        const activeHabits = habits.filter(h => (h.active_days || [0,1,2,3,4,5,6]).includes(dow));
+        const activeHabits = habits.filter(h => !h.is_paused && (h.active_days || [0,1,2,3,4,5,6]).includes(dow));
         
         let completedCount = 0;
         activeHabits.forEach(h => {
@@ -41,7 +42,7 @@ export function WeeklySummary({ habits, getStatusForDate, selectedDate, onSelect
         const allDone = totalActive > 0 && completedCount === totalActive;
         const someDone = completedCount > 0;
 
-        let textColor = 'rgba(255,255,255,0.5)';
+        let textColor = 'var(--text-muted, rgba(255,255,255,0.5))';
         if (allDone) textColor = '#22c55e';
         else if (someDone) textColor = '#a855f7';
 
@@ -53,22 +54,22 @@ export function WeeklySummary({ habits, getStatusForDate, selectedDate, onSelect
             style={{ 
               display: 'flex', flexDirection: 'column', alignItems: 'center', 
               minWidth: 40, cursor: 'pointer',
-              background: isSelected ? 'rgba(168,85,247,0.12)' : 'transparent',
-              border: isSelected ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent',
+              background: isSelected ? 'rgba(168,85,247,0.15)' : 'transparent',
+              border: isSelected ? '1px solid rgba(168,85,247,0.4)' : '1px solid transparent',
               borderRadius: 12, padding: '6px 4px',
               transition: 'all 0.15s ease',
             }}
           >
             <span style={{ 
               fontSize: 10, 
-              color: isSelected ? '#a855f7' : isToday ? '#fff' : 'rgba(255,255,255,0.4)', 
+              color: isSelected ? '#a855f7' : isToday ? 'var(--text-primary)' : 'var(--text-muted)', 
               fontWeight: isSelected || isToday ? 700 : 500 
             }}>
               {format(day, 'E')}
             </span>
             <span style={{ 
               fontSize: 12, fontWeight: 700, 
-              color: isSelected ? '#fff' : textColor,
+              color: isSelected ? '#a855f7' : textColor,
               marginTop: 4, fontFamily: 'monospace',
             }}>
               {totalActive === 0 ? '-' : `${completedCount}/${totalActive}`}
