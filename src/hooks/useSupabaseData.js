@@ -36,18 +36,23 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                 // If we have cached data, don't show full loading, just background refresh
                 if (data.length === 0) setLoading(true);
 
-                // Get current user
-                const { data: { user } } = await supabase.auth.getUser();
+                // Get current user from local session quickly without extra network round-trips
+                const { data: { session } } = await supabase.auth.getSession();
+                let userId = session?.user?.id;
+                if (!userId) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    userId = user?.id;
+                }
 
                 const { data: fetchedData, error: fetchError } = await supabase
                     .from(table)
                     .select('*')
-                    .eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000')
+                    .eq('user_id', userId || '00000000-0000-0000-0000-000000000000')
                     .order(orderBy, { ascending });
 
                 if (fetchError) throw fetchError;
 
-                // Only update state if data is different (deep compare could be expensive, so we just set it)
+                // Only update state if data is different
                 setData(fetchedData || []);
                 setError(null);
             } catch (err) {
@@ -72,8 +77,8 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                 },
                 async (payload) => {
                     // Get current user to filter events
-                    const { data: { user } } = await supabase.auth.getUser();
-                    const userId = user?.id || '00000000-0000-0000-0000-000000000000';
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const userId = session?.user?.id || '00000000-0000-0000-0000-000000000000';
 
                     if (payload.eventType === 'INSERT' && payload.new.user_id === userId) {
                         setData((current) => {

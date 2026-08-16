@@ -9,9 +9,6 @@ import CategoriesView from '../components/finances/CategoriesView';
 import BudgetsView from '../components/finances/BudgetsView';
 import ShoppingView from '../components/finances/ShoppingView';
 
-import useTransactions from '../hooks/useTransactions';
-import useExpenseCards from '../hooks/useExpenseCards';
-
 const Finances = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -26,9 +23,6 @@ const Finances = () => {
     };
 
     const [activeTab, setActiveTab] = useState(getTabFromPath());
-
-    const { transactions } = useTransactions();
-    const { cards } = useExpenseCards();
 
     useEffect(() => {
         setActiveTab(getTabFromPath());

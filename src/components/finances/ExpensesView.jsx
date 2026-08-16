@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
     Plus, Sparkles, Flame, Eye, EyeOff, ShieldAlert, ShieldCheck, 
     ArrowUpRight, ArrowDownLeft, ChevronRight, ShoppingBag, 
     Edit3, Trash2, Settings, Search, X, Filter, Calendar, Tag,
-    Clock, MoreVertical
+    Clock, MoreVertical, Loader2
 } from 'lucide-react';
 import useTransactions from '../../hooks/useTransactions';
 import useShopping from '../../hooks/useShopping';
@@ -18,6 +18,8 @@ import QuickEditExpenseModal from './QuickEditExpenseModal';
 import Modal from '../Modal';
 import CurrencyInput from '../CurrencyInput';
 import { format, parseISO, isSameMonth, addDays, differenceInCalendarDays, subMonths, subDays } from 'date-fns';
+
+const PAGE_SIZE = 25;
 
 const ExpensesView = () => {
     const { transactions, addTransaction: addTransactionDb, updateTransaction: updateTransactionDb, deleteTransaction: deleteTransactionDb } = useTransactions();
@@ -43,8 +45,30 @@ const ExpensesView = () => {
     const [customDate, setCustomDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [showFilters, setShowFilters] = useState(false);
 
+    // Progressive Chunking / Infinite Scrolling state
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const sentinelRef = useRef(null);
+
     // Shopping Suggestions State
     const [suggestionAmounts, setSuggestionAmounts] = useState({});
+
+    // Reset pagination when search or filters change
+    useEffect(() => {
+        setVisibleCount(PAGE_SIZE);
+    }, [searchQuery, filterCategory, timeFilter, customMonth, customDate]);
+
+    // Fast Card Lookup Map
+    const cardLookup = useMemo(() => {
+        const map = new Map();
+        cards.forEach(c => {
+            map.set(c.id, c);
+            if (c.category_ids && Array.isArray(c.category_ids)) {
+                c.category_ids.forEach(cid => map.set(cid, c));
+            }
+        });
+        return map;
+    }, [cards]);
 
     // Initialize defaults if no cards exist
     useEffect(() => {
@@ -162,7 +186,7 @@ const ExpensesView = () => {
                 // Search query
                 if (searchQuery.trim()) {
                     const q = searchQuery.toLowerCase();
-                    const card = cards.find(c => c.id === t.card_id || c.id === t.category || (c.category_ids && c.category_ids.includes(t.category)));
+                    const card = cardLookup.get(t.card_id) || cardLookup.get(t.category);
                     const descMatch = (t.description || '').toLowerCase().includes(q);
                     const catMatch = (card?.name || '').toLowerCase().includes(q);
                     if (!descMatch && !catMatch) return false;
@@ -195,9 +219,16 @@ const ExpensesView = () => {
                 return true;
             })
             .sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [transactions, filterCategory, searchQuery, timeFilter, customMonth, customDate, cards]);
+    }, [transactions, filterCategory, searchQuery, timeFilter, customMonth, customDate, cardLookup]);
 
-    // Group expenses by dynamic timeline: Today, Yesterday, Last 7 Days, Earlier This Month, and Monthly Buckets
+    const totalMatchingCount = filteredModalExpenses.length;
+
+    // Slice only the visible count for rendering in the DOM
+    const paginatedExpenses = useMemo(() => {
+        return filteredModalExpenses.slice(0, visibleCount);
+    }, [filteredModalExpenses, visibleCount]);
+
+    // Group paginated expenses by dynamic timeline: Today, Yesterday, Last 7 Days, Earlier This Month, and Monthly Buckets
     const groupedExpenseTimeline = useMemo(() => {
         const todayDate = new Date();
         const buckets = {
@@ -209,7 +240,7 @@ const ExpensesView = () => {
 
         const monthBuckets = {};
 
-        filteredModalExpenses.forEach(tx => {
+        paginatedExpenses.forEach(tx => {
             if (!tx.date) return;
             const txDate = parseISO(tx.date);
             const amt = parseFloat(tx.amount) || 0;
@@ -255,7 +286,35 @@ const ExpensesView = () => {
         groups.push(...sortedOlderMonths);
 
         return groups;
-    }, [filteredModalExpenses]);
+    }, [paginatedExpenses]);
+
+    // Infinite Scroll IntersectionObserver
+    useEffect(() => {
+        if (!sentinelRef.current) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const [entry] = entries;
+            if (entry.isIntersecting && visibleCount < totalMatchingCount && !isLoadingMore) {
+                setIsLoadingMore(true);
+                setTimeout(() => {
+                    setVisibleCount(prev => Math.min(prev + PAGE_SIZE, totalMatchingCount));
+                    setIsLoadingMore(false);
+                }, 150);
+            }
+        }, {
+            root: null,
+            rootMargin: '300px 0px',
+            threshold: 0.01,
+        });
+
+        const currentSentinel = sentinelRef.current;
+        observer.observe(currentSentinel);
+
+        return () => {
+            if (currentSentinel) observer.unobserve(currentSentinel);
+            observer.disconnect();
+        };
+    }, [visibleCount, totalMatchingCount, isLoadingMore]);
 
     // Shopping suggestions logic
     const shoppingSuggestions = shoppingItems.filter(item => item.is_bought && !item.added_to_expenses);
@@ -799,7 +858,7 @@ const ExpensesView = () => {
                                 {/* Transaction Items List */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {group.items.map(tx => {
-                                        const card = cards.find(c => c.id === tx.card_id || c.id === tx.category || (c.category_ids && c.category_ids.includes(tx.category)));
+                                        const card = cardLookup.get(tx.card_id) || cardLookup.get(tx.category);
                                         const isExpense = tx.type !== 'income';
                                         const cardColor = card?.color || (isExpense ? '#FF6B6B' : '#10B981');
                                         
@@ -910,8 +969,8 @@ const ExpensesView = () => {
 
                                                     <button
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingTransaction(tx);
+                                                             e.stopPropagation();
+                                                             setEditingTransaction(tx);
                                                         }}
                                                         style={{
                                                             padding: '6px',
@@ -938,6 +997,62 @@ const ExpensesView = () => {
                                 </div>
                             </div>
                         ))}
+
+                        {/* Infinite Scroll Bottom Sentinel */}
+                        <div ref={sentinelRef} style={{ height: '4px', width: '100%', margin: '4px 0' }} />
+
+                        {/* Loading State Spinner for Next Batch */}
+                        {isLoadingMore && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '10px',
+                                    padding: '16px 20px',
+                                    background: 'var(--surface-elevated, rgba(13, 17, 28, 0.6))',
+                                    border: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
+                                    borderRadius: '16px',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '13px',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                <Loader2 size={18} className="spin-animation" style={{ color: 'var(--accent-primary, #a855f7)' }} />
+                                <span>Loading more transactions...</span>
+                            </motion.div>
+                        )}
+
+                        {/* Fallback Manual Load More Button if Sentinel isn't triggered */}
+                        {!isLoadingMore && visibleCount < totalMatchingCount && (
+                            <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                                <button
+                                    onClick={() => setVisibleCount(prev => Math.min(prev + PAGE_SIZE, totalMatchingCount))}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '10px 22px',
+                                        borderRadius: '14px',
+                                        fontSize: '12.5px',
+                                        fontWeight: '700',
+                                        background: 'var(--surface-elevated, #131b2e)',
+                                        border: '1px solid var(--glass-border, rgba(255,255,255,0.12))',
+                                        color: 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-primary, #a855f7)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--glass-border, rgba(255,255,255,0.12))'}
+                                >
+                                    <span>Load More Transactions ({visibleCount} of {totalMatchingCount})</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div style={{

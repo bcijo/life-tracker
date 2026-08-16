@@ -628,3 +628,12 @@ textarea {
 }
 
 @keyframes waterWave { 0% { background-position-x: 0; } 100% { background-position-x: -200px; } }
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spin-animation {
+    animation: spin 0.8s linear infinite;
+}
