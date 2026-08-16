@@ -18,7 +18,8 @@ import {
     Lock,
     Sparkles,
     CheckCircle2,
-    MessageSquare
+    MessageSquare,
+    BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
@@ -429,6 +430,48 @@ const ProfileMenu = ({ variant = 'default' }) => {
                                             </div>
                                             <span>{updated ? 'Up to date' : updating ? 'Refreshing…' : 'Check for Updates'}</span>
                                         </div>
+                                    </button>
+
+                                    {/* User Guide & Handbook */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            navigate('/guide');
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '10px 12px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            color: 'var(--text-primary)',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            transition: 'background 0.15s ease'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--surface-input)'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '8px',
+                                                background: 'rgba(236, 72, 153, 0.12)',
+                                                color: '#ec4899',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                <BookOpen size={15} />
+                                            </div>
+                                            <span>User Guide</span>
+                                        </div>
+                                        <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
                                     </button>
 
                                     {/* Feedback */}
