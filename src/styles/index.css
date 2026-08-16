@@ -8,6 +8,12 @@
 :root {
     --font-family: 'Outfit', system-ui, sans-serif;
 
+    /* Safe Area Insets (iOS Dynamic Island, Notch, Home Bar) */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+
     /* Spacing & Radius */
     --radius-lg: 24px;
     --radius-md: 16px;
@@ -187,12 +193,17 @@
 html {
     /* Prevent flash of unstyled content on theme switch */
     transition: background-color 0.3s ease;
+    -webkit-text-size-adjust: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg-solid);
 }
 
 body {
     font-family: var(--font-family);
     background: var(--bg-gradient);
     min-height: 100vh;
+    min-height: 100dvh;
     color: var(--text-primary);
     overflow-x: hidden;
     transition: color 0.3s ease, background 0.3s ease;

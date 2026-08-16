@@ -1001,8 +1001,8 @@ const ExpensesView = () => {
             <style>{`
                 .fab-add-expense {
                     position: fixed;
-                    bottom: 85px;
-                    right: 20px;
+                    bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+                    right: calc(20px + env(safe-area-inset-right, 0px));
                     width: 54px;
                     height: 54px;
                     border-radius: 50%;

@@ -147,7 +147,10 @@ const Layout = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 20px;
+          padding-top: calc(12px + env(safe-area-inset-top, 0px));
+          padding-bottom: 12px;
+          padding-left: calc(20px + env(safe-area-inset-left, 0px));
+          padding-right: calc(20px + env(safe-area-inset-right, 0px));
           border-bottom: 1px solid var(--glass-border);
           background: var(--header-bg);
           backdrop-filter: blur(16px);
@@ -177,15 +180,17 @@ const Layout = () => {
           }
           .main-content-area {
             margin-left: 0;
-            padding: 16px;
-            padding-bottom: 90px;
+            padding-top: 16px;
+            padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+            padding-left: calc(16px + env(safe-area-inset-left, 0px));
+            padding-right: calc(16px + env(safe-area-inset-right, 0px));
           }
         }
 
         /* Bottom Nav Mobile */
         .bottom-nav {
           position: fixed;
-          bottom: 16px;
+          bottom: calc(16px + env(safe-area-inset-bottom, 0px));
           left: 50%;
           transform: translateX(-50%);
           width: calc(100% - 32px);

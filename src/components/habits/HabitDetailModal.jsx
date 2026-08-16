@@ -501,7 +501,7 @@ export function HabitDetailModal({
       <div
         style={{
           flexShrink: 0,
-          padding: '12px 14px',
+          padding: 'calc(12px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 12px calc(14px + env(safe-area-inset-left, 0px))',
           background: 'var(--bg-solid, #0b1120)',
           borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
           display: 'flex',

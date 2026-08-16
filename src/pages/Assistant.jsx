@@ -662,7 +662,7 @@ const Assistant = () => {
                 }
                 @media (max-width: 767px) {
                     .ai-page {
-                        height: calc(100vh - 140px);
+                        height: calc(100dvh - 140px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
                         margin: -16px;
                         padding: 16px;
                         width: calc(100% + 32px);
