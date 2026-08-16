@@ -26,7 +26,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
-const ADMIN_EMAIL = 'abhin.vinu@gmail.com';
+const ADMIN_EMAIL = 'abhinb2703@gmail.com';
 
 const ProfileMenu = ({ variant = 'default' }) => {
     const isSidebar = variant === 'sidebar';

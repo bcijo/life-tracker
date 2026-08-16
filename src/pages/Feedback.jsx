@@ -19,7 +19,7 @@ import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import '../styles/feedback.css';
 
-const ADMIN_EMAIL = 'abhin.vinu@gmail.com';
+const ADMIN_EMAIL = 'abhinb2703@gmail.com';
 
 const CATEGORIES = [
     { id: 'bug', label: 'Bug Report', emoji: '🐛', icon: Bug, color: '#ef4444' },

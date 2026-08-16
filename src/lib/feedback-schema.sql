@@ -26,5 +26,5 @@ CREATE POLICY "Users can read own feedback" ON feedback
 -- Admin can read ALL feedback (identified by email)
 CREATE POLICY "Admin can read all feedback" ON feedback
     FOR SELECT USING (
-        auth.jwt() ->> 'email' = 'abhin.vinu@gmail.com'
+        auth.jwt() ->> 'email' = 'abhinb2703@gmail.com'
     );
