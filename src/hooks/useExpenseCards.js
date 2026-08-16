@@ -114,6 +114,21 @@ function useExpenseCards() {
         }
     };
 
+    const fetchAllSubcategories = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('expense_subcategories')
+                .select('*')
+                .order('name');
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching all subcategories:', error);
+            return [];
+        }
+    };
+
     const deleteSubcategory = async (id) => {
         try {
             const { error } = await supabase
@@ -133,26 +148,32 @@ function useExpenseCards() {
         if (loading || cards.length > 0) return;
 
         const defaultCards = [
-            { name: 'Food & Dining', icon: '🍽️', color: '#FF6B6B', category_ids: ['food', 'dining'], sort_order: 1 },
-            { name: 'Transport', icon: '🚗', color: '#4ECDC4', category_ids: ['transport', 'travel', 'fuel'], sort_order: 2 },
-            { name: 'Shopping', icon: '🛒', color: '#45B7D1', category_ids: ['shopping', 'clothes'], sort_order: 3 },
-            { name: 'Entertainment', icon: '🎬', color: '#96CEB4', category_ids: ['entertainment', 'movies'], sort_order: 4 },
-            { name: 'Bills & Utilities', icon: '💡', color: '#FFEEAD', category_ids: ['bills', 'utilities', 'rent'], sort_order: 5 },
-            { name: 'Health', icon: '🏥', color: '#FF9999', category_ids: ['health', 'medical'], sort_order: 6 },
-            { name: 'Other', icon: '📦', color: '#D4A5A5', category_ids: ['other', 'miscellaneous'], sort_order: 7 },
+            { name: 'Food & Dining', icon: '🍔', color: '#FF6B6B', category_ids: ['food', 'dining'], sort_order: 1, subcategories: ['Groceries', 'Restaurants', 'Coffee & Drinks', 'Delivery'] },
+            { name: 'Transport', icon: '🚗', color: '#4ECDC4', category_ids: ['transport', 'travel', 'fuel'], sort_order: 2, subcategories: ['Fuel / Petrol', 'Metro / Bus', 'Cab / Uber', 'Maintenance'] },
+            { name: 'Shopping & Lifestyle', icon: '🛍️', color: '#A855F7', category_ids: ['shopping', 'clothes'], sort_order: 3, subcategories: ['Clothing', 'Electronics', 'Personal Care', 'Home'] },
+            { name: 'Bills & Utilities', icon: '💡', color: '#F59E0B', category_ids: ['bills', 'utilities', 'rent'], sort_order: 4, subcategories: ['Electricity', 'Wi-Fi / Internet', 'Mobile Recharge', 'Rent'] },
+            { name: 'Entertainment', icon: '🎬', color: '#EC4899', category_ids: ['entertainment', 'movies'], sort_order: 5, subcategories: ['Movies', 'Subscriptions', 'Events'] },
+            { name: 'Health & Wellness', icon: '🏥', color: '#10B981', category_ids: ['health', 'medical'], sort_order: 6, subcategories: ['Pharmacy / Medicines', 'Doctor', 'Fitness / Gym'] },
         ];
 
         try {
-            // Check one more time to be safe
             const { count } = await supabase.from('expense_cards').select('*', { count: 'exact', head: true });
 
             if (count === 0) {
-                console.log('Initializing default expense cards...');
+                console.log('Initializing default curated expense categories...');
                 for (const card of defaultCards) {
-                    await insert(card);
+                    const { subcategories, ...cardData } = card;
+                    const inserted = await insert(cardData);
+                    if (inserted?.id && subcategories?.length) {
+                        for (const sub of subcategories) {
+                            try {
+                                await supabase.from('expense_subcategories').insert([{ card_id: inserted.id, name: sub }]);
+                            } catch (e) {
+                                console.error('Error inserting default subcategory:', e);
+                            }
+                        }
+                    }
                 }
-                // Force reload
-                window.location.reload();
             }
         } catch (err) {
             console.error('Error initializing defaults:', err);
@@ -173,6 +194,7 @@ function useExpenseCards() {
         getBudgetProgress,
         addSubcategory,
         fetchSubcategories,
+        fetchAllSubcategories,
         deleteSubcategory,
         initializeDefaults
     };

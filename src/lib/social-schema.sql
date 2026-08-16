@@ -113,11 +113,10 @@ DECLARE
   v_rate NUMERIC := 0;
   v_score NUMERIC := 0;
 BEGIN
-  -- Count active (non-paused) habits for this user
+  -- Count active habits for this user
   SELECT COUNT(*) INTO v_active_habits
   FROM habits
-  WHERE user_id = target_user_id 
-    AND (is_paused IS NULL OR is_paused = false);
+  WHERE user_id = target_user_id;
 
   -- Count completions in last 30 days from JSONB history
   BEGIN
@@ -125,7 +124,6 @@ BEGIN
     FROM habits h,
          LATERAL jsonb_array_elements(COALESCE(h.history, '[]'::jsonb)) AS elem
     WHERE h.user_id = target_user_id
-      AND (h.is_paused IS NULL OR h.is_paused = false)
       AND (
         -- Object format: {"date": "YYYY-MM-DD", "status": "completed"}
         (

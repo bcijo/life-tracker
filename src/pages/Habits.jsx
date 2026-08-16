@@ -54,11 +54,11 @@ const Habits = () => {
         setHabitStatus(id, selectedDate, newStatus);
         if (newStatus === 'completed' && isViewingToday) {
             setCelebratingId(id);
-            setTimeout(() => setCelebratingId(null), 850);
+            setTimeout(() => setCelebratingId(null), 300);
             setTimeout(() => {
                 setCompletedPulse(true);
-                setTimeout(() => setCompletedPulse(false), 600);
-            }, 900);
+                setTimeout(() => setCompletedPulse(false), 400);
+            }, 350);
         }
     };
 

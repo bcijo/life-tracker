@@ -28,20 +28,23 @@ export function HabitCard({
     if (isCelebrating) {
       glowControls.start({
         opacity: [0, 0.55, 0.3, 0],
-        scale: [1, 1.025, 1.01, 1],
-        transition: { duration: 0.85, ease: 'easeOut' },
+        scale: [1, 1.02, 1.01, 1],
+        transition: { duration: 0.3, ease: 'easeOut' },
       });
     }
   }, [isCelebrating]);
 
   return (
     <motion.div
-      layoutId={`habit-${habit.id}`}
       style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, cursor: 'pointer' }}
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -16, scale: 0.96, transition: { duration: 0.35, ease: 'easeIn' } }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.35 + index * 0.08 }}
+      exit={{ opacity: 0, y: -10, scale: 0.96, transition: { duration: 0.2, ease: 'easeOut' } }}
+      transition={{
+        layout: { type: 'spring', stiffness: 500, damping: 32 },
+        opacity: { duration: 0.2 },
+        delay: 0.15 + index * 0.04
+      }}
       whileTap={{ scale: 0.985 }}
       onClick={() => onSelectHabit(habit.id)}
       layout
@@ -64,7 +67,7 @@ export function HabitCard({
           ? { borderColor: ['var(--border-subtle, rgba(255,255,255,0.06))', 'rgba(34,197,94,0.7)', 'var(--border-subtle, rgba(255,255,255,0.06))'] }
           : { borderColor: 'var(--border-subtle, rgba(255,255,255,0.06))' }
         }
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.3 }}
         style={{
           borderRadius: 20,
           position: 'relative',
@@ -77,7 +80,7 @@ export function HabitCard({
         <div
           style={{
             position: 'absolute',
-            left: 0, top: 16, bottom: 16,
+            left: 0, top: 12, bottom: 12,
             width: 3, borderRadius: 9999,
             background: habit.is_paused
               ? 'linear-gradient(180deg, #eab308, rgba(234,179,8,0.3))'
@@ -85,59 +88,85 @@ export function HabitCard({
           }}
         />
 
-        <div style={{ padding: '16px 16px 16px 20px' }}>
-          {/* Top row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            {/* Left info */}
+        <div style={{ padding: '12px 14px 12px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            {/* Left Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              {/* Category pill + streak */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span
-                  style={{
-                    fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.08em', padding: '2px 8px', borderRadius: 9999,
-                    background: `${accentColor}18`, color: accentColor,
-                  }}
-                >
-                  {timeOfDay === 'morning' ? '☀️ Morning' : '🌙 Evening'}
-                </span>
+              {/* Top line: Name + Streak / Paused badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                <h3 style={{
+                  margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {habit.name}
+                </h3>
 
-                {habit.is_paused && (
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 9999, background: 'rgba(234,179,8,0.18)', color: '#eab308', display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <PauseCircle size={10} /> Paused
+                {streak > 0 && !habit.is_paused && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    fontSize: 10, fontWeight: 800, color: streak >= 5 ? '#f97316' : '#f59e0b',
+                    background: streak >= 5 ? 'rgba(249,115,22,0.15)' : 'rgba(245,158,11,0.12)',
+                    padding: '1px 6px', borderRadius: 9999, flexShrink: 0,
+                  }}>
+                    <Flame size={10} fill={streak >= 5 ? '#f97316' : '#f59e0b'} />
+                    {streak}
                   </span>
                 )}
 
-                {streak >= 3 && !habit.is_paused && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, fontWeight: 600, color: '#f59e0b' }}>
-                    <Flame size={10} />
-                    {streak}
+                {habit.is_paused && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 9999,
+                    background: 'rgba(234,179,8,0.18)', color: '#eab308',
+                    display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0,
+                  }}>
+                    <PauseCircle size={10} /> Paused
                   </span>
                 )}
               </div>
 
-              {/* Habit name */}
-              <h3 style={{
-                margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {habit.name}
-              </h3>
+              {/* Bottom line: Time icon + Success % + Inline Weekly 7-Dots */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, color: 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', gap: 3,
+                }}>
+                  <span>{timeOfDay === 'morning' ? '☀️' : '🌙'}</span>
+                  {habit.is_paused
+                    ? `Paused`
+                    : successRate !== null ? `${successRate}%` : `${streak}d streak`
+                  }
+                </span>
 
-              {/* Success rate */}
-              <span style={{
-                fontSize: 10, color: 'var(--text-muted)',
-                fontFamily: "'JetBrains Mono', monospace",
-              }}>
-                {habit.is_paused
-                  ? `Streak protected · ${streak} d`
-                  : successRate !== null ? `${successRate}% success · ${streak} day streak` : `${streak} day streak`
-                }
-              </span>
+                <span style={{ color: 'var(--border-subtle, rgba(255,255,255,0.15))', fontSize: 10 }}>·</span>
+
+                {/* Inline 7-day dots */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {weeklyStatus.map((dayStatus, i) => {
+                    const isActive = dayStatus.isActive;
+                    const s = dayStatus.status;
+                    let bg = 'var(--border-subtle, rgba(255,255,255,0.08))';
+                    if (s === 'completed') bg = '#22c55e';
+                    else if (s === 'failed') bg = '#ef4444';
+                    else if (!isActive) bg = 'transparent';
+
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          width: 5, height: 5, borderRadius: '50%',
+                          background: bg,
+                          border: !isActive ? '1px dashed var(--border-subtle, rgba(255,255,255,0.15))' : 'none',
+                          opacity: dayStatus.isFuture ? 0.25 : 1,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Right controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {/* Right Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               {habit.is_paused ? (
                 <button
                   onClick={(e) => {
@@ -145,14 +174,14 @@ export function HabitCard({
                     if (onTogglePause) onTogglePause(habit.id);
                   }}
                   style={{
-                    padding: '6px 12px', borderRadius: 9999,
+                    padding: '5px 10px', borderRadius: 9999,
                     background: 'rgba(234,179,8,0.15)',
                     border: '1px solid rgba(234,179,8,0.3)',
                     color: '#eab308', fontSize: 11, fontWeight: 700,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                   }}
                 >
-                  <Play size={12} fill="#eab308" /> Resume
+                  <Play size={11} fill="#eab308" /> Resume
                 </button>
               ) : isActiveToday ? (
                 <div onClick={(e) => e.stopPropagation()}>
@@ -160,7 +189,7 @@ export function HabitCard({
                 </div>
               ) : (
                 <div style={{
-                  width: 52, height: 30, borderRadius: 9999,
+                  padding: '4px 9px', borderRadius: 9999,
                   background: 'var(--surface-input, rgba(255,255,255,0.03))',
                   border: '1px dashed var(--border-subtle, rgba(255,255,255,0.1))',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -170,40 +199,6 @@ export function HabitCard({
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Weekly dot tracker */}
-          <div
-            style={{
-              marginTop: 14, paddingTop: 12,
-              borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.04))',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            {weeklyStatus.map((dayStatus, i) => {
-              const isActive = dayStatus.isActive;
-              const s = dayStatus.status;
-              let bg = 'var(--border-subtle, rgba(255,255,255,0.06))';
-              if (s === 'completed') bg = '#22c55e';
-              else if (s === 'failed') bg = '#ef4444';
-              else if (!isActive) bg = 'transparent';
-
-              return (
-                <div key={i} style={{ display: 'flex', justifyContent: 'center', width: 8 }}>
-                  <motion.div
-                    style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: bg,
-                      border: !isActive ? '1px dashed var(--border-subtle, rgba(255,255,255,0.1))' : 'none',
-                      opacity: dayStatus.isFuture ? 0.3 : 1
-                    }}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.5 + i * 0.04, type: 'spring' }}
-                  />
-                </div>
-              );
-            })}
           </div>
         </div>
       </motion.div>

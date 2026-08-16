@@ -18,6 +18,9 @@ export function getHumanReadableQueryDescription(queryText) {
     
     const q = String(queryText).toLowerCase();
 
+    if (q.includes('recurring_expenses')) {
+        return "Checking your active recurring & fixed expenses...";
+    }
     if (q.includes('transactions')) {
         if (q.includes('group by') && (q.includes('day') || q.includes('date') || q.includes('date_trunc'))) {
             return "Calculating daily spending breakdown for this month...";
@@ -68,7 +71,7 @@ const SQL_TOOL = {
     type: "function",
     function: {
         name: "execute_read_only_query",
-        description: "PostgreSQL SELECT query tool. Tables: transactions (id, amount, description, type, category, date), habits (id, name, history, active_days), todos (id, text, completed, deadline), journal_entries (id, date, mood_score, how_was_today), bank_accounts (id, name, current_balance), expense_cards (id, name, budget_amount). Keep queries focused with aggregations (SUM, COUNT, GROUP BY) or LIMIT 10.",
+        description: "PostgreSQL SELECT query tool. Tables: transactions (id, amount, description, type, category, date), recurring_expenses (id, name, amount, category, day_of_month, is_active), habits (id, name, history, active_days), todos (id, text, completed, deadline), journal_entries (id, date, mood_score, how_was_today), bank_accounts (id, name, current_balance), expense_cards (id, name, budget_amount). Keep queries focused with aggregations (SUM, COUNT, GROUP BY) or LIMIT 10.",
         parameters: {
             type: "object",
             properties: {
@@ -155,6 +158,7 @@ async function runSQLTool(queryText) {
         const q = String(queryText).toLowerCase();
         let targetTable = null;
         if (q.includes('from transactions')) targetTable = 'transactions';
+        else if (q.includes('from recurring_expenses')) targetTable = 'recurring_expenses';
         else if (q.includes('from habits')) targetTable = 'habits';
         else if (q.includes('from todos')) targetTable = 'todos';
         else if (q.includes('from journal_entries')) targetTable = 'journal_entries';
@@ -216,10 +220,11 @@ export async function askAI(userQuery, contextData, onQueryLogged = null, histor
     const systemPrompt = `You are a concise, helpful personal life & finance assistant. Today is ${todayDate}.
 Use PostgreSQL SELECT tool execute_read_only_query for specific numbers or breakdown requests (max 1-2 queries per turn).
 Table rules:
-- transactions (id, amount, description, type, category, date) -> table is 'transactions', column is 'date' (never 'expenses' or 'transaction_date').
+- transactions (id, amount, description, type, category, date) -> past logged transactions (column is 'date', not 'transaction_date').
+- recurring_expenses (id, name, amount, category, day_of_month, is_active) -> active fixed/recurring expenses configuration (ALWAYS check this table when asked about fixed spending, recurring bills, or subscriptions).
 - todos (id, text, completed, deadline) -> table is 'todos'.
 - habits (id, name, history, active_days) -> table is 'habits'.
-- journal_entries, bank_accounts, expense_cards.
+- journal_entries, bank_accounts, expense_cards, shopping_items.
 Context Summary: ${JSON.stringify(contextData)}
 Format responses cleanly with Markdown (bold key metrics, tables for daily breakdowns, concise bullet points).`;
 

@@ -47,8 +47,8 @@ function App() {
                         <Route path="split-bill" element={<BillSplitter />} />
                         <Route path="journal" element={<Journal />} />
                         <Route path="shopping" element={<Navigate to="/finances/shopping" replace />} />
-                        <Route path="expenses" element={<Navigate to="/finances/spend" replace />} />
-                        <Route path="bank-accounts" element={<Navigate to="/finances/accounts" replace />} />
+                        <Route path="expenses" element={<Navigate to="/finances" replace />} />
+                        <Route path="bank-accounts" element={<Navigate to="/finances" replace />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

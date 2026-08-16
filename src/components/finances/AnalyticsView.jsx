@@ -5,7 +5,8 @@ import {
 } from 'recharts';
 import { 
     TrendingUp, Calendar, ChevronLeft, ChevronRight, Zap, 
-    AlertTriangle, ShoppingBag, ArrowUpRight, Award, Compass 
+    AlertTriangle, ShoppingBag, ArrowUpRight, Award, Compass,
+    RefreshCw 
 } from 'lucide-react';
 import { 
     format, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, 
@@ -15,15 +16,23 @@ import {
 import { getIconByName } from '../ExpenseCard';
 
 const PRESET_COLORS = [
-    '#4ecdc4', '#ff6b6b', '#ffd166', '#06d6a0', '#118ab2',
-    '#8338ec', '#3a86ff', '#f72585', '#7209b7', '#4361ee'
+    '#8338ec', '#4ecdc4', '#ff6b6b', '#ffd166', '#06d6a0', 
+    '#118ab2', '#3a86ff', '#f72585', '#7209b7', '#4361ee'
 ];
+
+const isRecurringTransaction = (t) => {
+    if (t.is_recurring) return true;
+    if (t.category && typeof t.category === 'string' && t.category.toLowerCase() === 'recurring') return true;
+    if (t.description && typeof t.description === 'string' && t.description.toLowerCase().includes('(recurring)')) return true;
+    return false;
+};
 
 const AnalyticsView = ({ transactions = [], categories = [] }) => {
     const [timeframe, setTimeframe] = useState('monthly'); // 'weekly' | 'monthly'
     const [monthOffset, setMonthOffset] = useState(0);
     const [weekOffset, setWeekOffset] = useState(0);
     const [outlierThreshold, setOutlierThreshold] = useState(3000);
+    const [includeRecurring, setIncludeRecurring] = useState(true);
 
     const currentDate = new Date();
 
@@ -38,10 +47,11 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
     const weekStart = startOfWeek(targetWeek, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(targetWeek, { weekStartsOn: 1 });
 
-    // Filter transactions for active interval
+    // Filter transactions for active interval & recurring toggle
     const periodTransactions = useMemo(() => {
         return transactions.filter(t => {
             if (t.type !== 'expense') return false;
+            if (!includeRecurring && isRecurringTransaction(t)) return false;
             const d = parseISO(t.date);
             if (timeframe === 'monthly') {
                 return d >= monthStart && d <= monthEnd;
@@ -49,7 +59,7 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
                 return d >= weekStart && d <= weekEnd;
             }
         });
-    }, [transactions, timeframe, monthOffset, weekOffset]);
+    }, [transactions, timeframe, monthOffset, weekOffset, includeRecurring]);
 
     const totalSpent = useMemo(() => {
         return periodTransactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
@@ -85,13 +95,27 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
         }
     }, [periodTransactions, timeframe, weekStart, weekEnd, monthStart, monthEnd]);
 
-    // Category Breakdown
+    // Category Breakdown (Properly categorizes recurring expenses)
     const categoryBreakdown = useMemo(() => {
         const map = {};
         periodTransactions.forEach(t => {
+            const isRec = isRecurringTransaction(t);
             const card = categories.find(c => c.id === t.card_id || c.id === t.category || (c.category_ids && c.category_ids.includes(t.category)));
-            const catName = card?.name || 'Uncategorized';
-            const catColor = card?.color || '#94a3b8';
+            
+            let catName;
+            let catColor;
+            
+            if (isRec) {
+                catName = 'Recurring Expenses';
+                catColor = '#8B5CF6'; // purple / violet for recurring expenses
+            } else if (card) {
+                catName = card.name;
+                catColor = card.color || '#4ECDC4';
+            } else {
+                catName = 'Uncategorized';
+                catColor = '#94a3b8';
+            }
+
             if (!map[catName]) {
                 map[catName] = { name: catName, color: catColor, amount: 0, count: 0 };
             }
@@ -191,14 +215,21 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
                     </p>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    flexWrap: 'wrap',
+                    maxWidth: '100%'
+                }}>
                     {/* Timeframe Switcher */}
                     <div style={{
                         display: 'flex',
                         background: 'var(--surface-input)',
                         padding: '3px',
                         borderRadius: '12px',
-                        border: '1px solid var(--glass-card-border)'
+                        border: '1px solid var(--glass-card-border)',
+                        flexShrink: 0
                     }}>
                         <button
                             onClick={() => { setTimeframe('weekly'); setWeekOffset(0); }}
@@ -240,7 +271,8 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
                         background: 'var(--surface-input)',
                         padding: '4px 8px',
                         borderRadius: '12px',
-                        border: '1px solid var(--glass-card-border)'
+                        border: '1px solid var(--glass-card-border)',
+                        flexShrink: 0
                     }}>
                         <button
                             onClick={() => timeframe === 'monthly' ? setMonthOffset(m => m - 1) : setWeekOffset(w => w - 1)}
@@ -248,7 +280,7 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
                         >
                             <ChevronLeft size={16} />
                         </button>
-                        <span style={{ fontSize: '13px', fontWeight: '600', minWidth: '100px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', minWidth: '90px', textAlign: 'center' }}>
                             {timeframe === 'monthly'
                                 ? format(targetMonth, 'MMMM yyyy')
                                 : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`}
@@ -268,6 +300,31 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
                             <ChevronRight size={16} />
                         </button>
                     </div>
+
+                    {/* Recurring Expenses Toggle */}
+                    <button
+                        onClick={() => setIncludeRecurring(!includeRecurring)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '12px',
+                            border: includeRecurring ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid var(--glass-card-border)',
+                            background: includeRecurring ? 'rgba(139, 92, 246, 0.15)' : 'var(--surface-input)',
+                            color: includeRecurring ? '#A78BFA' : 'var(--text-secondary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
+                        }}
+                        title="Toggle including recurring / fixed expenses in analytics charts"
+                    >
+                        <RefreshCw size={13} style={{ transform: includeRecurring ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s ease' }} />
+                        <span>Recurring: {includeRecurring ? 'ON' : 'OFF'}</span>
+                    </button>
                 </div>
             </div>
 
@@ -361,9 +418,32 @@ const AnalyticsView = ({ transactions = [], categories = [] }) => {
                 
                 {/* Category Donut & List */}
                 <div className="glass-card" style={{ padding: '20px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '14px' }}>
-                        Category Distribution
-                    </h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                            Category Distribution
+                        </h3>
+                        <button
+                            onClick={() => setIncludeRecurring(!includeRecurring)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '3px 8px',
+                                borderRadius: '8px',
+                                border: includeRecurring ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--border-subtle)',
+                                background: includeRecurring ? 'rgba(139, 92, 246, 0.12)' : 'var(--surface-input)',
+                                color: includeRecurring ? '#A78BFA' : 'var(--text-muted)',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                            title="Toggle recurring expenses in distribution"
+                        >
+                            <RefreshCw size={11} />
+                            <span>{includeRecurring ? 'Hide Recurring' : 'Show Recurring'}</span>
+                        </button>
+                    </div>
                     
                     {categoryBreakdown.length > 0 ? (
                         <div>

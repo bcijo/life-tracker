@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import useTransactions from './useTransactions';
 import useHabits from './useHabits';
 import useTodos from './useTodos';
-import useBankAccounts from './useBankAccounts';
 import useRecurringExpenses from './useRecurringExpenses';
 import useJournal from './useJournal';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -15,8 +14,7 @@ function useLifeContext() {
     const { transactions } = useTransactions();
     const { habits } = useHabits();
     const { todos } = useTodos();
-    const { bankAccounts, getTotalBalance } = useBankAccounts();
-    const { recurringExpenses, monthlyTotal: fixedExpensesTotal } = useRecurringExpenses();
+    const { recurringExpenses, getMonthlyTotal } = useRecurringExpenses();
     const { weekEntries: journalEntries } = useJournal();
 
     // 2. Process Data for AI Context
@@ -26,7 +24,11 @@ function useLifeContext() {
         const startOfCurrentMonth = startOfMonth(today);
 
         // --- Money ---
-        const totalBalance = getTotalBalance();
+        const fixedExpensesTotal = getMonthlyTotal ? getMonthlyTotal() : 0;
+        const activeRecurring = (recurringExpenses || [])
+            .filter(e => e.is_active)
+            .map(e => ({ name: e.name, amount: e.amount, day: e.day_of_month }));
+
         const recentTransactions = transactions
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, 10); // Last 10 transactions
@@ -63,9 +65,9 @@ function useLifeContext() {
         // --- Context String Construction ---
         return {
             financial: {
-                totalBalance,
                 monthlySpending: thisMonthSpending,
                 fixedExpenses: fixedExpensesTotal,
+                recurringExpenses: activeRecurring,
                 recentActivity: recentTransactions.map(t => `${t.description}: ${t.amount} (${t.category})`),
             },
             habits: habits.map(h => h.name),
@@ -78,7 +80,7 @@ function useLifeContext() {
                 currentDate: format(today, 'yyyy-MM-dd'),
             }
         };
-    }, [transactions, habits, todos, bankAccounts, recurringExpenses, journalEntries]);
+    }, [transactions, habits, todos, recurringExpenses, journalEntries]);
 
     return contextData;
 }

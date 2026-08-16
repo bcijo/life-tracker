@@ -3,14 +3,13 @@ import { Trash2, Plus } from 'lucide-react';
 import useExpenseCards from '../hooks/useExpenseCards';
 import CurrencyInput from './CurrencyInput';
 import Modal from './Modal';
-
-const EMOJI_LIST = ['🍽️', '🚗', '🛒', '💡', '🎬', '🏥', '📦', '🏠', '✈️', '🎮', '🎓', '🎁', '🔧', '💅', '🏋️', '📚', '🍕', '🍻', '👶', '🐾'];
+import { CategoryIcon, CATEGORY_ICON_LIST } from '../utils/categoryIcons';
 
 const CategorySettingsModal = ({ card, onClose }) => {
     const { updateCard, deleteCard, fetchSubcategories, addSubcategory, deleteSubcategory } = useExpenseCards();
     
     const [editName, setEditName] = useState(card.name);
-    const [editIcon, setEditIcon] = useState(card.icon || '🍽️');
+    const [editIcon, setEditIcon] = useState(card.icon || 'utensils');
     const [editBudget, setEditBudget] = useState(card.budget_amount || '');
     const [isSaving, setIsSaving] = useState(false);
     
@@ -86,38 +85,45 @@ const CategorySettingsModal = ({ card, onClose }) => {
                 {/* Icon */}
                 <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', letterSpacing: '0.5px' }}>
-                        ICON
+                        CATEGORY ICON
                     </label>
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gridTemplateColumns: 'repeat(7, 1fr)',
                         gap: '8px',
                         padding: '12px',
                         background: 'var(--glass-card-bg)',
                         border: '1px solid var(--glass-card-border)',
-                        borderRadius: '8px',
-                        maxHeight: '160px',
+                        borderRadius: '12px',
+                        maxHeight: '140px',
                         overflowY: 'auto',
                     }}>
-                        {EMOJI_LIST.map(emoji => (
-                            <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => setEditIcon(emoji)}
-                                style={{
-                                    border: 'none',
-                                    background: editIcon === emoji ? card.color : 'transparent',
-                                    borderRadius: '8px',
-                                    fontSize: '20px',
-                                    padding: '8px',
-                                    cursor: 'pointer',
-                                    transform: editIcon === emoji ? 'scale(1.1)' : 'scale(1)',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                {emoji}
-                            </button>
-                        ))}
+                        {CATEGORY_ICON_LIST.map(item => {
+                            const IconComponent = item.icon;
+                            const isSelected = editIcon === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    title={item.label}
+                                    onClick={() => setEditIcon(item.id)}
+                                    style={{
+                                        border: isSelected ? `2px solid ${card.color || 'var(--accent-primary)'}` : '1px solid transparent',
+                                        background: isSelected ? `color-mix(in srgb, ${card.color || 'var(--accent-primary)'} 25%, transparent)` : 'transparent',
+                                        borderRadius: '8px',
+                                        padding: '8px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: isSelected ? (card.color || 'var(--accent-primary)') : 'var(--text-secondary)',
+                                        transition: 'all 0.15s'
+                                    }}
+                                >
+                                    <IconComponent size={18} />
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

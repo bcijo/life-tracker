@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw, Send, AlertCircle } from 'lucide-react';
+import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
@@ -50,34 +50,10 @@ const Friends = () => {
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Quick Inline Add State
-  const [inlineUsername, setInlineUsername] = useState('');
-  const [quickAddStatus, setQuickAddStatus] = useState(null); // { type: 'success'|'error', msg: string }
-  const [sendingQuickAdd, setSendingQuickAdd] = useState(false);
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await Promise.all([refreshFriends(), refreshLeaderboard()]);
     setTimeout(() => setRefreshing(false), 500);
-  };
-
-  const handleQuickAdd = async (e) => {
-    if (e) e.preventDefault();
-    const clean = inlineUsername.trim().replace(/^@/, '');
-    if (!clean) return;
-
-    setSendingQuickAdd(true);
-    const res = await sendFriendRequest(clean);
-    setSendingQuickAdd(false);
-
-    if (res?.error) {
-      setQuickAddStatus({ type: 'error', msg: res.error });
-    } else {
-      setQuickAddStatus({ type: 'success', msg: `Request sent to @${clean}!` });
-      setInlineUsername('');
-    }
-
-    setTimeout(() => setQuickAddStatus(null), 4000);
   };
 
   const shareInviteLink = async () => {
@@ -263,92 +239,6 @@ const Friends = () => {
             exit={{ opacity: 0, x: 10 }}
             transition={{ duration: 0.2 }}
           >
-            {/* ── CLEAN INLINE QUICK ADD BY USERNAME BAR ── */}
-            <div className="glass-card" style={{
-              borderRadius: '14px',
-              padding: '8px 10px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              marginBottom: '12px'
-            }}>
-              <form onSubmit={handleQuickAdd} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'var(--surface-input)',
-                  borderRadius: '10px',
-                  padding: '0 10px',
-                  border: '1px solid var(--border-subtle)'
-                }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)', marginRight: '2px' }}>
-                    @
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="add friend by username..."
-                    value={inlineUsername}
-                    onChange={(e) => setInlineUsername(e.target.value)}
-                    style={{
-                      flex: 1,
-                      background: 'transparent',
-                      border: 'none',
-                      outline: 'none',
-                      color: 'var(--text-primary)',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      padding: '7px 0'
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!inlineUsername.trim() || sendingQuickAdd}
-                  className="btn-primary"
-                  style={{
-                    padding: '0 12px',
-                    height: '32px',
-                    borderRadius: '10px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    border: 'none',
-                    cursor: !inlineUsername.trim() ? 'not-allowed' : 'pointer',
-                    opacity: !inlineUsername.trim() ? 0.5 : 1,
-                    flexShrink: 0
-                  }}
-                >
-                  <Send size={11} />
-                  <span>Add</span>
-                </button>
-              </form>
-
-              {/* Status Toast Notification */}
-              {quickAddStatus && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    color: quickAddStatus.type === 'error' ? '#ef4444' : '#10b981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    paddingLeft: '4px'
-                  }}
-                >
-                  {quickAddStatus.type === 'error' ? <AlertCircle size={12} /> : <Check size={12} />}
-                  <span>{quickAddStatus.msg}</span>
-                </motion.div>
-              )}
-            </div>
-
             {/* Pending Requests Section */}
             {hasPending && (
               <div style={{ marginBottom: 14 }}>
@@ -419,7 +309,7 @@ const Friends = () => {
                   No friends yet
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16 }}>
-                  Type a username above to start comparing habit streaks!
+                  Tap the Add Friend button above to search by username and connect!
                 </p>
               </motion.div>
             ) : (

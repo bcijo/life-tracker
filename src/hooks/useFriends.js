@@ -39,18 +39,16 @@ export const computeScoreForUserHabits = (userHabits, startDateStr = null) => {
     const history = habit.history || [];
     const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
 
-    if (history.length > 0) {
-      activeHabitCount++;
-    }
+    activeHabitCount++;
 
     let habitPeriodCompletions = 0;
     for (const entry of history) {
-      const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
-      const status = typeof entry === 'string' ? 'completed' : entry.status;
+      const date = typeof entry === 'string' ? entry.split('T')[0] : entry?.date;
+      const status = typeof entry === 'string' ? 'completed' : entry?.status;
 
       if (status === 'completed') {
         allTimeCompletions++;
-        if (date >= fromDateStr && date <= todayStr) {
+        if (date && date >= fromDateStr && date <= todayStr) {
           habitPeriodCompletions++;
         }
       }
@@ -59,8 +57,9 @@ export const computeScoreForUserHabits = (userHabits, startDateStr = null) => {
 
     const completedDates = new Set(
       history
-        .filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed')
-        .map(e => typeof e === 'string' ? e.split('T')[0] : e.date)
+        .filter(e => (typeof e === 'string' ? 'completed' : e?.status) === 'completed')
+        .map(e => typeof e === 'string' ? e.split('T')[0] : e?.date)
+        .filter(Boolean)
     );
 
     const cursor = new Date(fromDate);
@@ -97,7 +96,7 @@ export const fetchHabitsForUser = async (userId) => {
   try {
     const { data: habits, error } = await supabase
       .from('habits')
-      .select('id, name, history, active_days, is_paused')
+      .select('id, name, history, active_days')
       .eq('user_id', userId);
 
     if (error) {

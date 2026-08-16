@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Globe, Trophy } from 'lucide-react';
 import ScoreBadge from './ScoreBadge';
+import AppLoader from '../common/AppLoader';
 
 const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loading }) => {
   const containerStyle = {
@@ -93,18 +94,18 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
     return (
       <div style={containerStyle}>
         <div style={toggleContainerStyle}>
-          <div style={getToggleStyle(true)}>Loading...</div>
+          <button style={getToggleStyle(scope === 'friends')} onClick={() => onScopeChange('friends')}>
+            <Users size={16} /> Friends
+          </button>
+          <button style={getToggleStyle(scope === 'global')} onClick={() => onScopeChange('global')}>
+            <Globe size={16} /> Global
+          </button>
         </div>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} style={{ ...getCardStyle(4, false), opacity: 0.5 }}>
-            <div style={{ width: '24px', height: '24px', background: 'var(--surface-elevated)', borderRadius: '4px' }} />
-            <div style={{ width: '40px', height: '40px', background: 'var(--surface-elevated)', borderRadius: '20px' }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ width: '120px', height: '16px', background: 'var(--surface-elevated)', borderRadius: '4px', marginBottom: '8px' }} />
-              <div style={{ width: '80px', height: '12px', background: 'var(--surface-elevated)', borderRadius: '4px' }} />
-            </div>
-          </div>
-        ))}
+        <AppLoader
+          variant="section"
+          size="normal"
+          message={`Loading ${scope === 'friends' ? 'friends' : 'global'} leaderboard...`}
+        />
       </div>
     );
   }

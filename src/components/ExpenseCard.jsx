@@ -1,53 +1,13 @@
 import React from 'react';
-import * as LucideIcons from 'lucide-react';
+import { CategoryIcon } from '../utils/categoryIcons';
 
 export const getIconByName = (name) => {
-    const iconMap = {
-        'food': 'Utensils',
-        'dining': 'Utensils',
-        'eat': 'Utensils',
-        'grocery': 'ShoppingCart',
-        'groceries': 'ShoppingCart',
-        'transport': 'Car',
-        'travel': 'Plane',
-        'flight': 'Plane',
-        'car': 'Car',
-        'shopping': 'ShoppingBag',
-        'health': 'HeartPulse',
-        'medical': 'Stethoscope',
-        'entertainment': 'Film',
-        'movies': 'Film',
-        'game': 'Gamepad2',
-        'bills': 'FileText',
-        'utilities': 'Zap',
-        'home': 'Home',
-        'rent': 'Home',
-        'education': 'GraduationCap',
-        'study': 'BookOpen',
-        'gifts': 'Gift',
-        'personal': 'User',
-        'fitness': 'Dumbbell',
-        'gym': 'Dumbbell',
-        'pets': 'Dog',
-        'subscriptions': 'Repeat',
-        'tech': 'Laptop',
-        'electronics': 'Smartphone'
-    };
-    
-    let IconName = 'CircleDollarSign';
-    const lowerName = name.toLowerCase();
-    for (const [key, value] of Object.entries(iconMap)) {
-        if (lowerName.includes(key)) {
-            IconName = value;
-            break;
-        }
-    }
-    
-    const IconComponent = LucideIcons[IconName];
-    return IconComponent ? <IconComponent size={24} strokeWidth={2} color="#ffffff" /> : <LucideIcons.CircleDollarSign size={24} color="#ffffff" />;
+    return <CategoryIcon name={name} size={22} color="#ffffff" />;
 };
 
 const ExpenseCard = ({ card, budgetProgress, onClick }) => {
+    const cardColor = card.color || '#4ECDC4';
+    
     return (
         <div
             onClick={onClick}
@@ -82,9 +42,10 @@ const ExpenseCard = ({ card, budgetProgress, onClick }) => {
                     alignItems: 'center', 
                     justifyContent: 'center', 
                     borderRadius: '12px',
-                    background: `${card.color}22`,
+                    background: `color-mix(in srgb, ${cardColor} 20%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${cardColor} 35%, transparent)`
                 }}>
-                    {React.cloneElement(getIconByName(card.name), { color: card.color, size: 22 })}
+                    <CategoryIcon icon={card.icon} name={card.name} color={cardColor} size={22} />
                 </div>
                 <div>
                     <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, marginBottom: '2px' }}>
