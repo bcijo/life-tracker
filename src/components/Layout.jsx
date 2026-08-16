@@ -1,5 +1,5 @@
-import React from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Sparkles, Activity, Wallet, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
@@ -8,7 +8,9 @@ import '../styles/index.css';
 
 const Layout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const dockRef = useRef(null);
 
   const desktopNavItems = [
     { to: '/', label: 'Home', icon: Home },
@@ -25,6 +27,64 @@ const Layout = () => {
     { to: '/assistant', label: 'AI', icon: Sparkles },
     { to: '/friends', label: 'Friends', icon: Users },
   ];
+
+  const activeIndex = mobileNavItems.findIndex(item => 
+    item.matchPrefix 
+      ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
+      : location.pathname === item.to
+  );
+  const currentActive = activeIndex !== -1 ? activeIndex : 0;
+
+  const [hoveredIndex, setHoveredIndex] = useState(currentActive);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Sync hoveredIndex with currentActive when not dragging
+  useEffect(() => {
+    if (!isDragging) {
+      setHoveredIndex(currentActive);
+    }
+  }, [currentActive, isDragging]);
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+    setHoveredIndex(currentActive);
+  };
+
+  const handleDrag = (e, info) => {
+    if (!dockRef.current) return;
+    const dockRect = dockRef.current.getBoundingClientRect();
+    const numItems = mobileNavItems.length;
+    const slotWidth = dockRect.width / numItems;
+    
+    // Calculate current center position of the dragged bubble in px
+    const currentCenterX = (currentActive * slotWidth) + (slotWidth / 2) + info.offset.x;
+    let targetIdx = Math.floor(currentCenterX / slotWidth);
+    targetIdx = Math.max(0, Math.min(numItems - 1, targetIdx));
+    
+    if (targetIdx !== hoveredIndex) {
+      setHoveredIndex(targetIdx);
+      if (navigator.vibrate) {
+        try { navigator.vibrate(10); } catch (err) {}
+      }
+    }
+  };
+
+  const handleDragEnd = (e, info) => {
+    setIsDragging(false);
+    if (!dockRef.current) return;
+    const dockRect = dockRef.current.getBoundingClientRect();
+    const numItems = mobileNavItems.length;
+    const slotWidth = dockRect.width / numItems;
+    
+    const currentCenterX = (currentActive * slotWidth) + (slotWidth / 2) + info.offset.x;
+    let targetIdx = Math.floor(currentCenterX / slotWidth);
+    targetIdx = Math.max(0, Math.min(numItems - 1, targetIdx));
+    
+    setHoveredIndex(targetIdx);
+    if (targetIdx !== currentActive) {
+      navigate(mobileNavItems[targetIdx].to);
+    }
+  };
 
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'row', minHeight: '100vh' }}>
@@ -78,38 +138,65 @@ const Layout = () => {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation (Apple Liquid Glass Dock) */}
-      <nav className="bottom-nav liquid-glass-dock" aria-label="Mobile navigation">
-        {mobileNavItems.map((item) => {
+      {/* Mobile Bottom Navigation (Apple Liquid Glass Dock with Draggable Bubble) */}
+      <nav 
+        ref={dockRef}
+        className="bottom-nav liquid-glass-dock" 
+        aria-label="Mobile navigation"
+      >
+        {/* Unified Draggable Liquid Glass Bubble */}
+        <motion.div
+          drag="x"
+          dragConstraints={dockRef}
+          dragElastic={0.08}
+          dragMomentum={false}
+          onDragStart={handleDragStart}
+          onDrag={handleDrag}
+          onDragEnd={handleDragEnd}
+          animate={isDragging ? {} : { 
+            x: `${currentActive * 100}%`,
+          }}
+          transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+          className={`liquid-bubble ${isDragging ? 'dragging' : ''}`}
+          style={{
+            width: `${100 / mobileNavItems.length}%`,
+          }}
+        >
+          <div className="liquid-bubble-glass" />
+        </motion.div>
+
+        {/* Tab Items */}
+        {mobileNavItems.map((item, idx) => {
           const Icon = item.icon;
-          const isActive = item.matchPrefix 
-            ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
-            : location.pathname === item.to;
+          const isActive = idx === currentActive;
+          const isTargeted = isDragging && idx === hoveredIndex;
 
           return (
-            <NavLink
+            <button
               key={item.to}
-              to={item.to}
-              className={`nav-item ${isActive ? 'active' : ''}`}
+              type="button"
+              onClick={() => {
+                if (!isDragging) {
+                  navigate(item.to);
+                }
+              }}
+              className={`nav-item ${isActive ? 'active' : ''} ${isTargeted ? 'targeted' : ''}`}
+              aria-label={item.label}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="liquidNavPill"
-                  className="liquid-pill"
-                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
-                />
-              )}
               <motion.div
                 className="nav-item-content"
-                whileTap={{ scale: 0.88 }}
+                animate={{
+                  scale: (isActive && !isDragging) || isTargeted ? 1.05 : 0.95,
+                  y: (isActive && !isDragging) || isTargeted ? -1 : 0
+                }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
               >
                 <div className="nav-icon-wrap">
-                  <Icon size={21} />
+                  <Icon size={20} strokeWidth={(isActive && !isDragging) || isTargeted ? 2.4 : 2} />
                 </div>
                 <span>{item.label}</span>
               </motion.div>
-            </NavLink>
+            </button>
           );
         })}
       </nav>
@@ -210,17 +297,17 @@ const Layout = () => {
           left: 50%;
           transform: translateX(-50%);
           width: calc(100% - 28px);
-          max-width: 420px;
+          max-width: 410px;
+          height: 60px;
           display: flex;
-          justify-content: space-around;
           align-items: center;
-          padding: 6px 8px;
+          padding: 4px;
           z-index: 100;
           
           /* Layered Glass Refraction */
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%), var(--surface-elevated, rgba(13, 17, 28, 0.88));
-          backdrop-filter: blur(30px) saturate(180%) contrast(102%);
-          -webkit-backdrop-filter: blur(30px) saturate(180%) contrast(102%);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%), var(--surface-elevated, rgba(13, 17, 28, 0.88));
+          backdrop-filter: blur(32px) saturate(190%) contrast(104%);
+          -webkit-backdrop-filter: blur(32px) saturate(190%) contrast(104%);
           border: 1px solid rgba(255, 255, 255, 0.18);
           
           /* Liquid Specular Highlights & Depth */
@@ -229,55 +316,89 @@ const Layout = () => {
             inset 0 -1px 2px 0 rgba(0, 0, 0, 0.25),
             0 16px 40px -8px rgba(0, 0, 0, 0.45),
             0 4px 16px 0 rgba(0, 0, 0, 0.2);
-          border-radius: 32px;
+          border-radius: 30px;
           user-select: none;
           -webkit-user-select: none;
+          touch-action: pan-y;
         }
         
+        .liquid-bubble {
+          position: absolute;
+          top: 4px;
+          bottom: 4px;
+          left: 0;
+          z-index: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 3px;
+          cursor: grab;
+          touch-action: none;
+        }
+
+        .liquid-bubble:active, .liquid-bubble.dragging {
+          cursor: grabbing;
+        }
+
+        .liquid-bubble-glass {
+          width: 100%;
+          height: 100%;
+          border-radius: 24px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%), rgba(147, 51, 234, 0.28);
+          border: 1px solid rgba(255, 255, 255, 0.32);
+          box-shadow: 
+            inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.6),
+            inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2),
+            0 4px 18px rgba(147, 51, 234, 0.4),
+            0 2px 8px rgba(0, 0, 0, 0.25);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .liquid-bubble.dragging .liquid-bubble-glass {
+          transform: scale(1.05);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%), rgba(168, 85, 247, 0.4);
+          box-shadow: 
+            inset 0 1px 2px 0 rgba(255, 255, 255, 0.75),
+            0 8px 26px rgba(168, 85, 247, 0.55),
+            0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
         .nav-item {
           position: relative;
           flex: 1;
+          height: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           text-decoration: none;
-          padding: 6px 0;
-          border-radius: 20px;
+          background: transparent;
+          border: none;
+          padding: 0;
           color: var(--text-secondary);
-          transition: color 0.2s ease, opacity 0.2s ease;
-          opacity: 0.65;
+          opacity: 0.6;
+          transition: opacity 0.2s ease, color 0.2s ease;
           -webkit-tap-highlight-color: transparent;
+          cursor: pointer;
+          z-index: 2;
         }
         
-        .nav-item.active {
+        .nav-item.active, .nav-item.targeted {
           color: var(--text-primary);
           opacity: 1;
         }
         
-        /* Sliding Fluid Pill Indicator */
-        .liquid-pill {
-          position: absolute;
-          inset: 1px 3px;
-          border-radius: 24px;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%), rgba(124, 58, 237, 0.18);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
-            0 2px 12px rgba(124, 58, 237, 0.28);
-          z-index: 1;
-          pointer-events: none;
-        }
-
         .nav-item-content {
-          position: relative;
-          z-index: 2;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 3px;
+          justify-content: center;
+          gap: 2px;
+          pointer-events: none;
         }
-        
+
         .nav-icon-wrap {
           display: flex;
           align-items: center;
@@ -285,19 +406,14 @@ const Layout = () => {
           transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        .nav-item.active .nav-icon-wrap {
-          transform: translateY(-1px);
-          filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.45));
+        .nav-item.active .nav-icon-wrap, .nav-item.targeted .nav-icon-wrap {
+          filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.5));
         }
 
         .nav-item span {
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: -0.01em;
-        }
-        
-        .nav-item svg {
-          stroke-width: 2.2px;
+          font-size: 10.5px;
+          font-weight: 700;
+          letter-spacing: -0.15px;
         }
       `}</style>
     </div>
