@@ -18,6 +18,8 @@ const PRESET_COLORS = [
 ];
 
 const ExpenseCardDetail = ({ card, onClose, onEdit }) => {
+    if (!card) return null;
+
     const { deleteTransaction, transactions } = useTransactions();
     const { 
         fetchSubcategories, 
@@ -34,22 +36,23 @@ const ExpenseCardDetail = ({ card, onClose, onEdit }) => {
     const [isAddingSub, setIsAddingSub] = useState(false);
 
     // Edit Category Settings State
-    const [editName, setEditName] = useState(card.name);
-    const [editIcon, setEditIcon] = useState(card.icon || 'utensils');
-    const [editBudget, setEditBudget] = useState(card.budget_amount || '');
-    const [editColor, setEditColor] = useState(card.color || '#4ECDC4');
+    const [editName, setEditName] = useState(card?.name || '');
+    const [editIcon, setEditIcon] = useState(card?.icon || 'utensils');
+    const [editBudget, setEditBudget] = useState(card?.budget_amount || '');
+    const [editColor, setEditColor] = useState(card?.color || '#4ECDC4');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-    const cardColor = editColor || card.color || '#4ECDC4';
+    const cardColor = editColor || card?.color || '#4ECDC4';
 
     // Load subcategories
     useEffect(() => {
+        if (!card?.id) return;
         const loadSubs = async () => {
             const data = await fetchSubcategories(card.id);
             setSubcategories(data || []);
         };
         loadSubs();
-    }, [card.id]);
+    }, [card?.id]);
 
     const currentDate = new Date();
     const targetMonth = monthOffset === 0 ? currentDate :
@@ -157,9 +160,11 @@ const ExpenseCardDetail = ({ card, onClose, onEdit }) => {
     };
 
     const handleDeleteCategory = async () => {
+        if (!card) return;
         if (window.confirm(`Are you sure you want to delete "${card.name}" and remove all its subcategories?`)) {
-            await deleteCard(card.id);
+            const cardId = card.id;
             onClose();
+            await deleteCard(cardId);
         }
     };
 

@@ -95,8 +95,9 @@ const QuickEditExpenseModal = ({
         if (!transaction || isDeleting) return;
         setIsDeleting(true);
         try {
-            await onDeleteExpense(transaction.id);
+            const txId = transaction.id;
             onClose();
+            await onDeleteExpense(txId);
         } catch (err) {
             console.error('Error deleting transaction:', err);
         } finally {

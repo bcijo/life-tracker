@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Activity, Wallet, Users, CheckSquare, Scissors } from 'lucide-react';
+import { Home, Sparkles, Activity, Wallet, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
 import '../styles/index.css';
@@ -77,8 +78,8 @@ const Layout = () => {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation (visible < 768px - exactly 5 items) */}
-      <nav className="bottom-nav glass-panel">
+      {/* Mobile Bottom Navigation (Apple Liquid Glass Dock) */}
+      <nav className="bottom-nav liquid-glass-dock" aria-label="Mobile navigation">
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchPrefix 
@@ -91,8 +92,23 @@ const Layout = () => {
               to={item.to}
               className={`nav-item ${isActive ? 'active' : ''}`}
             >
-              <Icon size={22} />
-              <span>{item.label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="liquidNavPill"
+                  className="liquid-pill"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <motion.div
+                className="nav-item-content"
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              >
+                <div className="nav-icon-wrap">
+                  <Icon size={21} />
+                </div>
+                <span>{item.label}</span>
+              </motion.div>
             </NavLink>
           );
         })}
@@ -187,42 +203,97 @@ const Layout = () => {
           }
         }
 
-        /* Bottom Nav Mobile */
-        .bottom-nav {
+        /* Apple Liquid Glass Bottom Navigation */
+        .bottom-nav.liquid-glass-dock {
           position: fixed;
           bottom: calc(16px + env(safe-area-inset-bottom, 0px));
           left: 50%;
           transform: translateX(-50%);
-          width: calc(100% - 32px);
-          max-width: 440px;
+          width: calc(100% - 28px);
+          max-width: 420px;
           display: flex;
           justify-content: space-around;
-          padding: 10px 16px;
+          align-items: center;
+          padding: 6px 8px;
           z-index: 100;
-          background: var(--surface-elevated, rgba(13, 17, 28, 0.92));
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
-          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-          border-radius: 24px;
+          
+          /* Layered Glass Refraction */
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%), var(--surface-elevated, rgba(13, 17, 28, 0.88));
+          backdrop-filter: blur(30px) saturate(180%) contrast(102%);
+          -webkit-backdrop-filter: blur(30px) saturate(180%) contrast(102%);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          
+          /* Liquid Specular Highlights & Depth */
+          box-shadow: 
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
+            inset 0 -1px 2px 0 rgba(0, 0, 0, 0.25),
+            0 16px 40px -8px rgba(0, 0, 0, 0.45),
+            0 4px 16px 0 rgba(0, 0, 0, 0.2);
+          border-radius: 32px;
+          user-select: none;
+          -webkit-user-select: none;
         }
         
         .nav-item {
+          position: relative;
+          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
+          justify-content: center;
           text-decoration: none;
+          padding: 6px 0;
+          border-radius: 20px;
           color: var(--text-secondary);
-          font-size: 10px;
-          gap: 4px;
-          transition: var(--transition-fast);
-          opacity: 0.7;
+          transition: color 0.2s ease, opacity 0.2s ease;
+          opacity: 0.65;
+          -webkit-tap-highlight-color: transparent;
         }
         
         .nav-item.active {
           color: var(--text-primary);
           opacity: 1;
-          transform: translateY(-2px);
+        }
+        
+        /* Sliding Fluid Pill Indicator */
+        .liquid-pill {
+          position: absolute;
+          inset: 1px 3px;
+          border-radius: 24px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%), rgba(124, 58, 237, 0.18);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow: 
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
+            0 2px 12px rgba(124, 58, 237, 0.28);
+          z-index: 1;
+          pointer-events: none;
+        }
+
+        .nav-item-content {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+        }
+        
+        .nav-icon-wrap {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .nav-item.active .nav-icon-wrap {
+          transform: translateY(-1px);
+          filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.45));
+        }
+
+        .nav-item span {
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: -0.01em;
         }
         
         .nav-item svg {

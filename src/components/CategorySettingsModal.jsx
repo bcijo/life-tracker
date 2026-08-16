@@ -6,25 +6,29 @@ import Modal from './Modal';
 import { CategoryIcon, CATEGORY_ICON_LIST } from '../utils/categoryIcons';
 
 const CategorySettingsModal = ({ card, onClose }) => {
+    if (!card) return null;
+
     const { updateCard, deleteCard, fetchSubcategories, addSubcategory, deleteSubcategory } = useExpenseCards();
     
-    const [editName, setEditName] = useState(card.name);
-    const [editIcon, setEditIcon] = useState(card.icon || 'utensils');
-    const [editBudget, setEditBudget] = useState(card.budget_amount || '');
+    const [editName, setEditName] = useState(card?.name || '');
+    const [editIcon, setEditIcon] = useState(card?.icon || 'utensils');
+    const [editBudget, setEditBudget] = useState(card?.budget_amount || '');
     const [isSaving, setIsSaving] = useState(false);
     
     const [subcategories, setSubcategories] = useState([]);
     const [newSubcategoryName, setNewSubcategoryName] = useState('');
 
     useEffect(() => {
+        if (!card?.id) return;
         const loadSubs = async () => {
             const data = await fetchSubcategories(card.id);
             setSubcategories(data || []);
         };
         loadSubs();
-    }, [card.id, fetchSubcategories]);
+    }, [card?.id, fetchSubcategories]);
 
     const handleSaveSettings = async () => {
+        if (!card?.id) return;
         setIsSaving(true);
         await updateCard(card.id, {
             name: editName,
@@ -36,9 +40,11 @@ const CategorySettingsModal = ({ card, onClose }) => {
     };
 
     const handleDeleteCard = async () => {
+        if (!card?.id) return;
         if (window.confirm(`Delete "${card.name}" and all its transactions?`)) {
-            await deleteCard(card.id);
+            const cardId = card.id;
             onClose();
+            await deleteCard(cardId);
         }
     };
 

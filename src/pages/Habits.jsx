@@ -150,10 +150,12 @@ const Habits = () => {
     };
 
     const getDateStatus = (habit) => {
+        if (!habit) return null;
         return getStatusForDate(habit, selectedDate);
     };
 
     const isDateActive = (habit) => {
+        if (!habit) return false;
         const date = parseLocalDate(selectedDate);
         const dayOfWeek = date.getDay();
         const activeDays = habit.active_days || ALL_DAYS;
@@ -162,10 +164,12 @@ const Habits = () => {
 
     // Stats for the actual today (used by BentoGrid, HabitDetailModal)
     const getTodayStatus = (habit) => {
+        if (!habit) return null;
         return getStatusForDate(habit, getLocalDateStr(new Date()));
     };
 
     const getSuccessRate = (habit) => {
+        if (!habit) return null;
         const stats = calculateSuccessRate(habit, trackingStartDate || null);
         return stats ? stats.rate : null;
     };
@@ -616,30 +620,38 @@ const Habits = () => {
 
             {/* Habit Detail Modal */}
             <AnimatePresence>
-                {selectedHabitId && (
-                    <HabitDetailModal
-                        habit={habits.find((h) => h.id === selectedHabitId)}
-                        todayStatus={getDateStatus(habits.find((h) => h.id === selectedHabitId))}
-                        selectedDate={selectedDate}
-                        streak={calculateStreak(habits.find((h) => h.id === selectedHabitId))}
-                        successRate={getSuccessRate(habits.find((h) => h.id === selectedHabitId))}
-                        isActiveToday={isDateActive(habits.find((h) => h.id === selectedHabitId))}
-                        getStatusForDate={getStatusForDate}
-                        onToggle={(id, newStatus) => setHabitStatus(id, selectedDate, newStatus)}
-                        onDelete={deleteHabitDb}
-                        onSaveEditDays={updateHabitDays}
-                        onTimeOfDayChange={updateHabitTimeOfDay}
-                        onTogglePause={togglePauseHabit}
-                        onCalendarClick={(id, dateStr) => {
-                            const habit = habits.find((h) => h.id === id);
-                            const current = getStatusForDate(habit, dateStr);
-                            // 3-state cycle: null -> completed -> failed -> null
-                            const nextStatus = current === null ? 'completed' : current === 'completed' ? 'failed' : null;
-                            setHabitStatus(id, dateStr, nextStatus);
-                        }}
-                        onClose={() => setSelectedHabitId(null)}
-                    />
-                )}
+                {(() => {
+                    const selectedHabit = habits.find((h) => h.id === selectedHabitId);
+                    if (!selectedHabit) return null;
+                    return (
+                        <HabitDetailModal
+                            habit={selectedHabit}
+                            todayStatus={getDateStatus(selectedHabit)}
+                            selectedDate={selectedDate}
+                            streak={calculateStreak(selectedHabit)}
+                            successRate={getSuccessRate(selectedHabit)}
+                            isActiveToday={isDateActive(selectedHabit)}
+                            getStatusForDate={getStatusForDate}
+                            onToggle={(id, newStatus) => setHabitStatus(id, selectedDate, newStatus)}
+                            onDelete={async (id) => {
+                                setSelectedHabitId(null);
+                                await deleteHabitDb(id);
+                            }}
+                            onSaveEditDays={updateHabitDays}
+                            onTimeOfDayChange={updateHabitTimeOfDay}
+                            onTogglePause={togglePauseHabit}
+                            onCalendarClick={(id, dateStr) => {
+                                const habit = habits.find((h) => h.id === id);
+                                if (!habit) return;
+                                const current = getStatusForDate(habit, dateStr);
+                                // 3-state cycle: null -> completed -> failed -> null
+                                const nextStatus = current === null ? 'completed' : current === 'completed' ? 'failed' : null;
+                                setHabitStatus(id, dateStr, nextStatus);
+                            }}
+                            onClose={() => setSelectedHabitId(null)}
+                        />
+                    );
+                })()}
             </AnimatePresence>
 
             {/* Reorder overlay */}

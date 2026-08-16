@@ -132,6 +132,9 @@ const ShoppingView = () => {
 
     const deleteItem = async (id, e) => {
         if (e) e.stopPropagation();
+        if (expensePromptItem?.id === id) {
+            handleSkipExpense();
+        }
         await deleteItemDb(id);
     };
 

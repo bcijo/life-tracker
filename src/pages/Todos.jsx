@@ -152,6 +152,9 @@ const Todos = () => {
     };
 
     const handleDelete = async (id) => {
+        if (editingTodo?.id === id) {
+            setEditingTodo(null);
+        }
         await deleteTodoDb(id);
     };
 

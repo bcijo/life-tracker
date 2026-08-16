@@ -118,9 +118,11 @@ export function HabitDetailModal({
   };
 
   const handleDelete = async () => {
+    if (!habit) return;
     if (window.confirm(`Delete "${habit.name}"? All history will be lost.`)) {
-      await onDelete(habit.id);
+      const habitId = habit.id;
       onClose();
+      await onDelete(habitId);
     }
   };
 
