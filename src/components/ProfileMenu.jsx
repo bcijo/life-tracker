@@ -17,13 +17,16 @@ import {
     Edit2, 
     Lock,
     Sparkles,
-    CheckCircle2
+    CheckCircle2,
+    MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+
+const ADMIN_EMAIL = 'abhin.vinu@gmail.com';
 
 const ProfileMenu = ({ variant = 'default' }) => {
     const isSidebar = variant === 'sidebar';
@@ -426,6 +429,48 @@ const ProfileMenu = ({ variant = 'default' }) => {
                                             </div>
                                             <span>{updated ? 'Up to date' : updating ? 'Refreshing…' : 'Check for Updates'}</span>
                                         </div>
+                                    </button>
+
+                                    {/* Feedback */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            navigate('/feedback');
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '10px 12px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            color: 'var(--text-primary)',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            transition: 'background 0.15s ease'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--surface-input)'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '8px',
+                                                background: 'rgba(245, 158, 11, 0.12)',
+                                                color: '#f59e0b',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                <MessageSquare size={15} />
+                                            </div>
+                                            <span>{user?.email === ADMIN_EMAIL ? 'View Feedback' : 'Send Feedback'}</span>
+                                        </div>
+                                        <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
                                     </button>
                                 </div>
 
