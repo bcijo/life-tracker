@@ -20,8 +20,7 @@ import {
   Shield,
   Star,
   X,
-  TrendingUp,
-  Smile
+  TrendingUp
 } from 'lucide-react';
 import { fetchHabitsForUser } from '../../hooks/useFriends';
 import useHabits from '../../hooks/useHabits';
@@ -47,7 +46,6 @@ const CompareView = ({
   );
   const [compareMode, setCompareMode] = useState('all_time'); // 'all_time' | 'this_week'
   const [showXPInspector, setShowXPInspector] = useState(false);
-  const [socialToast, setSocialToast] = useState(null);
 
   const [friendHabits, setFriendHabits] = useState([]);
   const [loadingFriendHabits, setLoadingFriendHabits] = useState(false);
@@ -166,24 +164,6 @@ const CompareView = ({
   const weeklyClash = useMemo(() => {
     return computeWeeklyClashMatrix(myData.dailyCompletions, theirData.dailyCompletions);
   }, [myData.dailyCompletions, theirData.dailyCompletions]);
-
-  const handleSendNudge = (type) => {
-    const friendName = selectedFriend?.display_name || selectedFriend?.username || 'Friend';
-    if (type === 'nudge') {
-      setSocialToast({
-        icon: '⚡',
-        title: 'Nudge Sent',
-        message: `Nudged @${selectedFriend?.username || friendName}!`,
-      });
-    } else {
-      setSocialToast({
-        icon: '🙌',
-        title: 'High Five Sent',
-        message: `High Five sent to @${selectedFriend?.username || friendName}!`,
-      });
-    }
-    setTimeout(() => setSocialToast(null), 2500);
-  };
 
   if (!friends || friends.length === 0) {
     return (
@@ -646,90 +626,7 @@ const CompareView = ({
                 />
               </div>
             </div>
-
-            {/* Compact Cheer & Nudge Bar */}
-            <div 
-              style={{
-                display: 'flex',
-                gap: '8px',
-                paddingTop: '6px',
-                borderTop: '1px solid var(--border-subtle)',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => handleSendNudge('nudge')}
-                style={{
-                  flex: 1,
-                  padding: '6px 0',
-                  borderRadius: '9px',
-                  border: '1px solid rgba(168,85,247,0.25)',
-                  background: 'rgba(168,85,247,0.06)',
-                  color: '#a855f7',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Zap size={12} />
-                <span>Nudge ⚡</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSendNudge('highfive')}
-                style={{
-                  flex: 1,
-                  padding: '6px 0',
-                  borderRadius: '9px',
-                  border: '1px solid rgba(6,182,212,0.25)',
-                  background: 'rgba(6,182,212,0.06)',
-                  color: '#06b6d4',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Smile size={12} />
-                <span>High Five 🙌</span>
-              </button>
-            </div>
           </div>
-
-          {/* Social Toast */}
-          <AnimatePresence>
-            {socialToast && (
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #a855f7, #ec4899)',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 16px rgba(168,85,247,0.3)',
-                }}
-              >
-                <span style={{ fontSize: '15px' }}>{socialToast.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '11.5px', fontWeight: '800' }}>{socialToast.title}</div>
-                  <div style={{ fontSize: '10.5px', opacity: 0.95 }}>{socialToast.message}</div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* ── 5-ATTRIBUTE STAT CLASH ── */}
           <div 

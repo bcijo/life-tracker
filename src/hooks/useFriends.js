@@ -1,94 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import useAuth from './useAuth';
-
-const getLocalDateStr = (d = new Date()) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { computeGamifiedHabitMetrics, getLocalDateStr } from '../utils/habitGamification';
 
 export const computeScoreForUserHabits = (userHabits, startDateStr = null) => {
   if (!userHabits || userHabits.length === 0) {
-    return { score: 0, completions: 0, completions_30d: 0, active_habits: 0, completion_rate: 0 };
+    return { 
+      score: 0, 
+      completions: 0, 
+      completions_30d: 0, 
+      active_habits: 0, 
+      completion_rate: 0,
+      level: 1,
+      rankTitle: 'Habit Novice',
+      rankIcon: '🌱'
+    };
   }
 
-  const now = new Date();
-  const todayStr = getLocalDateStr(now);
-
-  let fromDate;
-  if (startDateStr) {
-    fromDate = new Date(startDateStr);
-  } else {
-    // Default 30 days ago
-    fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - 30);
-  }
-  const fromDateStr = getLocalDateStr(fromDate);
-
-  let periodCompletions = 0;
-  let allTimeCompletions = 0;
-  let activeHabitCount = 0;
-  let totalActiveDaysInPeriod = 0;
-  let totalCompletedActiveDaysInPeriod = 0;
-
-  for (const habit of userHabits) {
-    if (habit.is_paused === true) continue;
-
-    const history = habit.history || [];
-    const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
-
-    activeHabitCount++;
-
-    let habitPeriodCompletions = 0;
-    for (const entry of history) {
-      const date = typeof entry === 'string' ? entry.split('T')[0] : entry?.date;
-      const status = typeof entry === 'string' ? 'completed' : entry?.status;
-
-      if (status === 'completed') {
-        allTimeCompletions++;
-        if (date && date >= fromDateStr && date <= todayStr) {
-          habitPeriodCompletions++;
-        }
-      }
-    }
-    periodCompletions += habitPeriodCompletions;
-
-    const completedDates = new Set(
-      history
-        .filter(e => (typeof e === 'string' ? 'completed' : e?.status) === 'completed')
-        .map(e => typeof e === 'string' ? e.split('T')[0] : e?.date)
-        .filter(Boolean)
-    );
-
-    const cursor = new Date(fromDate);
-    while (cursor <= now) {
-      const dayOfWeek = cursor.getDay();
-      if (activeDays.includes(dayOfWeek)) {
-        totalActiveDaysInPeriod++;
-        const dateStr = getLocalDateStr(cursor);
-        if (completedDates.has(dateStr)) {
-          totalCompletedActiveDaysInPeriod++;
-        }
-      }
-      cursor.setDate(cursor.getDate() + 1);
-    }
-  }
-
-  const completionRate = totalActiveDaysInPeriod > 0
-    ? Math.round((totalCompletedActiveDaysInPeriod / totalActiveDaysInPeriod) * 100)
-    : 0;
-
-  const score = (periodCompletions * 10) + (allTimeCompletions * 2) + (activeHabitCount * 5);
+  const metrics = computeGamifiedHabitMetrics(
+    userHabits, 
+    startDateStr ? 'this_week' : 'all_time'
+  );
 
   return {
-    score,
-    completions: periodCompletions,
-    completions_30d: periodCompletions,
-    active_habits: activeHabitCount,
-    completion_rate: completionRate,
-    startDate: fromDateStr
+    score: metrics.score,
+    completions: metrics.completions,
+    completions_30d: metrics.thirtyDayCompletions || metrics.completions,
+    active_habits: metrics.activeHabits,
+    completion_rate: metrics.consistencyRate,
+    level: metrics.level,
+    rankTitle: metrics.rankTitle,
+    rankIcon: metrics.rankIcon,
+    breakdown: metrics.breakdown,
+    startDate: startDateStr || metrics.startDate
   };
 };
 

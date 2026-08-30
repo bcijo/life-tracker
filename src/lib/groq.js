@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { APP_KNOWLEDGE_BASE } from './appKnowledge';
 
 // Groq LLM Integration
 // Add VITE_GROQ_API_KEY to your .env file
@@ -217,16 +218,26 @@ export async function askAI(userQuery, contextData, onQueryLogged = null, histor
 
     const todayDate = new Date().toISOString().split('T')[0];
 
-    const systemPrompt = `You are a concise, helpful personal life & finance assistant. Today is ${todayDate}.
-Use PostgreSQL SELECT tool execute_read_only_query for specific numbers or breakdown requests (max 1-2 queries per turn).
-Table rules:
-- transactions (id, amount, description, type, category, date) -> past logged transactions (column is 'date', not 'transaction_date').
-- recurring_expenses (id, name, amount, category, day_of_month, is_active) -> active fixed/recurring expenses configuration (ALWAYS check this table when asked about fixed spending, recurring bills, or subscriptions).
-- todos (id, text, completed, deadline) -> table is 'todos'.
-- habits (id, name, history, active_days) -> table is 'habits'.
-- journal_entries, bank_accounts, expense_cards, shopping_items.
-Context Summary: ${JSON.stringify(contextData)}
-Format responses cleanly with Markdown (bold key metrics, tables for daily breakdowns, concise bullet points).`;
+    const systemPrompt = `You are LifeTracker's intelligent, concise personal assistant and app guide expert. Today is ${todayDate}.
+
+=== APP KNOWLEDGE BASE & USER GUIDE ===
+${APP_KNOWLEDGE_BASE}
+
+=== CORE CAPABILITIES & INSTRUCTIONS ===
+1. APP HOW-TOS & USER GUIDE:
+   - When the user asks about ANY feature in LifeTracker (e.g. how Runway & Burn rate works, what "Ignore Outliers" does, how Habit XP and Levels work, how to install as iPhone PWA, how to split a bill, how to use expense cards, reorder habits, or convert shopping items into logged expenses), refer to the App Knowledge Base above and provide clear, concise, step-by-step guidance.
+2. PERSONAL DATA & SQL QUERIES:
+   - Use the PostgreSQL SELECT tool execute_read_only_query when the user asks for specific personal metrics, history, or breakdowns (max 1-2 queries per turn).
+   - Table rules:
+     * transactions (id, amount, description, type, category, date) -> past logged transactions (column is 'date', not 'transaction_date').
+     * recurring_expenses (id, name, amount, category, day_of_month, is_active) -> active fixed/recurring expenses configuration (ALWAYS check this table when asked about fixed spending, recurring bills, or subscriptions).
+     * todos (id, text, completed, deadline) -> table is 'todos'.
+     * habits (id, name, history, active_days) -> table is 'habits'.
+     * journal_entries, bank_accounts, expense_cards, shopping_items.
+3. PERSONAL DATA CONTEXT:
+   - Summary: ${JSON.stringify(contextData)}
+4. FORMATTING:
+   - Format answers cleanly with Markdown (bold key terms, bullet points, clean tables when appropriate). Keep answers concise and direct.`;
 
     // Filter valid conversational history (last 4 turns, skip failed errors)
     const validHistory = Array.isArray(history)

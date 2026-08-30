@@ -53,6 +53,15 @@ const FOLLOW_UPS = {
         "Am I on track with my budget?",
         "How much budget do I have left for food?",
     ],
+    appGuide: [
+        "How does the Runway & Burn rate calculator work?",
+        "How do I install LifeTracker on my iPhone as a PWA?",
+        "How is my Habit Level and XP calculated?",
+        "How do I convert shopping list items into expenses?",
+        "How do I reorder my habits?",
+        "How do I split bills with friends?",
+        "What does the Ignore Outliers toggle do in finances?",
+    ],
     general: [
         "Summarize my financial health this month",
         "What should I focus on improving?",
@@ -74,20 +83,20 @@ const INITIAL_SUGGESTIONS = [
         emoji: "⚡"
     },
     {
-        label: "Budget Status",
-        query: "Am I currently over budget on any category this month?",
-        emoji: "🎯"
+        label: "App Guide & Features",
+        query: "What are all the main features in LifeTracker and how does the runway calculator work?",
+        emoji: "📖"
     },
     {
-        label: "Pending Tasks",
-        query: "What urgent tasks or upcoming todos do I need to complete?",
-        emoji: "📋"
+        label: "Budget & Tasks",
+        query: "Am I currently over budget on any category, and what tasks are due?",
+        emoji: "🎯"
     }
 ];
 
 const THINKING_PHASES = [
     "Thinking...",
-    "Querying your data...",
+    "Querying your data & app guide...",
     "Analyzing results...",
     "Preparing answer...",
 ];
@@ -95,6 +104,7 @@ const THINKING_PHASES = [
 /* ─── Detect topic from text ─── */
 function detectTopic(text) {
     const lower = (text || '').toLowerCase();
+    if (/how (do|can|to)|where (is|are|can)|what is|explain|guide|help|tutorial|pwa|install|theme|runway|outlier|split bill|feature|app|xp|level|calculate/.test(lower)) return 'appGuide';
     if (/spend|expens|money|cost|paid|transaction|income|salary|food|transport|shopping|entertainment|bills|health/.test(lower)) return 'finance';
     if (/habit|streak|complet|morning|evening|maintain|active.?days|miss/.test(lower)) return 'habit';
     if (/todo|task|deadline|pending|overdue|due/.test(lower)) return 'task';

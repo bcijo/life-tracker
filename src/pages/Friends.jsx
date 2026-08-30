@@ -154,7 +154,7 @@ const Friends = () => {
             }}>
               <Trophy size={12} style={{ color: '#a855f7' }} />
               <span style={{ fontSize: 12, fontWeight: 800, color: '#a855f7', fontFamily: 'monospace' }}>
-                {Math.round(myScore.score || 0)}
+                {Math.round(myScore.score || 0).toLocaleString()}
               </span>
             </div>
           )}
