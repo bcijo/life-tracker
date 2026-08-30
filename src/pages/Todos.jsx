@@ -13,7 +13,6 @@ import {
     Layers, 
     Sun, 
     CalendarDays, 
-    Inbox, 
     CheckCircle2,
     ChevronDown,
     ChevronUp,
@@ -21,7 +20,8 @@ import {
     Flame,
     Sparkles,
     Gauge,
-    SlidersHorizontal
+    SlidersHorizontal,
+    AlertCircle
 } from 'lucide-react';
 import { format, isToday, isPast, isFuture, parseISO, addDays, differenceInMinutes } from 'date-fns';
 import useTodos from '../hooks/useTodos';
@@ -31,9 +31,8 @@ import { transcribeAudio } from '../lib/groq';
 const TABS = [
     { id: 'today', label: 'Today', shortLabel: 'Today', icon: Sun },
     { id: 'upcoming', label: 'Upcoming', shortLabel: 'Upcoming', icon: CalendarDays },
-    { id: 'unscheduled', label: 'No Date', shortLabel: 'Backlog', icon: Inbox },
-    { id: 'completed', label: 'Done', shortLabel: 'Done', icon: CheckCircle2 },
-    { id: 'all', label: 'All', shortLabel: 'All', icon: Layers }
+    { id: 'all', label: 'All Tasks', shortLabel: 'All', icon: Layers },
+    { id: 'completed', label: 'Done', shortLabel: 'Done', icon: CheckCircle2 }
 ];
 
 const DIFFICULTY_CONFIG = {
@@ -81,7 +80,7 @@ const Todos = () => {
     const { todos, loading, addTodo: addTodoDb, toggleTodo: toggleTodoDb, updateTodo: updateTodoDb, deleteTodo: deleteTodoDb } = useTodos();
     
     const [inputValue, setInputValue] = useState('');
-    const [selectedDatePreset, setSelectedDatePreset] = useState('today'); // 'none' | 'today' | 'tomorrow' | 'custom'
+    const [selectedDatePreset, setSelectedDatePreset] = useState('today'); // 'today' | 'tomorrow' | 'custom'
     const [selectedDifficulty, setSelectedDifficulty] = useState('medium'); // 'easy' | 'medium' | 'hard'
     const [customDate, setCustomDate] = useState('');
     const [activeTab, setActiveTab] = useState('today');
@@ -89,6 +88,7 @@ const Todos = () => {
     const [showOptions, setShowOptions] = useState(false);
     const [showMobileAnalytics, setShowMobileAnalytics] = useState(false);
     
+    const [completingIds, setCompletingIds] = useState({}); // { [id]: xpEarned }
     const [editingTodo, setEditingTodo] = useState(null);
     const [editText, setEditText] = useState('');
     const [editDate, setEditDate] = useState('');
@@ -115,11 +115,10 @@ const Todos = () => {
 
     // Helper for computing target deadline string
     const computedDeadline = useMemo(() => {
-        if (selectedDatePreset === 'none') return null;
         if (selectedDatePreset === 'today') return format(new Date(), 'yyyy-MM-dd');
         if (selectedDatePreset === 'tomorrow') return format(addDays(new Date(), 1), 'yyyy-MM-dd');
-        if (selectedDatePreset === 'custom') return customDate || null;
-        return null;
+        if (selectedDatePreset === 'custom') return customDate || format(new Date(), 'yyyy-MM-dd');
+        return format(new Date(), 'yyyy-MM-dd');
     }, [selectedDatePreset, customDate]);
 
     // Handle adding a task
@@ -127,28 +126,50 @@ const Todos = () => {
         if (e) e.preventDefault();
         if (!inputValue.trim()) return;
 
-        await addTodoDb(inputValue.trim(), computedDeadline, selectedDifficulty);
+        const text = inputValue.trim();
+        const deadline = computedDeadline;
+        const difficulty = selectedDifficulty;
+
         setInputValue('');
+        await addTodoDb(text, deadline, difficulty);
         if (selectedDatePreset === 'custom') setSelectedDatePreset('today');
         setShowOptions(false);
     };
 
     const handleToggle = async (id) => {
         const todo = todos.find(t => t.id === id);
-        if (todo && !todo.completed) {
+        if (!todo) return;
+
+        if (!todo.completed) {
+            // Trigger instant completion animation & XP burst
+            const diff = todo.difficulty || 'medium';
+            const xp = DIFFICULTY_CONFIG[diff]?.xp || 25;
+            setCompletingIds(prev => ({ ...prev, [id]: xp }));
+
             try {
                 const completionTimers = JSON.parse(localStorage.getItem('todo_completion_records') || '{}');
                 completionTimers[id] = {
                     createdAt: todo.created_at || new Date().toISOString(),
                     completedAt: new Date().toISOString(),
-                    difficulty: todo.difficulty || 'medium'
+                    difficulty: diff
                 };
                 localStorage.setItem('todo_completion_records', JSON.stringify(completionTimers));
             } catch (err) {
                 console.error(err);
             }
+
+            // Brief tactile delay for completion satisfaction before state commit
+            setTimeout(async () => {
+                await toggleTodoDb(id);
+                setCompletingIds(prev => {
+                    const next = { ...prev };
+                    delete next[id];
+                    return next;
+                });
+            }, 300);
+        } else {
+            await toggleTodoDb(id);
         }
-        await toggleTodoDb(id);
     };
 
     const handleDelete = async (id) => {
@@ -161,7 +182,7 @@ const Todos = () => {
     const startEditing = (todo) => {
         setEditingTodo(todo);
         setEditText(todo.text);
-        setEditDate(todo.deadline || '');
+        setEditDate(todo.deadline || format(new Date(), 'yyyy-MM-dd'));
         setEditDifficulty(todo.difficulty || 'medium');
     };
 
@@ -244,25 +265,43 @@ const Todos = () => {
     };
 
     // ─── TASK FILTERING & STATS ─────────────────────────────────────────────
-    const activeTodos = todos.filter(t => !t.completed);
-    const completedTodos = todos.filter(t => t.completed).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    const activeTodos = useMemo(() => todos.filter(t => !t.completed), [todos]);
+    const completedTodos = useMemo(() => {
+        return todos.filter(t => t.completed).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }, [todos]);
 
-    const todayTodos = activeTodos.filter(t => {
-        if (!t.deadline) return false;
-        const date = parseISO(t.deadline);
-        return isToday(date) || (isPast(date) && !isToday(date));
-    });
+    // Today tab includes Today + Overdue tasks + Unscheduled tasks
+    const todayTodos = useMemo(() => {
+        return activeTodos.filter(t => {
+            if (!t.deadline) return true;
+            const date = parseISO(t.deadline);
+            return isToday(date) || (isPast(date) && !isToday(date));
+        }).sort((a, b) => {
+            if (!a.deadline && !b.deadline) return 0;
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return new Date(a.deadline) - new Date(b.deadline);
+        });
+    }, [activeTodos]);
 
-    const upcomingTodos = activeTodos.filter(t => {
-        if (!t.deadline) return false;
-        const date = parseISO(t.deadline);
-        return isFuture(date) && !isToday(date);
-    }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+    // Upcoming tab includes future tasks
+    const upcomingTodos = useMemo(() => {
+        return activeTodos.filter(t => {
+            if (!t.deadline) return false;
+            const date = parseISO(t.deadline);
+            return isFuture(date) && !isToday(date);
+        }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+    }, [activeTodos]);
 
-    const unscheduledTodos = activeTodos.filter(t => !t.deadline)
-        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    // Count overdue items for visual alert badges
+    const overdueCount = useMemo(() => {
+        return activeTodos.filter(t => {
+            if (!t.deadline) return false;
+            const date = parseISO(t.deadline);
+            return isPast(date) && !isToday(date);
+        }).length;
+    }, [activeTodos]);
 
-    const totalCount = todos.length;
     const completedCount = completedTodos.length;
 
     // ─── DIFFICULTY & XP GAMIFICATION COMPUTATION ────────────────────────────
@@ -400,15 +439,12 @@ const Todos = () => {
             case 'upcoming':
                 list = upcomingTodos;
                 break;
-            case 'unscheduled':
-                list = unscheduledTodos;
-                break;
             case 'completed':
                 list = completedTodos;
                 break;
             case 'all':
             default:
-                list = [...todayTodos, ...upcomingTodos, ...unscheduledTodos];
+                list = activeTodos;
                 break;
         }
 
@@ -416,13 +452,12 @@ const Todos = () => {
             list = list.filter(t => (t.difficulty || 'medium') === difficultyFilter);
         }
         return list;
-    }, [activeTab, todayTodos, upcomingTodos, unscheduledTodos, completedTodos, difficultyFilter]);
+    }, [activeTab, todayTodos, upcomingTodos, activeTodos, completedTodos, difficultyFilter]);
 
     const tabCounts = {
-        all: activeTodos.length,
         today: todayTodos.length,
         upcoming: upcomingTodos.length,
-        unscheduled: unscheduledTodos.length,
+        all: activeTodos.length,
         completed: completedTodos.length
     };
 
@@ -444,20 +479,23 @@ const Todos = () => {
             return {
                 text: `Overdue • ${format(d, 'MMM d')}`,
                 color: '#ef4444',
-                bg: 'rgba(239, 68, 68, 0.12)'
+                bg: 'rgba(239, 68, 68, 0.14)',
+                border: 'rgba(239, 68, 68, 0.3)'
             };
         }
         if (dueToday) {
             return {
                 text: 'Today',
                 color: 'var(--accent-primary, #a855f7)',
-                bg: 'rgba(168, 85, 247, 0.12)'
+                bg: 'rgba(168, 85, 247, 0.12)',
+                border: 'rgba(168, 85, 247, 0.25)'
             };
         }
         return {
             text: format(d, 'MMM d'),
             color: 'var(--text-secondary)',
-            bg: 'var(--surface-input)'
+            bg: 'var(--surface-input)',
+            border: 'var(--border-subtle)'
         };
     };
 
@@ -675,6 +713,24 @@ const Todos = () => {
                         }}>
                             {activeTodos.length} active
                         </span>
+
+                        {overdueCount > 0 && (
+                            <span style={{
+                                fontSize: '10.5px',
+                                fontWeight: '700',
+                                color: '#ef4444',
+                                background: 'rgba(239, 68, 68, 0.12)',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                padding: '2px 7px',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                            }}>
+                                <AlertCircle size={10} />
+                                {overdueCount} overdue
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -756,8 +812,9 @@ const Todos = () => {
                             />
 
                             {/* Voice Dictation Button */}
-                            <button
+                            <motion.button
                                 type="button"
+                                whileTap={{ scale: 0.9 }}
                                 onClick={startVoiceInput}
                                 style={{
                                     width: '32px',
@@ -776,11 +833,12 @@ const Todos = () => {
                                 title={isRecording ? `Recording... (${recordingSeconds}s)` : 'Voice dictation'}
                             >
                                 {isRecording ? <Square size={12} /> : <Mic size={14} />}
-                            </button>
+                            </motion.button>
 
                             {/* Options Toggle Button (Date & Difficulty) */}
-                            <button
+                            <motion.button
                                 type="button"
+                                whileTap={{ scale: 0.95 }}
                                 onClick={() => setShowOptions(prev => !prev)}
                                 style={{
                                     height: '32px',
@@ -802,12 +860,14 @@ const Todos = () => {
                                 <SlidersHorizontal size={13} />
                                 <span className="hide-on-compact">
                                     {selectedDatePreset === 'today' ? 'Today' : selectedDatePreset === 'tomorrow' ? 'Tomorrow' : selectedDatePreset === 'custom' && customDate ? customDate : 'Date'}
+                                    {selectedDifficulty !== 'medium' && ` • ${selectedDifficulty === 'hard' ? '🔴' : '🟢'}`}
                                 </span>
-                            </button>
+                            </motion.button>
 
                             {/* Submit Button */}
-                            <button
+                            <motion.button
                                 type="submit"
+                                whileTap={inputValue.trim() ? { scale: 0.95 } : undefined}
                                 disabled={!inputValue.trim()}
                                 className="btn-primary"
                                 style={{
@@ -827,7 +887,7 @@ const Todos = () => {
                             >
                                 <Plus size={14} strokeWidth={2.5} />
                                 <span>Add</span>
-                            </button>
+                            </motion.button>
                         </form>
 
                         {/* Expandable Options Tray for Due Date & Tier */}
@@ -852,25 +912,29 @@ const Todos = () => {
                                         <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', width: '32px' }}>
                                             DUE:
                                         </span>
-                                        {['today', 'tomorrow', 'none'].map(preset => {
-                                            const isSelected = selectedDatePreset === preset;
+                                        {[
+                                            { id: 'today', label: '☀️ Today' },
+                                            { id: 'tomorrow', label: '🌙 Tomorrow' }
+                                        ].map(preset => {
+                                            const isSelected = selectedDatePreset === preset.id;
                                             return (
                                                 <button
-                                                    key={preset}
+                                                    key={preset.id}
                                                     type="button"
-                                                    onClick={() => setSelectedDatePreset(preset)}
+                                                    onClick={() => setSelectedDatePreset(preset.id)}
                                                     style={{
-                                                        padding: '3px 8px',
+                                                        padding: '4px 9px',
                                                         borderRadius: '8px',
                                                         border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
                                                         background: isSelected ? 'rgba(168,85,247,0.14)' : 'transparent',
                                                         color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
                                                         fontSize: '11px',
                                                         fontWeight: isSelected ? '700' : '500',
-                                                        cursor: 'pointer'
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease'
                                                     }}
                                                 >
-                                                    {preset === 'today' ? '☀️ Today' : preset === 'tomorrow' ? '🌙 Tomorrow' : '📦 No Date'}
+                                                    {preset.label}
                                                 </button>
                                             );
                                         })}
@@ -883,8 +947,8 @@ const Todos = () => {
                                             }}
                                             style={{
                                                 border: selectedDatePreset === 'custom' ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                                                background: 'transparent',
-                                                padding: '2px 6px',
+                                                background: 'var(--surface-input)',
+                                                padding: '3px 8px',
                                                 borderRadius: '8px',
                                                 fontSize: '11px',
                                                 color: 'var(--text-primary)',
@@ -907,7 +971,7 @@ const Todos = () => {
                                                     type="button"
                                                     onClick={() => setSelectedDifficulty(cfg.id)}
                                                     style={{
-                                                        padding: '3px 8px',
+                                                        padding: '4px 9px',
                                                         borderRadius: '8px',
                                                         border: isSelected ? `1.5px solid ${cfg.color}` : '1px solid var(--border-subtle)',
                                                         background: isSelected ? cfg.bg : 'transparent',
@@ -917,7 +981,8 @@ const Todos = () => {
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         gap: '4px',
-                                                        cursor: 'pointer'
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease'
                                                     }}
                                                 >
                                                     <span>{cfg.icon}</span>
@@ -987,63 +1052,132 @@ const Todos = () => {
                     {loading ? (
                         <AppLoader variant="section" size="small" message="Loading tasks..." />
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <AnimatePresence mode="popLayout">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <AnimatePresence initial={false} mode="popLayout">
                                 {displayedTodos.map((todo) => {
                                     const badge = getDeadlineBadge(todo.deadline, todo.completed);
                                     const diffCfg = DIFFICULTY_CONFIG[todo.difficulty || 'medium'] || DIFFICULTY_CONFIG.medium;
+                                    const isCompleting = Boolean(completingIds[todo.id]);
+                                    const isDone = todo.completed || isCompleting;
 
                                     return (
                                         <motion.div
-                                            key={todo.id}
-                                            layout
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.96 }}
-                                            transition={{ duration: 0.18 }}
+                                            key={todo.client_id || todo.id}
+                                            layout="position"
+                                            initial={{ opacity: 0, y: -12, scale: 0.96 }}
+                                            animate={{ 
+                                                opacity: isDone ? 0.6 : 1, 
+                                                y: 0, 
+                                                scale: 1 
+                                            }}
+                                            exit={{ 
+                                                opacity: 0, 
+                                                scale: 0.9, 
+                                                height: 0, 
+                                                marginBottom: 0,
+                                                paddingTop: 0,
+                                                paddingBottom: 0,
+                                                overflow: 'hidden',
+                                                transition: {
+                                                    opacity: { duration: 0.15 },
+                                                    scale: { duration: 0.15 },
+                                                    height: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
+                                                    marginBottom: { duration: 0.25 }
+                                                }
+                                            }}
+                                            transition={{ 
+                                                layout: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
+                                                opacity: { duration: 0.2 },
+                                                y: { duration: 0.2 }
+                                            }}
+                                            whileHover={{ y: -1 }}
                                             className="glass-card todo-item-card"
                                             style={{
+                                                position: 'relative',
                                                 padding: '10px 12px',
                                                 borderRadius: '12px',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
                                                 gap: '10px',
-                                                opacity: todo.completed ? 0.6 : 1
+                                                marginBottom: '6px'
                                             }}
                                         >
+                                            {/* Floating XP Reward Burst */}
+                                            <AnimatePresence>
+                                                {isCompleting && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, y: -22, scale: 1.05 }}
+                                                        exit={{ opacity: 0, y: -30, scale: 0.9 }}
+                                                        transition={{ duration: 0.35, ease: "easeOut" }}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: '70px',
+                                                            top: '4px',
+                                                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                            color: '#fff',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '10px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '800',
+                                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                                                            pointerEvents: 'none',
+                                                            zIndex: 10,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '3px'
+                                                        }}
+                                                    >
+                                                        <Sparkles size={11} />
+                                                        <span>+{completingIds[todo.id]} XP</span>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
                                             {/* Checkbox & Task Text */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                                <button
+                                                <motion.button
                                                     type="button"
+                                                    whileTap={{ scale: 0.85 }}
+                                                    whileHover={{ scale: 1.08 }}
                                                     onClick={() => handleToggle(todo.id)}
                                                     className="todo-checkbox-btn"
                                                     style={{
                                                         width: '22px',
                                                         height: '22px',
                                                         borderRadius: '7px',
-                                                        border: todo.completed ? 'none' : '1.5px solid var(--border-subtle)',
-                                                        background: todo.completed ? '#10b981' : 'transparent',
+                                                        border: isDone ? 'none' : '1.5px solid var(--border-subtle)',
+                                                        background: isDone ? '#10b981' : 'var(--surface-input)',
                                                         color: '#fff',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         cursor: 'pointer',
                                                         flexShrink: 0,
-                                                        transition: 'all 0.15s ease'
+                                                        transition: 'background 0.2s ease, border-color 0.2s ease'
                                                     }}
                                                 >
-                                                    {todo.completed && <Check size={14} strokeWidth={3} />}
-                                                </button>
+                                                    {isDone && (
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                                        >
+                                                            <Check size={14} strokeWidth={3} />
+                                                        </motion.div>
+                                                    )}
+                                                </motion.button>
 
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: 1 }}>
                                                     <span style={{
                                                         fontSize: '13.5px',
                                                         fontWeight: '500',
-                                                        color: todo.completed ? 'var(--text-muted)' : 'var(--text-primary)',
-                                                        textDecoration: todo.completed ? 'line-through' : 'none',
+                                                        color: isDone ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                        textDecoration: isDone ? 'line-through' : 'none',
                                                         wordBreak: 'break-word',
-                                                        lineHeight: '1.35'
+                                                        lineHeight: '1.35',
+                                                        transition: 'color 0.2s ease'
                                                     }}>
                                                         {todo.text}
                                                     </span>
@@ -1053,10 +1187,11 @@ const Todos = () => {
                                                         <span style={{
                                                             fontSize: '9.5px',
                                                             fontWeight: '800',
-                                                            padding: '1px 5px',
+                                                            padding: '1px 6px',
                                                             borderRadius: '4px',
                                                             background: diffCfg.bg,
                                                             color: diffCfg.color,
+                                                            border: `1px solid ${diffCfg.border}`,
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
                                                             gap: '3px'
@@ -1069,10 +1204,11 @@ const Todos = () => {
                                                             <span style={{
                                                                 fontSize: '9.5px',
                                                                 fontWeight: '700',
-                                                                padding: '1px 5px',
+                                                                padding: '1px 6px',
                                                                 borderRadius: '4px',
                                                                 background: badge.bg,
-                                                                color: badge.color
+                                                                color: badge.color,
+                                                                border: badge.border ? `1px solid ${badge.border}` : 'none'
                                                             }}>
                                                                 {badge.text}
                                                             </span>
@@ -1083,8 +1219,10 @@ const Todos = () => {
 
                                             {/* Actions: Edit & Delete */}
                                             <div className="todo-actions" style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                                                <button
+                                                <motion.button
                                                     type="button"
+                                                    whileHover={{ scale: 1.15 }}
+                                                    whileTap={{ scale: 0.9 }}
                                                     onClick={() => startEditing(todo)}
                                                     style={{
                                                         background: 'transparent',
@@ -1100,10 +1238,12 @@ const Todos = () => {
                                                     title="Edit Task"
                                                 >
                                                     <Edit2 size={13} />
-                                                </button>
+                                                </motion.button>
 
-                                                <button
+                                                <motion.button
                                                     type="button"
+                                                    whileHover={{ scale: 1.15, color: '#ef4444' }}
+                                                    whileTap={{ scale: 0.9 }}
                                                     onClick={() => handleDelete(todo.id)}
                                                     style={{
                                                         background: 'transparent',
@@ -1119,7 +1259,7 @@ const Todos = () => {
                                                     title="Delete Task"
                                                 >
                                                     <Trash2 size={13} />
-                                                </button>
+                                                </motion.button>
                                             </div>
                                         </motion.div>
                                     );
@@ -1211,6 +1351,7 @@ const Todos = () => {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <div>
+                                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>TASK</label>
                                     <input
                                         type="text"
                                         value={editText}
@@ -1222,6 +1363,7 @@ const Todos = () => {
                                 </div>
 
                                 <div>
+                                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>DUE DATE</label>
                                     <input
                                         type="date"
                                         value={editDate}
@@ -1232,27 +1374,31 @@ const Todos = () => {
                                 </div>
 
                                 {/* Edit Difficulty Selector */}
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                    {Object.values(DIFFICULTY_CONFIG).map(cfg => (
-                                        <button
-                                            key={cfg.id}
-                                            type="button"
-                                            onClick={() => setEditDifficulty(cfg.id)}
-                                            style={{
-                                                flex: 1,
-                                                padding: '6px 4px',
-                                                borderRadius: '6px',
-                                                border: editDifficulty === cfg.id ? `1.5px solid ${cfg.color}` : '1px solid var(--border-subtle)',
-                                                background: editDifficulty === cfg.id ? cfg.bg : 'transparent',
-                                                color: editDifficulty === cfg.id ? cfg.color : 'var(--text-secondary)',
-                                                fontSize: '10.5px',
-                                                fontWeight: '700',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {cfg.icon} {cfg.label} (+{cfg.xp} XP)
-                                        </button>
-                                    ))}
+                                <div>
+                                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>DIFFICULTY TIER</label>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        {Object.values(DIFFICULTY_CONFIG).map(cfg => (
+                                            <button
+                                                key={cfg.id}
+                                                type="button"
+                                                onClick={() => setEditDifficulty(cfg.id)}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '7px 4px',
+                                                    borderRadius: '8px',
+                                                    border: editDifficulty === cfg.id ? `1.5px solid ${cfg.color}` : '1px solid var(--border-subtle)',
+                                                    background: editDifficulty === cfg.id ? cfg.bg : 'transparent',
+                                                    color: editDifficulty === cfg.id ? cfg.color : 'var(--text-secondary)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                {cfg.icon} {cfg.label} (+{cfg.xp} XP)
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -1285,7 +1431,7 @@ const Todos = () => {
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        Save
+                                        Save Changes
                                     </button>
                                 </div>
                             </div>
@@ -1307,7 +1453,7 @@ const Todos = () => {
                 .todos-header {
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
+                    justifyContent: space-between;
                     gap: 8px;
                 }
 
@@ -1321,7 +1467,7 @@ const Todos = () => {
                 .todos-filter-bar {
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
+                    justifyContent: space-between;
                     gap: 8px;
                     flex-wrap: wrap;
                 }
@@ -1345,12 +1491,12 @@ const Todos = () => {
 
                 .todos-tab-btn {
                     flex: 1 0 auto;
-                    padding: 5px 8px;
+                    padding: 6px 10px;
                     border-radius: 9px;
                     border: none;
                     background: transparent;
                     color: var(--text-secondary);
-                    font-size: 11px;
+                    font-size: 11.5px;
                     font-weight: 500;
                     display: flex;
                     align-items: center;
@@ -1377,10 +1523,8 @@ const Todos = () => {
                 }
 
                 .todo-item-card {
-                    transition: transform 0.15s ease, box-shadow 0.15s ease;
-                }
-                .todo-item-card:hover {
-                    transform: translateY(-1px);
+                    /* Do NOT set transition: transform here as it interferes with Framer Motion layout animations */
+                    transition: box-shadow 0.15s ease, background 0.15s ease;
                 }
 
                 /* Layout Breakpoints */

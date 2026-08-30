@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Plus, Sparkles, Flame, Eye, EyeOff, ShieldAlert, ShieldCheck, 
-    ArrowUpRight, ArrowDownLeft, ChevronRight, ShoppingBag, 
+    ArrowUpRight, ArrowDownLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, ShoppingBag, 
     Edit3, Trash2, Settings, Search, X, Filter, Calendar, Tag,
     Clock, MoreVertical, Loader2
 } from 'lucide-react';
@@ -288,6 +288,54 @@ const ExpensesView = () => {
         return groups;
     }, [paginatedExpenses]);
 
+    // Group accordion open/close state
+    // 'today', 'yesterday', 'last7' default to open (true); older months/earlier this month default to closed (false)
+    const [openGroups, setOpenGroups] = useState({});
+
+    // Check if filtering/search is active
+    const isFilteringActive = useMemo(() => {
+        return Boolean(
+            searchQuery.trim() ||
+            filterCategory !== 'all' ||
+            (timeFilter !== 'all' && timeFilter !== 'today' && timeFilter !== 'yesterday' && timeFilter !== 'last7')
+        );
+    }, [searchQuery, filterCategory, timeFilter]);
+
+    const isGroupOpen = (groupKey) => {
+        if (openGroups[groupKey] !== undefined) {
+            return openGroups[groupKey];
+        }
+        if (isFilteringActive) {
+            return true;
+        }
+        // Recent 7 days groups (today, yesterday, last 7 days) are open by default
+        return groupKey === 'today' || groupKey === 'yesterday' || groupKey === 'last7';
+    };
+
+    const toggleGroup = (groupKey) => {
+        setOpenGroups(prev => {
+            const currentlyOpen = isGroupOpen(groupKey);
+            return {
+                ...prev,
+                [groupKey]: !currentlyOpen
+            };
+        });
+    };
+
+    const handleToggleAllGroups = () => {
+        const anyClosed = groupedExpenseTimeline.some(g => !isGroupOpen(g.key));
+        const updated = {};
+        groupedExpenseTimeline.forEach(g => {
+            updated[g.key] = anyClosed;
+        });
+        if (!anyClosed) {
+            groupedExpenseTimeline.forEach(g => {
+                updated[g.key] = (g.key === 'today' || g.key === 'yesterday' || g.key === 'last7');
+            });
+        }
+        setOpenGroups(updated);
+    };
+
     // Infinite Scroll IntersectionObserver
     useEffect(() => {
         if (!sentinelRef.current) return;
@@ -528,37 +576,64 @@ const ExpensesView = () => {
                         </p>
                     </div>
 
-                    {/* Filter Toggle Button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowFilters(!showFilters)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            borderRadius: '12px',
-                            background: (showFilters || searchQuery || filterCategory !== 'all' || timeFilter !== 'all') ? 'rgba(78, 205, 196, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                            border: `1px solid ${(showFilters || searchQuery || filterCategory !== 'all' || timeFilter !== 'all') ? 'rgba(78, 205, 196, 0.35)' : 'rgba(255, 255, 255, 0.07)'}`,
-                            color: (showFilters || searchQuery || filterCategory !== 'all' || timeFilter !== 'all') ? 'var(--accent-primary, #4ecdc4)' : 'var(--text-secondary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                        }}
-                    >
-                        <Filter size={13} />
-                        <span>Filter</span>
-                        {(searchQuery || filterCategory !== 'all' || timeFilter !== 'all') && (
-                            <span style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                background: 'var(--accent-primary, #4ecdc4)',
-                                boxShadow: '0 0 6px var(--accent-primary, #4ecdc4)'
-                            }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {groupedExpenseTimeline.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={handleToggleAllGroups}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '6px 12px',
+                                    borderRadius: '12px',
+                                    background: 'rgba(255, 255, 255, 0.04)',
+                                    border: '1px solid rgba(255, 255, 255, 0.07)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                }}
+                                title={groupedExpenseTimeline.some(g => !isGroupOpen(g.key)) ? 'Expand all months' : 'Collapse older months'}
+                            >
+                                <ChevronsUpDown size={13} />
+                                <span>{groupedExpenseTimeline.some(g => !isGroupOpen(g.key)) ? 'Expand All' : 'Collapse'}</span>
+                            </button>
                         )}
-                    </button>
+
+                        {/* Filter Toggle Button */}
+                        <button
+                            type="button"
+                            onClick={() => setShowFilters(!showFilters)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '6px 12px',
+                                borderRadius: '12px',
+                                background: (showFilters || searchQuery || filterCategory !== 'all' || timeFilter !== 'all') ? 'rgba(78, 205, 196, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                                border: `1px solid ${(showFilters || searchQuery || filterCategory !== 'all' || timeFilter !== 'all') ? 'rgba(78, 205, 196, 0.35)' : 'rgba(255, 255, 255, 0.07)'}`,
+                                color: (showFilters || searchQuery || filterCategory !== 'all' || timeFilter !== 'all') ? 'var(--accent-primary, #4ecdc4)' : 'var(--text-secondary)',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                            }}
+                        >
+                            <Filter size={13} />
+                            <span>Filter</span>
+                            {(searchQuery || filterCategory !== 'all' || timeFilter !== 'all') && (
+                                <span style={{
+                                    width: '6px',
+                                    height: '6px',
+                                    borderRadius: '50%',
+                                    background: 'var(--accent-primary, #4ecdc4)',
+                                    boxShadow: '0 0 6px var(--accent-primary, #4ecdc4)'
+                                }} />
+                            )}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Collapsible Search, Time & Category Filter Panel */}
@@ -802,201 +877,270 @@ const ExpensesView = () => {
 
                 {/* Grouped Transactions Feed - Dynamic Timeline (Today, Yesterday, Last 7 Days, Months) */}
                 {groupedExpenseTimeline.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {groupedExpenseTimeline.map((group) => (
-                            <div key={group.key}>
-                                {/* Timeline Group Header */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '4px 6px 10px',
-                                    marginBottom: '8px',
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{
-                                            width: '8px',
-                                            height: '8px',
-                                            borderRadius: '50%',
-                                            background: group.tagColor,
-                                            boxShadow: `0 0 8px ${group.tagColor}`
-                                        }} />
-                                        <span style={{
-                                            fontSize: '12px',
-                                            fontWeight: '800',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.6px',
-                                            color: group.tagColor
-                                        }}>
-                                            {group.title}
-                                        </span>
-                                        <span style={{
-                                            fontSize: '11px',
-                                            fontWeight: '700',
-                                            color: 'var(--text-muted)',
-                                            background: 'rgba(255, 255, 255, 0.04)',
-                                            padding: '1px 7px',
-                                            borderRadius: '10px',
-                                            border: '1px solid rgba(255, 255, 255, 0.06)'
-                                        }}>
-                                            {group.items.length} {group.items.length === 1 ? 'txn' : 'txns'}
-                                        </span>
-                                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {groupedExpenseTimeline.map((group) => {
+                            const isOpen = isGroupOpen(group.key);
 
-                                    <div style={{
-                                        fontSize: '13px',
-                                        fontWeight: '800',
-                                        color: 'var(--text-primary)',
-                                        fontFamily: 'monospace',
-                                        letterSpacing: '-0.2px'
-                                    }}>
-                                        ₹{Math.round(group.total).toLocaleString('en-IN')}
-                                    </div>
-                                </div>
+                            return (
+                                <div key={group.key} style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {/* Timeline Group Header (Interactive Accordion Trigger) */}
+                                    <motion.button
+                                        type="button"
+                                        onClick={() => toggleGroup(group.key)}
+                                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.055)' }}
+                                        whileTap={{ scale: 0.995 }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '10px 14px',
+                                            borderRadius: '14px',
+                                            background: isOpen 
+                                                ? 'rgba(255, 255, 255, 0.025)' 
+                                                : 'rgba(255, 255, 255, 0.045)',
+                                            border: isOpen 
+                                                ? '1px solid rgba(255, 255, 255, 0.08)' 
+                                                : '1px solid rgba(255, 255, 255, 0.12)',
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            textAlign: 'left',
+                                            transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                                            marginBottom: isOpen ? '10px' : '0px'
+                                        }}
+                                    >
+                                        {/* Left Side: Glowing dot, Title, Count badge */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+                                            <div style={{
+                                                width: '9px',
+                                                height: '9px',
+                                                borderRadius: '50%',
+                                                background: group.tagColor,
+                                                boxShadow: `0 0 10px ${group.tagColor}`,
+                                                flexShrink: 0
+                                            }} />
+                                            <span style={{
+                                                fontSize: '12.5px',
+                                                fontWeight: '800',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.6px',
+                                                color: group.tagColor,
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {group.title}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                color: 'var(--text-muted)',
+                                                background: 'rgba(255, 255, 255, 0.06)',
+                                                padding: '2px 8px',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(255, 255, 255, 0.07)',
+                                                flexShrink: 0
+                                            }}>
+                                                {group.items.length} {group.items.length === 1 ? 'txn' : 'txns'}
+                                            </span>
+                                        </div>
 
-                                {/* Transaction Items List */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {group.items.map(tx => {
-                                        const card = cardLookup.get(tx.card_id) || cardLookup.get(tx.category);
-                                        const isExpense = tx.type !== 'income';
-                                        const cardColor = card?.color || (isExpense ? '#FF6B6B' : '#10B981');
-                                        
-                                        return (
+                                        {/* Right Side: Total Spend & Rotating Animated Chevron */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                                            <div style={{
+                                                fontSize: '13.5px',
+                                                fontWeight: '800',
+                                                color: 'var(--text-primary)',
+                                                fontFamily: 'monospace',
+                                                letterSpacing: '-0.2px'
+                                            }}>
+                                                ₹{Math.round(group.total).toLocaleString('en-IN')}
+                                            </div>
+
                                             <motion.div
-                                                key={tx.id}
-                                                whileHover={{ y: -1, backgroundColor: 'var(--surface-elevated, #172033)' }}
-                                                transition={{ duration: 0.15 }}
-                                                className="transaction-card glass-card"
-                                                onClick={() => setEditingTransaction(tx)}
+                                                animate={{ rotate: isOpen ? 0 : -90 }}
+                                                transition={{ duration: 0.22, ease: "easeInOut" }}
                                                 style={{
-                                                    padding: '12px 14px',
-                                                    borderRadius: '16px',
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    gap: '12px',
-                                                    cursor: 'pointer',
-                                                    background: 'var(--surface-elevated, #131b2e)',
-                                                    border: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
-                                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-                                                    transition: 'all 0.15s ease'
+                                                    justifyContent: 'center',
+                                                    color: 'var(--text-secondary)'
                                                 }}
                                             >
-                                                {/* Left: Minimal Icon Badge + Details */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-                                                    {/* Icon Badge */}
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '12px',
-                                                        background: `color-mix(in srgb, ${cardColor} 18%, transparent)`,
-                                                        border: `1.2px solid color-mix(in srgb, ${cardColor} 32%, transparent)`,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        flexShrink: 0,
-                                                        boxShadow: `0 2px 10px color-mix(in srgb, ${cardColor} 20%, transparent)`
-                                                    }}>
-                                                        <CategoryIcon 
-                                                            icon={card?.icon} 
-                                                            name={card?.name || tx.description} 
-                                                            size={18} 
-                                                            color={cardColor} 
-                                                            strokeWidth={2.2} 
-                                                        />
-                                                    </div>
+                                                <ChevronDown size={17} />
+                                            </motion.div>
+                                        </div>
+                                    </motion.button>
 
-                                                    {/* Transaction Title & Tags */}
-                                                    <div style={{ minWidth: 0, flex: 1 }}>
-                                                        <p style={{
-                                                            fontSize: '14px',
-                                                            fontWeight: '700',
-                                                            color: 'var(--text-primary)',
-                                                            margin: 0,
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                            letterSpacing: '-0.2px'
-                                                        }}>
-                                                            {tx.description || card?.name || 'Expense'}
-                                                        </p>
+                                    {/* Collapsible Animated Transaction Items List */}
+                                    <AnimatePresence initial={false}>
+                                        {isOpen && (
+                                            <motion.div
+                                                key={`content-${group.key}`}
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ 
+                                                    opacity: 1, 
+                                                    height: 'auto',
+                                                    transition: {
+                                                        height: { duration: 0.28, ease: [0.04, 0.62, 0.23, 0.98] },
+                                                        opacity: { duration: 0.2, delay: 0.04 }
+                                                    }
+                                                }}
+                                                exit={{ 
+                                                    opacity: 0, 
+                                                    height: 0,
+                                                    transition: {
+                                                        height: { duration: 0.22, ease: [0.04, 0.62, 0.23, 0.98] },
+                                                        opacity: { duration: 0.15 }
+                                                    }
+                                                }}
+                                                style={{ overflow: 'hidden' }}
+                                            >
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingBottom: '4px' }}>
+                                                    {group.items.map(tx => {
+                                                        const card = cardLookup.get(tx.card_id) || cardLookup.get(tx.category);
+                                                        const isExpense = tx.type !== 'income';
+                                                        const cardColor = card?.color || (isExpense ? '#FF6B6B' : '#10B981');
                                                         
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            flexWrap: 'wrap',
-                                                            gap: '6px',
-                                                            marginTop: '3px'
-                                                        }}>
-                                                            {/* Category Pill */}
-                                                            <span style={{
-                                                                fontSize: '11px',
-                                                                fontWeight: '600',
-                                                                color: cardColor,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '4px'
-                                                            }}>
-                                                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: cardColor }} />
-                                                                {card?.name || 'General'}
-                                                            </span>
+                                                        return (
+                                                            <motion.div
+                                                                key={tx.id}
+                                                                whileHover={{ y: -1, backgroundColor: 'var(--surface-elevated, #172033)' }}
+                                                                transition={{ duration: 0.15 }}
+                                                                className="transaction-card glass-card"
+                                                                onClick={() => setEditingTransaction(tx)}
+                                                                style={{
+                                                                    padding: '12px 14px',
+                                                                    borderRadius: '16px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
+                                                                    gap: '12px',
+                                                                    cursor: 'pointer',
+                                                                    background: 'var(--surface-elevated, #131b2e)',
+                                                                    border: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
+                                                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                                                                    transition: 'all 0.15s ease'
+                                                                }}
+                                                            >
+                                                                {/* Left: Minimal Icon Badge + Details */}
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                                                                    {/* Icon Badge */}
+                                                                    <div style={{
+                                                                        width: '40px',
+                                                                        height: '40px',
+                                                                        borderRadius: '12px',
+                                                                        background: `color-mix(in srgb, ${cardColor} 18%, transparent)`,
+                                                                        border: `1.2px solid color-mix(in srgb, ${cardColor} 32%, transparent)`,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        flexShrink: 0,
+                                                                        boxShadow: `0 2px 10px color-mix(in srgb, ${cardColor} 20%, transparent)`
+                                                                    }}>
+                                                                        <CategoryIcon 
+                                                                            icon={card?.icon} 
+                                                                            name={card?.name || tx.description} 
+                                                                            size={18} 
+                                                                            color={cardColor} 
+                                                                            strokeWidth={2.2} 
+                                                                        />
+                                                                    </div>
 
-                                                            {/* Date Formatted for group */}
-                                                            {tx.date && (
-                                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                                    • {group.key === 'today' || group.key === 'yesterday'
-                                                                        ? format(parseISO(tx.date), 'h:mm a')
-                                                                        : format(parseISO(tx.date), 'MMM d')}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                                    {/* Transaction Title & Tags */}
+                                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                                        <p style={{
+                                                                            fontSize: '14px',
+                                                                            fontWeight: '700',
+                                                                            color: 'var(--text-primary)',
+                                                                            margin: 0,
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                            letterSpacing: '-0.2px'
+                                                                        }}>
+                                                                            {tx.description || card?.name || 'Expense'}
+                                                                        </p>
+                                                                        
+                                                                        <div style={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            flexWrap: 'wrap',
+                                                                            gap: '6px',
+                                                                            marginTop: '3px'
+                                                                        }}>
+                                                                            {/* Category Pill */}
+                                                                            <span style={{
+                                                                                fontSize: '11px',
+                                                                                fontWeight: '600',
+                                                                                color: cardColor,
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '4px'
+                                                                            }}>
+                                                                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: cardColor }} />
+                                                                                {card?.name || 'General'}
+                                                                            </span>
 
-                                                {/* Right: Amount & Actions */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                                                    <div style={{
-                                                        fontSize: '16px',
-                                                        fontWeight: '800',
-                                                        color: isExpense ? 'var(--text-primary)' : 'var(--success, #10b981)',
-                                                        fontFamily: 'monospace',
-                                                        letterSpacing: '-0.3px',
-                                                        textAlign: 'right'
-                                                    }}>
-                                                        {isExpense ? '-' : '+'}₹{parseFloat(tx.amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                                                    </div>
+                                                                            {/* Date Formatted for group */}
+                                                                            {tx.date && (
+                                                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                                                    • {group.key === 'today' || group.key === 'yesterday'
+                                                                                        ? format(parseISO(tx.date), 'h:mm a')
+                                                                                        : format(parseISO(tx.date), 'MMM d')}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
 
-                                                    <button
-                                                        onClick={(e) => {
-                                                             e.stopPropagation();
-                                                             setEditingTransaction(tx);
-                                                        }}
-                                                        style={{
-                                                            padding: '6px',
-                                                            borderRadius: '8px',
-                                                            background: 'var(--surface-input, rgba(255,255,255,0.05))',
-                                                            border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-                                                            color: 'var(--text-muted)',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            transition: 'all 0.15s ease'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                                                        title="Edit Transaction"
-                                                    >
-                                                        <Edit3 size={13} />
-                                                    </button>
+                                                                {/* Right: Amount & Actions */}
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                                                                    <div style={{
+                                                                        fontSize: '16px',
+                                                                        fontWeight: '800',
+                                                                        color: isExpense ? 'var(--text-primary)' : 'var(--success, #10b981)',
+                                                                        fontFamily: 'monospace',
+                                                                        letterSpacing: '-0.3px',
+                                                                        textAlign: 'right'
+                                                                    }}>
+                                                                        {isExpense ? '-' : '+'}₹{parseFloat(tx.amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                             e.stopPropagation();
+                                                                             setEditingTransaction(tx);
+                                                                        }}
+                                                                        style={{
+                                                                            padding: '6px',
+                                                                            borderRadius: '8px',
+                                                                            background: 'var(--surface-input, rgba(255,255,255,0.05))',
+                                                                            border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                                                                            color: 'var(--text-muted)',
+                                                                            cursor: 'pointer',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            transition: 'all 0.15s ease'
+                                                                        }}
+                                                                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                                                                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                                                                        title="Edit Transaction"
+                                                                    >
+                                                                        <Edit3 size={13} />
+                                                                    </button>
+                                                                </div>
+                                                            </motion.div>
+                                                        );
+                                                    })}
                                                 </div>
                                             </motion.div>
-                                        );
-                                    })}
+                                        )}
+                                    </AnimatePresence>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
 
                         {/* Infinite Scroll Bottom Sentinel */}
                         <div ref={sentinelRef} style={{ height: '4px', width: '100%', margin: '4px 0' }} />

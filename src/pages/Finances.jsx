@@ -110,7 +110,7 @@ const Finances = () => {
             {/* Tab Views */}
             <div className="tab-content-wrapper" style={{ animation: 'fadeIn 0.35s ease' }}>
                 {activeTab === 'overview' && <ExpensesView />}
-                {activeTab === 'analytics' && <AnalyticsView transactions={transactions} categories={cards} />}
+                {activeTab === 'analytics' && <AnalyticsView />}
                 {activeTab === 'categories' && <CategoriesView />}
                 {activeTab === 'budgets' && <BudgetsView />}
                 {activeTab === 'shopping' && <ShoppingView />}

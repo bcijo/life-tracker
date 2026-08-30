@@ -1,134 +1,189 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, TrendingUp, TrendingDown, User } from 'lucide-react';
+import { UserMinus, TrendingUp, TrendingDown, Swords } from 'lucide-react';
 import ScoreBadge from './ScoreBadge';
+import { getLevelData } from '../../utils/habitGamification';
 
 const FriendCard = ({ friend, myScore, onRemove, onCompare }) => {
-  const diff = friend.score - (myScore?.score || 0);
+  const friendScore = Math.round(friend.score || 0);
+  const myTotalScore = Math.round(myScore?.score || 0);
+  const diff = friendScore - myTotalScore;
   const youLead = diff < 0;
-  
+  const levelInfo = getLevelData(friendScore);
+
   const cardStyle = {
     background: 'var(--glass-card-bg)',
     backdropFilter: 'blur(10px)',
     border: '1px solid var(--glass-card-border)',
     borderRadius: '16px',
-    padding: '16px',
+    padding: '14px 16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '12px',
+    marginBottom: '10px',
     position: 'relative',
     overflow: 'hidden',
-    cursor: 'pointer'
+    cursor: 'pointer',
   };
 
   const leftContentStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: '12px',
+    minWidth: 0,
+    flex: 1,
   };
 
   const avatarStyle = {
-    width: '48px',
-    height: '48px',
-    borderRadius: '24px',
-    background: 'var(--surface-elevated)',
-    border: '2px solid var(--border-subtle)',
+    width: '46px',
+    height: '46px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '20px',
-    fontWeight: 'bold',
-    color: 'var(--text-primary)'
+    fontSize: '18px',
+    fontWeight: '800',
+    color: '#fff',
+    flexShrink: 0,
+    boxShadow: '0 2px 8px rgba(6,182,212,0.25)',
   };
 
   const infoStyle = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px'
+    gap: '2px',
+    minWidth: 0,
+    flex: 1,
   };
 
   const nameStyle = {
     color: 'var(--text-primary)',
-    fontWeight: '600',
-    fontSize: '16px',
-    margin: 0
+    fontWeight: '700',
+    fontSize: '15px',
+    margin: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   };
 
   const usernameStyle = {
     color: 'var(--text-muted)',
-    fontSize: '13px',
-    margin: 0
+    fontSize: '12px',
+    margin: 0,
   };
 
   const comparisonStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '4px',
-    fontSize: '12px',
-    color: youLead ? 'var(--success)' : 'var(--text-secondary)',
-    marginTop: '4px'
+    fontSize: '11px',
+    fontWeight: '700',
+    color: youLead ? '#22c55e' : '#06b6d4',
+    marginTop: '2px',
   };
 
   const rightContentStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: '10px',
+    flexShrink: 0,
   };
 
   const removeBtnStyle = {
-    background: 'transparent',
-    border: 'none',
+    background: 'var(--surface-input)',
+    border: '1px solid var(--border-subtle)',
     color: 'var(--text-muted)',
     cursor: 'pointer',
-    padding: '4px',
+    width: '32px',
+    height: '32px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '50%'
+    borderRadius: '8px',
+    transition: 'all 0.15s ease',
   };
 
   const initial = friend.display_name?.[0] || friend.username?.[0] || '?';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.01, borderColor: 'rgba(168,85,247,0.3)' }}
+      whileTap={{ scale: 0.99 }}
       style={cardStyle}
       onClick={() => onCompare?.(friend)}
     >
       <div style={leftContentStyle}>
-        <div style={avatarStyle}>
-          {initial.toUpperCase()}
-        </div>
+        <div style={avatarStyle}>{initial.toUpperCase()}</div>
         <div style={infoStyle}>
-          <p style={nameStyle}>{friend.display_name || friend.full_name || friend.username}</p>
-          <p style={usernameStyle}>@{friend.username}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <p style={nameStyle}>{friend.display_name || friend.full_name || friend.username}</p>
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: '800',
+                padding: '1px 6px',
+                borderRadius: '6px',
+                background: 'rgba(168,85,247,0.12)',
+                color: '#a855f7',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>{levelInfo.rankIcon}</span>
+              <span>Lv.{levelInfo.level}</span>
+            </span>
+          </div>
+          <p style={usernameStyle}>@{friend.username} · <span style={{ color: 'var(--text-secondary)' }}>{levelInfo.rankTitle}</span></p>
           {myScore && (
             <div style={comparisonStyle}>
-              {youLead ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+              {youLead ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
               <span>
-                {youLead ? `You lead +${Math.abs(diff)}` : `They lead +${diff}`}
+                {youLead ? `You lead +${Math.abs(diff)} XP` : `They lead +${diff} XP`}
               </span>
             </div>
           )}
         </div>
       </div>
-      
+
       <div style={rightContentStyle}>
-        <ScoreBadge score={friend.score} size="sm" showLabel={false} animate={false} />
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '2px',
+          }}
+        >
+          <ScoreBadge score={friendScore} size="sm" showLabel={false} animate={false} />
+          <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>
+            {friend.active_habits || 0} habits
+          </span>
+        </div>
+
         {onRemove && (
-          <button 
-            style={removeBtnStyle} 
+          <button
+            type="button"
+            title="Remove Friend"
+            style={removeBtnStyle}
             onClick={(e) => {
               e.stopPropagation();
-              onRemove(friend.friendship_id);
+              onRemove(friend);
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = '#ef4444';
+              e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.background = 'var(--surface-input)';
             }}
           >
-            <X size={18} />
+            <UserMinus size={15} />
           </button>
         )}
       </div>

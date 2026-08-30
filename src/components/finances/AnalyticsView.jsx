@@ -15,6 +15,9 @@ import {
 } from 'date-fns';
 import { getIconByName } from '../ExpenseCard';
 
+import useTransactions from '../../hooks/useTransactions';
+import useExpenseCards from '../../hooks/useExpenseCards';
+
 const PRESET_COLORS = [
     '#8338ec', '#4ecdc4', '#ff6b6b', '#ffd166', '#06d6a0', 
     '#118ab2', '#3a86ff', '#f72585', '#7209b7', '#4361ee'
@@ -27,7 +30,13 @@ const isRecurringTransaction = (t) => {
     return false;
 };
 
-const AnalyticsView = ({ transactions = [], categories = [] }) => {
+const AnalyticsView = ({ transactions: propTransactions, categories: propCategories }) => {
+    const { transactions: hookTransactions = [] } = useTransactions();
+    const { cards: hookCards = [] } = useExpenseCards();
+
+    const transactions = propTransactions || hookTransactions;
+    const categories = propCategories || hookCards;
+
     const [timeframe, setTimeframe] = useState('monthly'); // 'weekly' | 'monthly'
     const [monthOffset, setMonthOffset] = useState(0);
     const [weekOffset, setWeekOffset] = useState(0);

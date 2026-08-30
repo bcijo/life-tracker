@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Users, Globe, Trophy } from 'lucide-react';
 import ScoreBadge from './ScoreBadge';
 import AppLoader from '../common/AppLoader';
+import { getLevelData } from '../../utils/habitGamification';
 
 const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loading }) => {
   const containerStyle = {
@@ -136,6 +137,7 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
               ? `@${user.username}` 
               : (user.display_name || user.full_name || `@${user.username}`);
             
+            const levelInfo = getLevelData(user.score);
             return (
               <motion.div key={user.user_id} variants={itemVariants} style={getCardStyle(user.rank, isCurrentUser)}>
                 <div style={{ width: '32px', textAlign: 'center' }}>
@@ -152,12 +154,31 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
                 </div>
                 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h4 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {displayName} {isCurrentUser && <span style={{ color: 'var(--accent-primary)', fontSize: '12px' }}>(You)</span>}
-                  </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--surface-elevated)', padding: '2px 8px', borderRadius: '10px' }}>
-                      {user.completions_30d || 0} completions
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {displayName} {isCurrentUser && <span style={{ color: 'var(--accent-primary)', fontSize: '11px' }}>(You)</span>}
+                    </h4>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        padding: '1px 5px',
+                        borderRadius: '5px',
+                        background: 'rgba(168,85,247,0.12)',
+                        color: '#a855f7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span>{levelInfo.rankIcon}</span>
+                      <span>Lv.{levelInfo.level}</span>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {levelInfo.rankTitle} · {user.completions_30d || 0} completions
                     </span>
                   </div>
                 </div>

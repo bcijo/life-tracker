@@ -9,6 +9,7 @@ import UsernameOnboarding from '../components/friends/UsernameOnboarding';
 import FriendCard from '../components/friends/FriendCard';
 import FriendRequestCard from '../components/friends/FriendRequestCard';
 import FriendSearchModal from '../components/friends/FriendSearchModal';
+import RemoveFriendModal from '../components/friends/RemoveFriendModal';
 import LeaderboardList from '../components/friends/LeaderboardList';
 import CompareView from '../components/friends/CompareView';
 import AppLoader from '../components/common/AppLoader';
@@ -49,6 +50,22 @@ const Friends = () => {
   const [showPending, setShowPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [friendToRemove, setFriendToRemove] = useState(null);
+  const [removingFriend, setRemovingFriend] = useState(false);
+  const [selectedCompareFriendId, setSelectedCompareFriendId] = useState(null);
+
+  const handleConfirmRemoveFriend = async () => {
+    if (!friendToRemove) return;
+    setRemovingFriend(true);
+    try {
+      await removeFriend(friendToRemove.friendship_id);
+      setFriendToRemove(null);
+    } catch (err) {
+      console.error('Failed to remove friend:', err);
+    } finally {
+      setRemovingFriend(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -319,8 +336,11 @@ const Friends = () => {
                     key={friend.friendship_id}
                     friend={friend}
                     myScore={myScore}
-                    onRemove={() => removeFriend(friend.friendship_id)}
-                    onCompare={() => setActiveTab('compare')}
+                    onRemove={(f) => setFriendToRemove(f)}
+                    onCompare={(f) => {
+                      setSelectedCompareFriendId(f.friendship_id);
+                      setActiveTab('compare');
+                    }}
                     index={i}
                   />
                 ))}
@@ -360,6 +380,7 @@ const Friends = () => {
               myScore={myScore}
               currentUserId={user?.id}
               myProfile={profile}
+              initialSelectedFriendId={selectedCompareFriendId}
             />
           </motion.div>
         )}
@@ -371,6 +392,15 @@ const Friends = () => {
         onClose={() => setShowSearch(false)}
         onSendRequest={sendFriendRequest}
         searchUsers={searchUsers}
+      />
+
+      {/* Remove Friend Confirmation Modal */}
+      <RemoveFriendModal
+        isOpen={!!friendToRemove}
+        onClose={() => setFriendToRemove(null)}
+        onConfirm={handleConfirmRemoveFriend}
+        friend={friendToRemove}
+        loading={removingFriend}
       />
     </div>
   );

@@ -120,9 +120,12 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
 
             setData(current => [optimisticItem, ...current]);
 
+            // Strip client-side transient fields before sending to Supabase
+            const { client_id, ...dbPayload } = payload;
+
             const { data: insertedData, error: insertError } = await supabase
                 .from(table)
-                .insert([payload])
+                .insert([dbPayload])
                 .select()
                 .single();
 
@@ -132,9 +135,10 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                 throw insertError;
             }
 
-            // Replace temp item with real item
+            // Replace temp item with real item, preserving client_id for seamless animations
             if (insertedData) {
-                setData(current => current.map(item => item.id === tempId ? insertedData : item));
+                const finalItem = { ...optimisticItem, ...insertedData };
+                setData(current => current.map(item => item.id === tempId ? finalItem : item));
             }
 
             return { data: insertedData, error: null };
