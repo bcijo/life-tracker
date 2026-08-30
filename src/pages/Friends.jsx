@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw } from 'lucide-react';
+import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw, Search, X } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
@@ -53,6 +53,17 @@ const Friends = () => {
   const [friendToRemove, setFriendToRemove] = useState(null);
   const [removingFriend, setRemovingFriend] = useState(false);
   const [selectedCompareFriendId, setSelectedCompareFriendId] = useState(null);
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
+
+  const filteredFriends = useMemo(() => {
+    if (!friendSearchQuery.trim()) return friends;
+    const q = friendSearchQuery.toLowerCase();
+    return friends.filter(f => {
+      const name = (f.display_name || f.full_name || '').toLowerCase();
+      const username = (f.username || '').toLowerCase();
+      return name.includes(q) || username.includes(q);
+    });
+  }, [friends, friendSearchQuery]);
 
   const handleConfirmRemoveFriend = async () => {
     if (!friendToRemove) return;
@@ -312,6 +323,71 @@ const Friends = () => {
               </div>
             )}
 
+            {/* Friends Filter & Actions Header */}
+            {friends.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                marginBottom: '12px',
+                flexWrap: 'wrap'
+              }}>
+                {/* Search input */}
+                <div style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'var(--surface-input)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '0 10px',
+                  flex: 1,
+                  minWidth: '160px',
+                  height: '34px'
+                }}>
+                  <Search size={13} color="var(--text-muted)" style={{ marginRight: '6px', flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    placeholder="Search friends..."
+                    value={friendSearchQuery}
+                    onChange={(e) => setFriendSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      color: 'var(--text-primary)',
+                      fontSize: '12.5px',
+                      fontWeight: '500'
+                    }}
+                  />
+                  {friendSearchQuery && (
+                    <button
+                      onClick={() => setFriendSearchQuery('')}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Friend Count Badge */}
+                <div style={{
+                  fontSize: '11.5px',
+                  fontWeight: '700',
+                  color: 'var(--text-muted)',
+                  background: 'var(--surface-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '6px 10px',
+                  borderRadius: '10px',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}
+                </div>
+              </div>
+            )}
+
             {/* Friends List */}
             {friendsLoading ? (
               <AppLoader variant="section" size="small" message="Loading your friends..." />
@@ -319,29 +395,76 @@ const Friends = () => {
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{ textAlign: 'center', padding: '40px 20px' }}
+                style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  background: 'var(--glass-card-bg)',
+                  border: '1px dashed var(--glass-card-border)',
+                  borderRadius: '20px'
+                }}
               >
                 <div style={{ fontSize: 36, marginBottom: 10 }}>👋</div>
-                <h3 style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
+                <h3 style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
                   No friends yet
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16 }}>
-                  Tap the Add Friend button above to search by username and connect!
+                <p style={{ color: 'var(--text-muted)', fontSize: 12.5, marginBottom: 16, maxWidth: '280px', margin: '0 auto 16px' }}>
+                  Add friends to compare habit streaks, track consistency, and climb the leaderboard!
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSearch(true)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                    color: '#fff',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <UserPlus size={14} /> Add Friend
+                </button>
               </motion.div>
+            ) : filteredFriends.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '30px 20px',
+                color: 'var(--text-muted)',
+                fontSize: '13px'
+              }}>
+                No friends found matching "{friendSearchQuery}".
+                <div style={{ marginTop: '8px' }}>
+                  <button
+                    onClick={() => setFriendSearchQuery('')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-primary, #a855f7)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear search
+                  </button>
+                </div>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {friends.map((friend, i) => (
+                {filteredFriends.map((friend) => (
                   <FriendCard
                     key={friend.friendship_id}
                     friend={friend}
-                    myScore={myScore}
                     onRemove={(f) => setFriendToRemove(f)}
                     onCompare={(f) => {
                       setSelectedCompareFriendId(f.friendship_id);
                       setActiveTab('compare');
                     }}
-                    index={i}
                   />
                 ))}
               </div>

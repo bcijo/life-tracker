@@ -11,6 +11,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const dockRef = useRef(null);
+  const trackRef = useRef(null);
 
   const desktopNavItems = [
     { to: '/', label: 'Home', icon: Home },
@@ -51,10 +52,11 @@ const Layout = () => {
   };
 
   const handleDrag = (e, info) => {
-    if (!dockRef.current) return;
-    const dockRect = dockRef.current.getBoundingClientRect();
+    const trackEl = trackRef.current || dockRef.current;
+    if (!trackEl) return;
+    const trackRect = trackEl.getBoundingClientRect();
     const numItems = mobileNavItems.length;
-    const slotWidth = dockRect.width / numItems;
+    const slotWidth = trackRect.width / numItems;
     
     // Calculate current center position of the dragged bubble in px
     const currentCenterX = (currentActive * slotWidth) + (slotWidth / 2) + info.offset.x;
@@ -71,10 +73,11 @@ const Layout = () => {
 
   const handleDragEnd = (e, info) => {
     setIsDragging(false);
-    if (!dockRef.current) return;
-    const dockRect = dockRef.current.getBoundingClientRect();
+    const trackEl = trackRef.current || dockRef.current;
+    if (!trackEl) return;
+    const trackRect = trackEl.getBoundingClientRect();
     const numItems = mobileNavItems.length;
-    const slotWidth = dockRect.width / numItems;
+    const slotWidth = trackRect.width / numItems;
     
     const currentCenterX = (currentActive * slotWidth) + (slotWidth / 2) + info.offset.x;
     let targetIdx = Math.floor(currentCenterX / slotWidth);
@@ -144,61 +147,63 @@ const Layout = () => {
         className="bottom-nav liquid-glass-dock" 
         aria-label="Mobile navigation"
       >
-        {/* Unified Draggable Liquid Glass Bubble */}
-        <motion.div
-          drag="x"
-          dragConstraints={dockRef}
-          dragElastic={0.08}
-          dragMomentum={false}
-          onDragStart={handleDragStart}
-          onDrag={handleDrag}
-          onDragEnd={handleDragEnd}
-          animate={isDragging ? {} : { 
-            x: `${currentActive * 100}%`,
-          }}
-          transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className={`liquid-bubble ${isDragging ? 'dragging' : ''}`}
-          style={{
-            width: `${100 / mobileNavItems.length}%`,
-          }}
-        >
-          <div className="liquid-bubble-glass" />
-        </motion.div>
+        <div className="dock-track" ref={trackRef}>
+          {/* Unified Draggable Liquid Glass Bubble */}
+          <motion.div
+            drag="x"
+            dragConstraints={trackRef}
+            dragElastic={0.08}
+            dragMomentum={false}
+            onDragStart={handleDragStart}
+            onDrag={handleDrag}
+            onDragEnd={handleDragEnd}
+            animate={isDragging ? {} : { 
+              x: `${currentActive * 100}%`,
+            }}
+            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            className={`liquid-bubble ${isDragging ? 'dragging' : ''}`}
+            style={{
+              width: `${100 / mobileNavItems.length}%`,
+            }}
+          >
+            <div className="liquid-bubble-glass" />
+          </motion.div>
 
-        {/* Tab Items */}
-        {mobileNavItems.map((item, idx) => {
-          const Icon = item.icon;
-          const isActive = idx === currentActive;
-          const isTargeted = isDragging && idx === hoveredIndex;
+          {/* Tab Items */}
+          {mobileNavItems.map((item, idx) => {
+            const Icon = item.icon;
+            const isActive = idx === currentActive;
+            const isTargeted = isDragging && idx === hoveredIndex;
 
-          return (
-            <button
-              key={item.to}
-              type="button"
-              onClick={() => {
-                if (!isDragging) {
-                  navigate(item.to);
-                }
-              }}
-              className={`nav-item ${isActive ? 'active' : ''} ${isTargeted ? 'targeted' : ''}`}
-              aria-label={item.label}
-            >
-              <motion.div
-                className="nav-item-content"
-                animate={{
-                  scale: (isActive && !isDragging) || isTargeted ? 1.05 : 0.95,
-                  y: (isActive && !isDragging) || isTargeted ? -1 : 0
+            return (
+              <button
+                key={item.to}
+                type="button"
+                onClick={() => {
+                  if (!isDragging) {
+                    navigate(item.to);
+                  }
                 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className={`nav-item ${isActive ? 'active' : ''} ${isTargeted ? 'targeted' : ''}`}
+                aria-label={item.label}
               >
-                <div className="nav-icon-wrap">
-                  <Icon size={20} strokeWidth={(isActive && !isDragging) || isTargeted ? 2.4 : 2} />
-                </div>
-                <span>{item.label}</span>
-              </motion.div>
-            </button>
-          );
-        })}
+                <motion.div
+                  className="nav-item-content"
+                  animate={{
+                    scale: (isActive && !isDragging) || isTargeted ? 1.05 : 0.95,
+                    y: (isActive && !isDragging) || isTargeted ? -1 : 0
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                >
+                  <div className="nav-icon-wrap">
+                    <Icon size={20} strokeWidth={(isActive && !isDragging) || isTargeted ? 2.4 : 2} />
+                  </div>
+                  <span>{item.label}</span>
+                </motion.div>
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
       <style>{`
@@ -299,8 +304,6 @@ const Layout = () => {
           width: calc(100% - 28px);
           max-width: 410px;
           height: 60px;
-          display: flex;
-          align-items: center;
           padding: 4px;
           z-index: 100;
           
@@ -321,19 +324,29 @@ const Layout = () => {
           -webkit-user-select: none;
           touch-action: pan-y;
         }
+
+        .dock-track {
+          position: relative;
+          display: flex;
+          align-items: center;
+          width: 100%;
+          height: 100%;
+        }
         
         .liquid-bubble {
           position: absolute;
-          top: 4px;
-          bottom: 4px;
+          top: 0;
+          bottom: 0;
           left: 0;
+          height: 100%;
           z-index: 1;
           display: flex;
           align-items: center;
-          justify-content: center;
-          padding: 0 3px;
+          justifyContent: center;
+          padding: 1px 2px;
           cursor: grab;
           touch-action: none;
+          box-sizing: border-box;
         }
 
         .liquid-bubble:active, .liquid-bubble.dragging {
@@ -343,7 +356,7 @@ const Layout = () => {
         .liquid-bubble-glass {
           width: 100%;
           height: 100%;
-          border-radius: 24px;
+          border-radius: 26px;
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%), rgba(147, 51, 234, 0.28);
           border: 1px solid rgba(255, 255, 255, 0.32);
           box-shadow: 
