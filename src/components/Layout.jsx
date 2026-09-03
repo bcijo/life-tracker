@@ -4,6 +4,7 @@ import { Home, Sparkles, Activity, Wallet, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
+import VaultUnlockModal from './common/VaultUnlockModal';
 import '../styles/index.css';
 
 const Layout = () => {
@@ -138,6 +139,7 @@ const Layout = () => {
         {/* Main Content Viewport */}
         <main className="main-content-area">
           <Outlet />
+          <VaultUnlockModal />
         </main>
       </div>
 

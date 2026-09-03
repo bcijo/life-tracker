@@ -15,12 +15,14 @@ import {
     Sun, 
     Layers, 
     Mic, 
-    Square 
+    Square,
+    ShieldCheck
 } from 'lucide-react';
 import { format, parseISO, subDays } from 'date-fns';
 import useJournal from '../hooks/useJournal';
 import { transcribeAudio } from '../lib/groq';
 import AppLoader from '../components/common/AppLoader';
+import PrivacySettingsModal from '../components/common/PrivacySettingsModal';
 
 const MOODS = [
     { value: 1, emoji: '😞', label: 'Rough', color: '#ef4444' },
@@ -51,6 +53,7 @@ const Journal = () => {
     const [savedNotice, setSavedNotice] = useState(false);
     const [manualSaveSuccess, setManualSaveSuccess] = useState(false);
     const [selectedPastEntry, setSelectedPastEntry] = useState(null);
+    const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
     // Audio recording & Speech-to-Text state
     const [isRecording, setIsRecording] = useState(false);
@@ -427,6 +430,31 @@ const Journal = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => setShowPrivacyModal(true)}
+                        title="Client-Side Zero-Knowledge Encryption Active (Click to manage)"
+                        style={{
+                            padding: '7px 11px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            borderRadius: '12px',
+                            background: 'rgba(16, 185, 129, 0.12)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            color: '#10b981',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                        }}
+                    >
+                        <ShieldCheck size={14} />
+                        <span>E2EE Active</span>
+                    </motion.button>
+
                     <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
@@ -1148,6 +1176,11 @@ const Journal = () => {
                     }
                 }
             `}</style>
+
+            <PrivacySettingsModal 
+                isOpen={showPrivacyModal} 
+                onClose={() => setShowPrivacyModal(false)} 
+            />
         </div>
     );
 };

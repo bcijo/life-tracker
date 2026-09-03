@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './contexts/AuthContext'
+import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Layout from './components/Layout'
@@ -26,8 +27,9 @@ function App() {
         <ErrorBoundary>
             <ThemeProvider>
                 <AuthProvider>
-                    <MigrationBanner />
-                    <Router>
+                    <EncryptionProvider>
+                        <MigrationBanner />
+                        <Router>
                         <Routes>
                             <Route path="/login" element={<Login />} />
                             <Route path="/signup" element={<Signup />} />
@@ -61,6 +63,7 @@ function App() {
                         </Routes>
                     </Router>
                     <Analytics />
+                    </EncryptionProvider>
                 </AuthProvider>
             </ThemeProvider>
         </ErrorBoundary>

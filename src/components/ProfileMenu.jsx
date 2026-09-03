@@ -19,13 +19,15 @@ import {
     Sparkles,
     CheckCircle2,
     MessageSquare,
-    BookOpen
+    BookOpen,
+    ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import PrivacySettingsModal from './common/PrivacySettingsModal';
 
 const ADMIN_EMAIL = 'abhinb2703@gmail.com';
 
@@ -36,6 +38,7 @@ const ProfileMenu = ({ variant = 'default' }) => {
     const { theme, setTheme, THEMES, currentTheme } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const [currentView, setCurrentView] = useState('main'); // 'main' | 'theme' | 'account' | 'edit-name'
+    const [showPrivacyModal, setShowPrivacyModal] = useState(false);
     const menuRef = useRef(null);
     const navigate = useNavigate();
 
@@ -391,6 +394,53 @@ const ProfileMenu = ({ variant = 'default' }) => {
                                             <span>Account Details</span>
                                         </div>
                                         <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
+                                    </button>
+
+                                    {/* Privacy & Encryption (Zero-Knowledge) */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowPrivacyModal(true);
+                                            setIsOpen(false);
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '10px 12px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            color: 'var(--text-primary)',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            transition: 'background 0.15s ease'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--surface-input)'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '8px',
+                                                background: 'rgba(16, 185, 129, 0.15)',
+                                                color: '#10b981',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                <ShieldCheck size={15} />
+                                            </div>
+                                            <span>Privacy & Encryption</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
+                                                E2EE
+                                            </span>
+                                            <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
+                                        </div>
                                     </button>
 
                                     {/* App Updates & Cache */}
@@ -846,6 +896,11 @@ const ProfileMenu = ({ variant = 'default' }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <PrivacySettingsModal 
+                isOpen={showPrivacyModal} 
+                onClose={() => setShowPrivacyModal(false)} 
+            />
         </div>
     );
 };
