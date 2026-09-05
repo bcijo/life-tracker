@@ -29,7 +29,7 @@ const ForceUpdateModal = () => {
     }
   }, [isUpdateAvailable]);
 
-  if (!isUpdateAvailable) return null;
+  if (import.meta.env.DEV || !isUpdateAvailable) return null;
 
   return (
     <AnimatePresence>

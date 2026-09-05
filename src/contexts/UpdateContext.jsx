@@ -3,9 +3,9 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 
 const UpdateContext = createContext(null);
 
-// Embedded build time from vite.config.js define
-const CLIENT_BUILD_TIME = typeof __APP_BUILD_TIME__ !== 'undefined' ? Number(__APP_BUILD_TIME__) : 0;
-const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+// Embedded build ID from vite.config.js define
+const CLIENT_BUILD_ID = typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'dev';
+const CHECK_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
 
 export const UpdateProvider = ({ children }) => {
   const [versionMismatch, setVersionMismatch] = useState(false);
@@ -18,24 +18,23 @@ export const UpdateProvider = ({ children }) => {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker
   } = useRegisterSW({
+    immediate: !import.meta.env.DEV,
     onRegisteredSW(swUrl, r) {
-      if (r) {
+      if (r && !import.meta.env.DEV) {
         swRegistrationRef.current = r;
-        // Check for updates periodically
-        setInterval(() => {
-          r.update().catch(() => {});
-        }, CHECK_INTERVAL_MS);
       }
     },
     onRegisterError(error) {
-      console.warn('Service Worker registration error:', error);
+      if (!import.meta.env.DEV) {
+        console.warn('Service Worker registration error:', error);
+      }
     }
   });
 
-  // Check version.json for build timestamp differences
+  // Check version.json for deployment build ID differences
   const checkVersionJson = useCallback(async () => {
-    // Only check against build time if we have a valid client build timestamp (production builds)
-    if (import.meta.env.DEV || !CLIENT_BUILD_TIME) {
+    // Never trigger in local development mode
+    if (import.meta.env.DEV || !CLIENT_BUILD_ID || CLIENT_BUILD_ID === 'dev') {
       return false;
     }
 
@@ -53,7 +52,8 @@ export const UpdateProvider = ({ children }) => {
       const data = await res.json();
       setLastChecked(Date.now());
 
-      if (data && typeof data.buildTime === 'number' && data.buildTime > CLIENT_BUILD_TIME) {
+      // Only trigger if server has a valid buildId different from client's embedded buildId
+      if (data && data.buildId && data.buildId !== 'dev' && data.buildId !== CLIENT_BUILD_ID) {
         setVersionMismatch(true);
         return true;
       }
@@ -65,6 +65,10 @@ export const UpdateProvider = ({ children }) => {
 
   // Check for updates both via Service Worker and version.json
   const checkForUpdates = useCallback(async () => {
+    if (import.meta.env.DEV) {
+      return false;
+    }
+
     setLastChecked(Date.now());
     let found = false;
 
@@ -86,19 +90,18 @@ export const UpdateProvider = ({ children }) => {
     return found;
   }, [checkVersionJson, needRefresh]);
 
-  // Periodic and event-driven update checking
+  // Periodic and event-driven update checking (no aggressive 5s loop)
   useEffect(() => {
-    // Initial check after 5 seconds of mounting
-    const initialTimer = setTimeout(() => {
-      checkForUpdates();
-    }, 5000);
+    if (import.meta.env.DEV) {
+      return;
+    }
 
-    // Periodic interval
+    // Periodic interval (every 3 minutes)
     const intervalTimer = setInterval(() => {
       checkForUpdates();
     }, CHECK_INTERVAL_MS);
 
-    // Tab visibility change (e.g. user switches back to tab or unlocks phone)
+    // Tab visibility change (e.g. user returns to the app)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkForUpdates();
@@ -114,14 +117,13 @@ export const UpdateProvider = ({ children }) => {
     window.addEventListener('focus', handleFocus);
 
     return () => {
-      clearTimeout(initialTimer);
       clearInterval(intervalTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
   }, [checkForUpdates]);
 
-  // Apply update: clear caches, activate worker, and hard reload
+  // Apply update: clear caches and activate new version
   const applyUpdate = useCallback(async () => {
     setIsUpdating(true);
 
@@ -132,27 +134,23 @@ export const UpdateProvider = ({ children }) => {
         await Promise.all(keys.map(k => caches.delete(k)));
       }
 
-      // 2. Tell service worker to skip waiting
-      if (updateServiceWorker) {
+      // 2. If PWA service worker is waiting, activate it
+      if (needRefresh && updateServiceWorker) {
         await updateServiceWorker(true);
-      }
-
-      // 3. Unregister existing service workers to ensure fresh start
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => r.unregister()));
+        return;
       }
     } catch (err) {
       console.error('Error while applying software update:', err);
-    } finally {
-      // 4. Force hard reload bypassing cache
-      setTimeout(() => {
-        window.location.href = window.location.origin + window.location.pathname + '?_v=' + Date.now();
-      }, 300);
     }
-  }, [updateServiceWorker]);
 
-  const isUpdateAvailable = Boolean(needRefresh || versionMismatch);
+    // 3. Force hard reload bypassing cache
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname + '?_v=' + Date.now();
+    }, 200);
+  }, [needRefresh, updateServiceWorker]);
+
+  // In development, update is never enforced
+  const isUpdateAvailable = import.meta.env.DEV ? false : Boolean(needRefresh || versionMismatch);
 
   return (
     <UpdateContext.Provider

@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import tailwindcss from '@tailwindcss/vite'
 
-function versionEmitterPlugin() {
-  const buildTime = Date.now();
+function versionEmitterPlugin(buildId) {
   return {
     name: 'version-emitter',
     configureServer(server) {
@@ -12,7 +11,7 @@ function versionEmitterPlugin() {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
           version: 'dev',
-          buildTime: 0
+          buildId: 'dev'
         }));
       });
     },
@@ -22,7 +21,7 @@ function versionEmitterPlugin() {
         fileName: 'version.json',
         source: JSON.stringify({
           version: process.env.npm_package_version || '1.0.0',
-          buildTime: buildTime
+          buildId: buildId
         })
       });
     }
@@ -32,16 +31,16 @@ function versionEmitterPlugin() {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
-  const buildTime = Date.now();
+  const buildId = isProd ? `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}` : 'dev';
 
   return {
     define: {
-      __APP_BUILD_TIME__: JSON.stringify(isProd ? buildTime : 0),
+      __APP_BUILD_ID__: JSON.stringify(buildId),
     },
     plugins: [
       react(),
       tailwindcss(),
-      versionEmitterPlugin(),
+      versionEmitterPlugin(buildId),
       VitePWA({
         registerType: 'prompt',
         includeAssets: ['logo.png'],

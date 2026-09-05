@@ -5,9 +5,9 @@ import { APP_KNOWLEDGE_BASE } from './appKnowledge';
 // Add VITE_GROQ_API_KEY to your .env file
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const PRIMARY_MODEL = 'llama-3.3-70b-versatile';
-const FALLBACK_MODEL = 'llama-3.1-8b-instant';
-const VISION_MODEL_NAME = 'qwen/qwen3.6-27b';
+const PRIMARY_MODEL = 'groq/compound';
+const FALLBACK_MODEL = 'openai/gpt-oss-120b';
+const VISION_MODEL_NAME = 'qwen/qwen3.8-27b';
 
 /**
  * Converts a raw SQL query into a human-understandable activity phrase
