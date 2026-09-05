@@ -116,7 +116,7 @@ const CompareView = ({
   const isFriendLeading = theirData.score > myData.score;
   const scoreDiff = Math.abs(myData.score - theirData.score);
 
-  // 5 Battle Attributes (aggregates only)
+  // 4 Battle Attributes (aggregates only)
   const battleAttributes = [
     {
       id: 'consistency',
@@ -153,18 +153,6 @@ const CompareView = ({
       theirLead: theirData.sevenDayCompletions > myData.sevenDayCompletions,
       myNum: myData.sevenDayCompletions,
       theirNum: theirData.sevenDayCompletions,
-    },
-    {
-      id: 'arsenal',
-      label: 'Active Arsenal',
-      icon: Shield,
-      color: '#3b82f6',
-      myVal: `${myData.activeHabits}`,
-      theirVal: `${theirData.activeHabits}`,
-      myLead: myData.activeHabits > theirData.activeHabits,
-      theirLead: theirData.activeHabits > myData.activeHabits,
-      myNum: myData.activeHabits,
-      theirNum: theirData.activeHabits,
     },
     {
       id: 'perfect',
@@ -476,182 +464,355 @@ const CompareView = ({
           </div>
         </div>
 
-        {/* ── BENTO STAT CLASH MATRIX (2-COLUMN GRID) ── */}
+        {/* ── 2×2 SQUARE ATTRIBUTE CLASH GRID (DYNAMIC GRADIENT SPILL) ── */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
-              Attributes Breakdown
-            </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+                Attributes Breakdown
+              </h3>
+              <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                Head-to-head 2×2 territory clash
+              </span>
+            </div>
+
             <span style={{
-              fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 9999,
-              background: myAttributeWins > theirAttributeWins ? 'rgba(34,197,94,0.12)' : 'rgba(168,85,247,0.12)',
-              color: myAttributeWins > theirAttributeWins ? '#22c55e' : '#a855f7',
+              fontSize: 10.5, fontWeight: 800, padding: '3px 10px', borderRadius: 9999,
+              background: myAttributeWins > theirAttributeWins 
+                ? 'rgba(34,197,94,0.12)' 
+                : theirAttributeWins > myAttributeWins 
+                ? 'rgba(6,182,212,0.12)' 
+                : 'rgba(234,179,8,0.12)',
+              color: myAttributeWins > theirAttributeWins 
+                ? '#22c55e' 
+                : theirAttributeWins > myAttributeWins 
+                ? '#06b6d4' 
+                : '#eab308',
               border: '1px solid currentColor',
             }}>
               {myAttributeWins > theirAttributeWins
-                ? `You hold ${myAttributeWins}/5 attributes`
+                ? `You hold ${myAttributeWins}/4 attributes`
                 : theirAttributeWins > myAttributeWins
-                ? `${friendDisplayName} holds ${theirAttributeWins}/5`
-                : 'Tied 50/50'}
+                ? `${friendDisplayName} holds ${theirAttributeWins}/4`
+                : 'Tied 2-2'}
             </span>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 10,
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 12,
           }}>
             {battleAttributes.map(attr => {
               const Icon = attr.icon;
-              const total = Math.max(1, (attr.myNum || 0) + (attr.theirNum || 0));
-              const myRatio = Math.round(((attr.myNum || 0) / total) * 100);
+              const myNum = attr.myNum || 0;
+              const theirNum = attr.theirNum || 0;
+              const total = myNum + theirNum;
+              const myRatio = total > 0 ? Math.round((myNum / total) * 100) : 50;
+              const theirRatio = 100 - myRatio;
+
+              // Dynamic angled territory clash gradient (Left Purple vs Right Cyan)
+              const blendZone = 12;
+              const blendStart = Math.max(0, myRatio - blendZone);
+              const blendEnd = Math.min(100, myRatio + blendZone);
+
+              const dynamicGradientSpill = `linear-gradient(115deg, 
+                rgba(168, 85, 247, ${0.18 + (myRatio / 100) * 0.22}) 0%, 
+                rgba(168, 85, 247, ${0.10 + (myRatio / 100) * 0.16}) ${blendStart}%, 
+                rgba(6, 182, 212, ${0.10 + (theirRatio / 100) * 0.16}) ${blendEnd}%, 
+                rgba(6, 182, 212, ${0.18 + (theirRatio / 100) * 0.22}) 100%)`;
+
+              const ambientGlow = attr.myLead
+                ? 'radial-gradient(ellipse at 15% 15%, rgba(168, 85, 247, 0.36) 0%, transparent 65%)'
+                : attr.theirLead
+                ? 'radial-gradient(ellipse at 85% 15%, rgba(6, 182, 212, 0.36) 0%, transparent 65%)'
+                : 'radial-gradient(ellipse at 50% 15%, rgba(234, 179, 8, 0.2) 0%, transparent 65%)';
 
               return (
                 <div
                   key={attr.id}
                   className="glass-card"
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: 16,
-                    background: 'var(--surface-elevated, rgba(255,255,255,0.03))',
-                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+                    aspectRatio: '1 / 1',
+                    minHeight: 180,
+                    borderRadius: 22,
+                    padding: '14px 14px',
+                    position: 'relative',
+                    overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 8,
+                    justifyContent: 'space-between',
+                    background: `${ambientGlow}, ${dynamicGradientSpill}, var(--surface-elevated, rgba(18, 19, 30, 0.9))`,
+                    border: attr.myLead
+                      ? '1.5px solid rgba(168, 85, 247, 0.4)'
+                      : attr.theirLead
+                      ? '1.5px solid rgba(6, 182, 212, 0.4)'
+                      : '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
+                    boxShadow: attr.myLead
+                      ? '0 10px 28px -6px rgba(168, 85, 247, 0.22)'
+                      : attr.theirLead
+                      ? '0 10px 28px -6px rgba(6, 182, 212, 0.22)'
+                      : '0 4px 20px rgba(0,0,0,0.25)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* Top Header: Icon container & Lead Pill */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    zIndex: 2,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                       <div style={{
-                        width: 24, height: 24, borderRadius: 7,
-                        background: `${attr.color}20`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        width: 28, height: 28, borderRadius: 8,
+                        background: `${attr.color}22`,
+                        border: `1px solid ${attr.color}35`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
                       }}>
-                        <Icon size={13} color={attr.color} />
+                        <Icon size={14} color={attr.color} />
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <span style={{
+                        fontSize: 12.5,
+                        fontWeight: 800,
+                        color: 'var(--text-primary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
                         {attr.label}
                       </span>
                     </div>
 
-                    {/* Lead Pill */}
                     <span style={{
-                      fontSize: 9.5, fontWeight: 800,
-                      color: attr.myLead ? '#22c55e' : attr.theirLead ? '#06b6d4' : 'var(--text-muted)'
+                      fontSize: 9.5,
+                      fontWeight: 800,
+                      padding: '3px 8px',
+                      borderRadius: 9999,
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      background: attr.myLead
+                        ? 'rgba(168,85,247,0.2)'
+                        : attr.theirLead
+                        ? 'rgba(6,182,212,0.2)'
+                        : 'rgba(234,179,8,0.16)',
+                      color: attr.myLead
+                        ? '#c084fc'
+                        : attr.theirLead
+                        ? '#38bdf8'
+                        : '#eab308',
+                      border: attr.myLead
+                        ? '1px solid rgba(168,85,247,0.35)'
+                        : attr.theirLead
+                        ? '1px solid rgba(6,182,212,0.35)'
+                        : '1px solid rgba(234,179,8,0.35)',
                     }}>
-                      {attr.myLead ? 'You Lead 👑' : attr.theirLead ? `${friendDisplayName} Leads` : 'Tied'}
+                      {attr.myLead ? '👑 Lead' : attr.theirLead ? 'Deficit' : 'Tied'}
                     </span>
                   </div>
 
-                  {/* Stat Values */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                    <div>
-                      <span style={{ fontSize: 9.5, color: 'var(--text-muted)', display: 'block' }}>You</span>
+                  {/* Center Zone: Head-to-Head Clash Pods */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 12,
+                    padding: '6px 0',
+                    position: 'relative',
+                    zIndex: 2,
+                    margin: 'auto 0',
+                  }}>
+                    {/* You Pod */}
+                    <div style={{
+                      flex: '1 1 0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px 6px',
+                      borderRadius: 14,
+                      background: attr.myLead ? 'rgba(168, 85, 247, 0.14)' : 'rgba(255, 255, 255, 0.03)',
+                      border: attr.myLead ? '1px solid rgba(168, 85, 247, 0.35)' : '1px solid rgba(255, 255, 255, 0.06)',
+                    }}>
+                      <span style={{ fontSize: 9.5, color: '#c084fc', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        You
+                      </span>
                       <span style={{
-                        fontSize: 16, fontWeight: 900,
-                        color: attr.myLead ? '#22c55e' : '#a855f7',
-                        fontFamily: 'monospace'
+                        fontSize: 'clamp(19px, 3.2vw, 25px)',
+                        fontWeight: 900,
+                        color: attr.myLead ? '#c084fc' : 'var(--text-primary)',
+                        fontFamily: 'monospace',
+                        letterSpacing: '-0.02em',
+                        textShadow: attr.myLead ? '0 0 16px rgba(168,85,247,0.5)' : 'none',
                       }}>
                         {attr.myVal}
                       </span>
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: 9.5, color: 'var(--text-muted)', display: 'block' }}>{friendDisplayName}</span>
+                    {/* VS Shield */}
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 9.5, fontWeight: 900, color: 'var(--text-muted)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      flexShrink: 0,
+                    }}>
+                      VS
+                    </div>
+
+                    {/* Opponent Pod */}
+                    <div style={{
+                      flex: '1 1 0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px 6px',
+                      borderRadius: 14,
+                      background: attr.theirLead ? 'rgba(6, 182, 212, 0.14)' : 'rgba(255, 255, 255, 0.03)',
+                      border: attr.theirLead ? '1px solid rgba(6, 182, 212, 0.35)' : '1px solid rgba(255, 255, 255, 0.06)',
+                    }}>
                       <span style={{
-                        fontSize: 16, fontWeight: 900,
-                        color: attr.theirLead ? '#22c55e' : '#06b6d4',
-                        fontFamily: 'monospace'
+                        fontSize: 9.5,
+                        color: '#38bdf8',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        maxWidth: 85,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {friendDisplayName}
+                      </span>
+                      <span style={{
+                        fontSize: 'clamp(19px, 3.2vw, 25px)',
+                        fontWeight: 900,
+                        color: attr.theirLead ? '#38bdf8' : 'var(--text-primary)',
+                        fontFamily: 'monospace',
+                        letterSpacing: '-0.02em',
+                        textShadow: attr.theirLead ? '0 0 16px rgba(6,182,212,0.5)' : 'none',
                       }}>
                         {attr.theirVal}
                       </span>
                     </div>
                   </div>
 
-                  {/* Proportional Mini Bar */}
-                  <div style={{
-                    height: 4, borderRadius: 2,
-                    background: 'var(--surface-input, rgba(255,255,255,0.06))',
-                    overflow: 'hidden', display: 'flex',
-                  }}>
-                    <div style={{ width: `${myRatio}%`, background: '#a855f7' }} />
-                    <div style={{ width: `${100 - myRatio}%`, background: '#06b6d4' }} />
+                  {/* Bottom Zone: Duotone Duel Horizon Bar & Ratio Split */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative', zIndex: 2 }}>
+                    <div style={{
+                      height: 6,
+                      borderRadius: 9999,
+                      background: 'rgba(255,255,255,0.06)',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      position: 'relative',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}>
+                      <div style={{
+                        width: `${myRatio}%`,
+                        background: 'linear-gradient(90deg, #a855f7, #ec4899)',
+                        boxShadow: attr.myLead ? '0 0 8px rgba(168,85,247,0.7)' : 'none',
+                        transition: 'width 0.6s ease',
+                      }} />
+                      <div style={{
+                        width: `${theirRatio}%`,
+                        background: 'linear-gradient(90deg, #06b6d4, #3b82f6)',
+                        boxShadow: attr.theirLead ? '0 0 8px rgba(6,182,212,0.7)' : 'none',
+                        transition: 'width 0.6s ease',
+                      }} />
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: 9.5,
+                      fontWeight: 800,
+                      fontFamily: 'monospace',
+                    }}>
+                      <span style={{ color: '#c084fc' }}>{myRatio}%</span>
+                      <span style={{
+                        color: 'var(--text-muted)',
+                        fontSize: 8.5,
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                      }}>
+                        {attr.myLead ? 'Territory Lead' : attr.theirLead ? `${friendDisplayName} Leads` : 'Even'}
+                      </span>
+                      <span style={{ color: '#38bdf8' }}>{theirRatio}%</span>
+                    </div>
                   </div>
                 </div>
               );
             })}
-
-            {/* 6th Card: Domination Summary */}
-            <div
-              className="glass-card"
-              style={{
-                padding: '12px 14px',
-                borderRadius: 16,
-                background: 'linear-gradient(135deg, rgba(234,179,8,0.08), rgba(168,85,247,0.05))',
-                border: '1px solid rgba(234,179,8,0.2)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{
-                  width: 24, height: 24, borderRadius: 7, background: 'rgba(234,179,8,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <Trophy size={13} color="#eab308" />
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Arena Status
-                </span>
-              </div>
-
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#eab308' }}>
-                  {myAttributeWins > theirAttributeWins ? 'Advantage You 🛡️' : theirAttributeWins > myAttributeWins ? `${friendDisplayName} in Control ⚔️` : 'Balanced Showdown 🤝'}
-                </div>
-                <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
-                  Calculated from streak, consistency & daily rate
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* ── 7-DAY BATTLE MATRIX ── */}
+        {/* ── 7-DAY BATTLE MOMENTUM (C3 VERTICAL CAPSULE BARS) ── */}
         <div 
           className="glass-card" 
           style={{
-            borderRadius: 20,
-            padding: '16px',
+            borderRadius: 22,
+            padding: '18px 16px',
             background: 'var(--surface-elevated, rgba(255,255,255,0.03))',
             border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
-                7-Day Battle History
+                7-Day Momentum
               </h3>
               <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
-                Daily completions comparison
+                Daily completion duel capsules
               </span>
             </div>
 
-            <span style={{
-              fontSize: 11, fontWeight: 800, color: 'var(--text-primary)',
-              padding: '3px 8px', borderRadius: 8,
-              background: 'var(--surface-input, rgba(255,255,255,0.06))',
-            }}>
-              {weeklyClash.myWins}W · {weeklyClash.theirWins}L · {weeklyClash.ties}T
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{
+                fontSize: 10.5, fontWeight: 800, color: '#c084fc',
+                padding: '3px 8px', borderRadius: 8,
+                background: 'rgba(168,85,247,0.12)',
+              }}>
+                {weeklyClash.myWins}W
+              </span>
+              <span style={{
+                fontSize: 10.5, fontWeight: 800, color: '#38bdf8',
+                padding: '3px 8px', borderRadius: 8,
+                background: 'rgba(6,182,212,0.12)',
+              }}>
+                {weeklyClash.theirWins}L
+              </span>
+              {weeklyClash.ties > 0 && (
+                <span style={{
+                  fontSize: 10.5, fontWeight: 800, color: '#eab308',
+                  padding: '3px 8px', borderRadius: 8,
+                  background: 'rgba(234,179,8,0.12)',
+                }}>
+                  {weeklyClash.ties}T
+                </span>
+              )}
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, textAlign: 'center' }}>
+          {/* 7-Day Vertical Capsule Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gap: 8,
+            alignItems: 'end',
+            textAlign: 'center'
+          }}>
             {weeklyClash.days.map((d, dIdx) => {
               const youWonDay = d.winner === 'you';
               const friendWonDay = d.winner === 'friend';
+              const totalDayActivity = (d.myVal || 0) + (d.theirVal || 0);
+
+              const maxValInWeek = Math.max(1, ...weeklyClash.days.map(x => Math.max(x.myVal || 0, x.theirVal || 0)));
+              const dayPeak = Math.max(d.myVal || 0, d.theirVal || 0);
+              const fillPercent = dayPeak === 0 ? 15 : Math.max(25, Math.round((dayPeak / maxValInWeek) * 100));
 
               return (
                 <div
@@ -660,37 +821,89 @@ const CompareView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 4,
-                    padding: '8px 4px',
-                    borderRadius: 12,
-                    background: d.isToday ? 'rgba(168,85,247,0.1)' : 'var(--surface-input, rgba(255,255,255,0.04))',
-                    border: d.isToday 
-                      ? '1px solid rgba(168,85,247,0.35)' 
-                      : '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+                    gap: 6,
+                    padding: '8px 2px',
+                    borderRadius: 16,
+                    position: 'relative',
+                    background: d.isToday ? 'rgba(168,85,247,0.08)' : 'transparent',
+                    border: d.isToday ? '1.5px solid rgba(168,85,247,0.45)' : '1.5px solid transparent',
+                    boxShadow: d.isToday ? '0 0 16px rgba(168,85,247,0.18)' : 'none',
                   }}
                 >
+                  {/* Day Victor Marker / Outcome */}
                   <span style={{
-                    fontSize: 10, fontWeight: 700,
-                    color: d.isToday ? '#a855f7' : 'var(--text-muted)'
+                    fontSize: 11,
+                    lineHeight: 1,
+                    height: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {youWonDay ? '👑' : friendWonDay ? '⚡' : totalDayActivity > 0 ? '🤝' : '·'}
+                  </span>
+
+                  {/* Vertical Duel Capsule */}
+                  <div style={{
+                    width: 24,
+                    height: 72,
+                    borderRadius: 9999,
+                    background: 'var(--surface-input, rgba(255,255,255,0.05))',
+                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    padding: 2,
+                  }}>
+                    {/* Animated Fill Capsule */}
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${fillPercent}%` }}
+                      transition={{ duration: 0.5, delay: dIdx * 0.05, ease: 'easeOut' }}
+                      style={{
+                        width: '100%',
+                        borderRadius: 9999,
+                        background: youWonDay
+                          ? 'linear-gradient(180deg, #c084fc 0%, #a855f7 100%)'
+                          : friendWonDay
+                          ? 'linear-gradient(180deg, #38bdf8 0%, #06b6d4 100%)'
+                          : totalDayActivity > 0
+                          ? 'linear-gradient(180deg, #fde047 0%, #eab308 100%)'
+                          : 'rgba(255,255,255,0.12)',
+                        boxShadow: youWonDay
+                          ? '0 0 10px rgba(168,85,247,0.5)'
+                          : friendWonDay
+                          ? '0 0 10px rgba(6,182,212,0.5)'
+                          : 'none',
+                      }}
+                    />
+                  </div>
+
+                  {/* Check-in Count / Stat */}
+                  <div style={{
+                    fontSize: 9.5,
+                    fontFamily: 'monospace',
+                    fontWeight: 800,
+                    lineHeight: 1.1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ color: youWonDay ? '#22c55e' : '#c084fc' }}>{d.myVal}</span>
+                    <span style={{ color: friendWonDay ? '#22c55e' : '#38bdf8', opacity: 0.85 }}>{d.theirVal}</span>
+                  </div>
+
+                  {/* Day Label (e.g. Mon, Tue) */}
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: d.isToday ? 900 : 700,
+                    color: d.isToday ? '#c084fc' : 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
                   }}>
                     {d.dayLabel}
                   </span>
-
-                  {/* Outcome Badge */}
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: youWonDay ? 'rgba(168,85,247,0.25)' : friendWonDay ? 'rgba(6,182,212,0.25)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11,
-                  }}>
-                    {youWonDay ? '👑' : friendWonDay ? '🏃' : '·'}
-                  </div>
-
-                  {/* Numbers: You vs Friend */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 9.5, fontWeight: 800, fontFamily: 'monospace' }}>
-                    <span style={{ color: '#a855f7' }}>{d.myVal}</span>
-                    <span style={{ color: '#06b6d4' }}>{d.theirVal}</span>
-                  </div>
                 </div>
               );
             })}

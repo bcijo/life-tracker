@@ -552,11 +552,14 @@ const Habits = () => {
                                             }}
                                         >
                                             <option value="">-- Choose Accountability Partner --</option>
-                                            {friends.map(f => (
-                                                <option key={f.id} value={f.id}>
-                                                    {f.display_name || f.full_name || f.username} (@{f.username})
-                                                </option>
-                                            ))}
+                                            {friends.map(f => {
+                                                const friendName = f.display_name?.trim() || f.full_name?.trim() || f.username || 'Friend';
+                                                return (
+                                                    <option key={f.id} value={f.id}>
+                                                        {friendName}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
                                 )}

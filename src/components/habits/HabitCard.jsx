@@ -40,7 +40,7 @@ export function HabitCard({
 
   const duoStreak = pactInfo ? computeDuoStreak(pactInfo.pact, habit, pactInfo.partnerHabit) : 0;
   const partnerDaily = pactInfo ? getPartnerDailyStatus(pactInfo.partnerHabit, pactInfo.pact.active_days) : null;
-  const partnerName = pactInfo?.partnerProfile?.display_name || pactInfo?.partnerProfile?.username || 'Partner';
+  const partnerName = pactInfo?.partnerProfile?.display_name?.trim() || pactInfo?.partnerProfile?.full_name?.trim() || pactInfo?.partnerProfile?.username || 'Partner';
   const partnerInitial = partnerName[0]?.toUpperCase() || 'P';
 
   const handleNudge = (e, type) => {

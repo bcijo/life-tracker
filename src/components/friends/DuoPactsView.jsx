@@ -59,6 +59,21 @@ export default function DuoPactsView({
   const [acceptingPactId, setAcceptingPactId] = useState(null);
   const [acceptHabitChoice, setAcceptHabitChoice] = useState('new'); // 'new' or habitId
 
+  // Helper to get person's name (display_name or full_name) instead of username
+  const getPartnerName = (userId) => {
+    const profile = partnerProfilesMap[userId];
+    if (profile?.display_name?.trim()) return profile.display_name.trim();
+    if (profile?.full_name?.trim()) return profile.full_name.trim();
+
+    const friend = friends?.find(f => f.id === userId);
+    if (friend?.display_name?.trim()) return friend.display_name.trim();
+    if (friend?.full_name?.trim()) return friend.full_name.trim();
+
+    if (profile?.username) return profile.username.replace(/^@/, '');
+    if (friend?.username) return friend.username.replace(/^@/, '');
+    return 'Partner';
+  };
+
   // Toggle active days
   const toggleDay = (day) => {
     setSelectedDays(prev =>
@@ -227,7 +242,7 @@ export default function DuoPactsView({
           </div>
 
           {pendingReceivedPacts.map(pact => {
-            const sender = partnerProfilesMap[pact.creator_id] || { display_name: 'Friend', username: 'friend' };
+            const senderName = getPartnerName(pact.creator_id);
             const isAcceptingThis = acceptingPactId === pact.id;
 
             return (
@@ -246,7 +261,7 @@ export default function DuoPactsView({
                       "{pact.name}"
                     </span>
                     <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
-                      Invited by <strong style={{ color: 'var(--text-primary)' }}>{sender.display_name || sender.username}</strong> (@{sender.username})
+                      Invited by <strong style={{ color: 'var(--text-primary)' }}>{senderName}</strong>
                     </p>
                   </div>
 
@@ -367,7 +382,7 @@ export default function DuoPactsView({
             Invitations Sent ({pendingSentPacts.length})
           </span>
           {pendingSentPacts.map(pact => {
-            const partner = partnerProfilesMap[pact.partner_id] || { display_name: 'Friend', username: 'friend' };
+            const partnerName = getPartnerName(pact.partner_id);
             return (
               <div
                 key={pact.id}
@@ -381,7 +396,7 @@ export default function DuoPactsView({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Clock size={12} color="var(--text-muted)" />
                   <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>
-                    "{pact.name}" sent to <strong>{partner.display_name || partner.username}</strong>
+                    "{pact.name}" sent to <strong>{partnerName}</strong>
                   </span>
                 </div>
                 <button
@@ -410,14 +425,13 @@ export default function DuoPactsView({
 
             const myHabit = habits.find(h => h.id === myHabitId);
             const partnerHabit = partnerHabitsMap[partnerHabitId];
-            const partnerProfile = partnerProfilesMap[partnerId] || { display_name: 'Partner', username: 'partner' };
+            const partnerName = getPartnerName(partnerId);
 
             const duoStreak = computeDuoStreak(pact, myHabit, partnerHabit);
             const synergy = computeSynergyScore(pact, myHabit, partnerHabit);
             const badge = getDuoBadge(duoStreak);
             const partnerDaily = getPartnerDailyStatus(partnerHabit, pact.active_days);
             const weeklyMatrix = computeDuoWeeklyMatrix(pact, myHabit, partnerHabit);
-            const partnerName = partnerProfile.display_name || partnerProfile.username || 'Partner';
             const isNudged = nudgedPactId === pact.id;
 
             return (
@@ -679,11 +693,14 @@ export default function DuoPactsView({
                       }}
                     >
                       <option value="">-- Select a friend --</option>
-                      {friends.map(f => (
-                        <option key={f.id} value={f.id}>
-                          {f.display_name || f.full_name || f.username} (@{f.username})
-                        </option>
-                      ))}
+                      {friends.map(f => {
+                        const friendName = f.display_name?.trim() || f.full_name?.trim() || f.username || 'Friend';
+                        return (
+                          <option key={f.id} value={f.id}>
+                            {friendName}
+                          </option>
+                        );
+                      })}
                     </select>
                   ) : (
                     <div style={{ padding: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 10, fontSize: 11.5, color: '#ef4444' }}>

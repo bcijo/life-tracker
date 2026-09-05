@@ -56,7 +56,12 @@ export function useMutualHabits() {
         if (!profErr && profiles) {
           const profMap = {};
           profiles.forEach(p => {
-            profMap[p.id] = p;
+            const resolvedName = p.display_name?.trim() || p.full_name?.trim() || p.username || 'Friend';
+            profMap[p.id] = {
+              ...p,
+              name: resolvedName,
+              display_name: resolvedName,
+            };
           });
           setPartnerProfilesMap(profMap);
         }

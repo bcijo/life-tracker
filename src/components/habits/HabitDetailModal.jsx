@@ -82,9 +82,7 @@ export function HabitDetailModal({
   const synergyScore = pactInfo ? computeSynergyScore(pactInfo.pact, habit, pactInfo.partnerHabit) : 0;
   const duoBadge = getDuoBadge(duoStreak);
   const weeklyDuoMatrix = pactInfo ? computeDuoWeeklyMatrix(pactInfo.pact, habit, pactInfo.partnerHabit) : [];
-  const partnerDaily = pactInfo ? getPartnerDailyStatus(pactInfo.partnerHabit, pactInfo.pact.active_days) : null;
-  const partnerName = pactInfo?.partnerProfile?.display_name || pactInfo?.partnerProfile?.username || 'Partner';
-  const partnerUsername = pactInfo?.partnerProfile?.username ? `@${pactInfo.partnerProfile.username}` : '';
+  const partnerName = pactInfo?.partnerProfile?.display_name?.trim() || pactInfo?.partnerProfile?.full_name?.trim() || pactInfo?.partnerProfile?.username || 'Partner';
   const partnerInitial = partnerName[0]?.toUpperCase() || 'P';
 
   const handleSendNudgeAction = (type) => {
@@ -403,7 +401,7 @@ export function HabitDetailModal({
                     {partnerName}
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    {partnerUsername} · <span style={{ color: partnerDaily?.color, fontWeight: 700 }}>{partnerDaily?.label} Today</span>
+                    <span style={{ color: partnerDaily?.color, fontWeight: 700 }}>{partnerDaily?.label} Today</span>
                   </div>
                 </div>
               </div>
@@ -578,11 +576,14 @@ export function HabitDetailModal({
                       }}
                     >
                       <option value="">-- Choose Friend --</option>
-                      {friends.map(f => (
-                        <option key={f.id} value={f.id}>
-                          {f.display_name || f.full_name || f.username} (@{f.username})
-                        </option>
-                      ))}
+                      {friends.map(f => {
+                        const friendName = f.display_name?.trim() || f.full_name?.trim() || f.username || 'Friend';
+                        return (
+                          <option key={f.id} value={f.id}>
+                            {friendName}
+                          </option>
+                        );
+                      })}
                     </select>
 
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
