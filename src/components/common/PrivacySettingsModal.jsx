@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Lock, Key, Copy, Check, X, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { useEncryption } from '../../contexts/EncryptionContext';
@@ -27,7 +28,25 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
     const [importError, setImportError] = useState('');
     const [importSuccess, setImportSuccess] = useState(false);
 
-    if (!isOpen) return null;
+    // Close on Escape key & lock background scroll
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = originalOverflow;
+        };
+    }, [isOpen, onClose]);
 
     const handleSavePin = async (e) => {
         e.preventDefault();
@@ -97,42 +116,53 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
         }
     };
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <AnimatePresence>
-            <div 
-                style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 9999,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(8px)',
-                    padding: '16px'
-                }}
-                onClick={onClose}
-            >
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                    transition={{ duration: 0.2 }}
+            {isOpen && (
+                <div 
                     style={{
-                        width: '100%',
-                        maxWidth: '520px',
-                        background: 'var(--surface-elevated, #131b2e)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '24px',
-                        padding: '28px',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        color: 'var(--text-primary, #fff)',
-                        position: 'relative',
-                        maxHeight: '90vh',
-                        overflowY: 'auto'
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        zIndex: 99999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        padding: '20px',
+                        boxSizing: 'border-box'
                     }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={onClose}
                 >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                            width: '100%',
+                            maxWidth: '520px',
+                            background: 'var(--surface-elevated, #131b2e)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '24px',
+                            padding: '28px',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+                            color: 'var(--text-primary, #fff)',
+                            position: 'relative',
+                            maxHeight: 'min(90vh, 720px)',
+                            overflowY: 'auto',
+                            overscrollBehavior: 'contain'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                     {/* Header */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -406,7 +436,9 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                     </div>
                 </motion.div>
             </div>
-        </AnimatePresence>
+            )}
+        </AnimatePresence>,
+        document.body
     );
 };
 

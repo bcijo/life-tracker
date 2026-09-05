@@ -20,7 +20,11 @@ import {
   Shield,
   Star,
   X,
-  TrendingUp
+  TrendingUp,
+  Handshake,
+  ArrowRight,
+  Clock,
+  Compass
 } from 'lucide-react';
 import { fetchHabitsForUser } from '../../hooks/useFriends';
 import useHabits from '../../hooks/useHabits';
@@ -40,7 +44,7 @@ const CompareView = ({
 }) => {
   const { habits: myContextHabits, addHabit: addHabitDb } = useHabits();
 
-  const [viewMode, setViewMode] = useState('arena'); // 'arena' | 'habit_match'
+  const [activeTab, setActiveTab] = useState('arena'); // 'arena' | 'habits'
   const [selectedFriendId, setSelectedFriendId] = useState(
     initialSelectedFriendId || friends?.[0]?.friendship_id || ''
   );
@@ -133,12 +137,6 @@ const CompareView = ({
     }
   };
 
-  useEffect(() => {
-    if (viewMode === 'habit_match' && !aiMatchResult && !loadingAiMatch && myContextHabits.length > 0 && friendHabits.length > 0) {
-      handleRunAiMatch();
-    }
-  }, [viewMode, aiMatchResult, myContextHabits.length, friendHabits.length]);
-
   const handleAcceptHabit = async (habitTitle) => {
     if (acceptedHabits.has(habitTitle)) return;
     try {
@@ -165,15 +163,59 @@ const CompareView = ({
     return computeWeeklyClashMatrix(myData.dailyCompletions, theirData.dailyCompletions);
   }, [myData.dailyCompletions, theirData.dailyCompletions]);
 
+  // Automated Habit-by-Habit matching
+  const habitClashData = useMemo(() => {
+    const common = [];
+    const friendUnique = [];
+
+    const myHabitsMap = new Map(
+      myContextHabits.map(h => [(h.name || '').toLowerCase().trim(), h])
+    );
+
+    (friendHabits || []).forEach(fh => {
+      const fNameKey = (fh.name || '').toLowerCase().trim();
+      const matchedMyHabit = myHabitsMap.get(fNameKey);
+
+      if (matchedMyHabit) {
+        const myComps = matchedMyHabit.history?.filter(e => 
+          (typeof e === 'string' ? 'completed' : e.status) === 'completed'
+        ).length || 0;
+        const friendComps = fh.history?.filter(e => 
+          (typeof e === 'string' ? 'completed' : e.status) === 'completed'
+        ).length || 0;
+
+        common.push({
+          name: matchedMyHabit.name,
+          myHabit: matchedMyHabit,
+          friendHabit: fh,
+          myCompletions: myComps,
+          friendCompletions: friendComps,
+          myLead: myComps > friendComps,
+          friendLead: friendComps > myComps,
+        });
+      } else {
+        friendUnique.push(fh);
+      }
+    });
+
+    return { common, friendUnique };
+  }, [myContextHabits, friendHabits]);
+
   if (!friends || friends.length === 0) {
     return (
-      <div className="glass-card" style={{ textAlign: 'center', padding: '36px 20px', borderRadius: '18px' }}>
-        <Swords size={32} style={{ color: '#a855f7', marginBottom: '12px' }} />
-        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 6px 0', color: 'var(--text-primary)' }}>
+      <div className="glass-card" style={{ textAlign: 'center', padding: '40px 24px', borderRadius: '22px' }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: '50%',
+          background: 'rgba(168,85,247,0.12)', margin: '0 auto 12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <Swords size={26} style={{ color: '#a855f7' }} />
+        </div>
+        <h3 style={{ fontSize: '17px', fontWeight: '800', margin: '0 0 6px', color: 'var(--text-primary)' }}>
           Head-to-Head Compare
         </h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', margin: 0, lineHeight: 1.5 }}>
-          Add friends to compare habit streaks and consistency head-to-head!
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0, lineHeight: 1.5, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
+          Add friends to compare streaks, explore common habits, and compete head-to-head!
         </p>
       </div>
     );
@@ -186,17 +228,18 @@ const CompareView = ({
 
   const friendDisplayName = selectedFriend?.display_name || selectedFriend?.full_name || selectedFriend?.username || 'Friend';
   const friendInitial = friendDisplayName[0]?.toUpperCase() || 'F';
-  const myInitial = (me.display_name || me.username || 'You')[0]?.toUpperCase() || 'Y';
+  const myDisplayName = me.display_name || me.full_name || me.username || 'You';
+  const myInitial = myDisplayName[0]?.toUpperCase() || 'Y';
 
   const isYouLeading = myData.score > theirData.score;
   const isFriendLeading = theirData.score > myData.score;
   const scoreDiff = Math.abs(myData.score - theirData.score);
 
-  // Battle Attributes list for 5-stat clash
+  // 5 Battle Attributes
   const battleAttributes = [
     {
       id: 'consistency',
-      label: 'Consistency',
+      label: 'Consistency Rate',
       icon: Target,
       color: '#10b981',
       myVal: `${myData.consistencyRate}%`,
@@ -208,7 +251,7 @@ const CompareView = ({
     },
     {
       id: 'streak',
-      label: 'Streak',
+      label: 'Best Active Streak',
       icon: Flame,
       color: '#f59e0b',
       myVal: `${myData.bestStreak}d`,
@@ -223,8 +266,8 @@ const CompareView = ({
       label: '7-Day Check-ins',
       icon: Zap,
       color: '#a855f7',
-      myVal: myData.sevenDayCompletions,
-      theirVal: theirData.sevenDayCompletions,
+      myVal: `${myData.sevenDayCompletions}`,
+      theirVal: `${theirData.sevenDayCompletions}`,
       myLead: myData.sevenDayCompletions > theirData.sevenDayCompletions,
       theirLead: theirData.sevenDayCompletions > myData.sevenDayCompletions,
       myNum: myData.sevenDayCompletions,
@@ -232,11 +275,11 @@ const CompareView = ({
     },
     {
       id: 'arsenal',
-      label: 'Active Habits',
+      label: 'Active Arsenal',
       icon: Shield,
       color: '#3b82f6',
-      myVal: myData.activeHabits,
-      theirVal: theirData.activeHabits,
+      myVal: `${myData.activeHabits}`,
+      theirVal: `${theirData.activeHabits}`,
       myLead: myData.activeHabits > theirData.activeHabits,
       theirLead: theirData.activeHabits > myData.activeHabits,
       myNum: myData.activeHabits,
@@ -259,41 +302,46 @@ const CompareView = ({
   const myAttributeWins = battleAttributes.filter(a => a.myLead).length;
   const theirAttributeWins = battleAttributes.filter(a => a.theirLead).length;
 
-  const mutualHabit = aiMatchResult?.mutualSynergyHabit || aiMatchResult?.mutualSynergyHabits?.[0];
-  const isMutualAccepted = mutualHabit && (
-    acceptedHabits.has(mutualHabit.title) || 
-    myContextHabits.some(h => h.name.toLowerCase() === mutualHabit.title.toLowerCase())
-  );
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '90px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 60 }}>
       
-      {/* ── UNIFIED CONTROL BAR ── */}
+      {/* ── COMMAND CONTROL BAR ── */}
       <div 
         className="glass-card" 
         style={{
-          borderRadius: '14px',
-          padding: '8px 10px',
+          borderRadius: 18,
+          padding: '10px 14px',
           display: 'flex',
+          flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '8px',
+          gap: 10,
+          background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
+          border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
         }}
       >
         {/* Opponent Selector */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 0, flex: 1, maxWidth: '170px' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 180 }}>
+          <div style={{
+            position: 'absolute', left: 10, width: 22, height: 22, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+            color: '#fff', fontSize: 10, fontWeight: 900,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
+          }}>
+            {friendInitial}
+          </div>
           <select
             value={selectedFriendId}
             onChange={(e) => setSelectedFriendId(e.target.value)}
             style={{
               width: '100%',
-              padding: '6px 24px 6px 10px',
-              borderRadius: '9px',
-              background: 'var(--surface-input)',
-              border: '1px solid var(--border-subtle)',
+              padding: '8px 30px 8px 38px',
+              borderRadius: 11,
+              background: 'var(--surface-input, rgba(255,255,255,0.05))',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
               color: 'var(--text-primary)',
-              fontSize: '12px',
-              fontWeight: '700',
+              fontSize: 12.5,
+              fontWeight: 700,
               appearance: 'none',
               outline: 'none',
               cursor: 'pointer',
@@ -305,452 +353,458 @@ const CompareView = ({
               </option>
             ))}
           </select>
-          <ChevronDown size={13} style={{ position: 'absolute', right: '8px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <ChevronDown size={14} style={{ position: 'absolute', right: 10, color: 'var(--text-muted)', pointerEvents: 'none' }} />
         </div>
 
-        {/* View Mode & Timeframe Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          {viewMode === 'arena' && (
+        {/* View Mode & Timeframe Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {/* Sub-Tab Switcher */}
+          <div style={{
+            display: 'flex', background: 'var(--surface-input, rgba(255,255,255,0.05))',
+            borderRadius: 10, padding: 3, border: '1px solid var(--border-subtle)'
+          }}>
             <button
               type="button"
-              onClick={() => setCompareMode(m => m === 'all_time' ? 'this_week' : 'all_time')}
+              onClick={() => setActiveTab('arena')}
               style={{
-                padding: '6px 9px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--surface-input)',
-                color: 'var(--text-secondary)',
-                fontSize: '11px',
-                fontWeight: '700',
-                cursor: 'pointer',
+                padding: '5px 12px', borderRadius: 8,
+                background: activeTab === 'arena' ? 'linear-gradient(135deg, #a855f7, #ec4899)' : 'transparent',
+                border: 'none', color: activeTab === 'arena' ? '#fff' : 'var(--text-muted)',
+                fontSize: 11.5, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
               }}
             >
-              {compareMode === 'all_time' ? 'All Time' : 'This Week'}
+              <Swords size={12} />
+              <span>Clash Arena</span>
             </button>
-          )}
 
+            <button
+              type="button"
+              onClick={() => setActiveTab('habits')}
+              style={{
+                padding: '5px 12px', borderRadius: 8,
+                background: activeTab === 'habits' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent',
+                border: 'none', color: activeTab === 'habits' ? '#fff' : 'var(--text-muted)',
+                fontSize: 11.5, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <Sparkles size={12} />
+              <span>Habit Duels ({habitClashData.common.length})</span>
+            </button>
+          </div>
+
+          {/* Timeframe Toggle */}
           <button
             type="button"
-            onClick={() => setViewMode(v => v === 'arena' ? 'habit_match' : 'arena')}
+            onClick={() => setCompareMode(m => m === 'all_time' ? 'this_week' : 'all_time')}
             style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              border: 'none',
-              background: viewMode === 'habit_match' 
-                ? 'linear-gradient(135deg, #a855f7, #ec4899)' 
-                : 'var(--surface-elevated)',
-              color: viewMode === 'habit_match' ? '#fff' : 'var(--text-primary)',
-              fontSize: '11px',
-              fontWeight: '800',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              cursor: 'pointer',
+              padding: '6px 12px', borderRadius: 10,
+              background: 'var(--surface-input, rgba(255,255,255,0.05))',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+              color: 'var(--text-secondary)',
+              fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            {viewMode === 'arena' ? (
-              <>
-                <Sparkles size={12} style={{ color: '#ec4899' }} />
-                <span>Synergy</span>
-              </>
-            ) : (
-              <>
-                <Swords size={12} style={{ color: '#a855f7' }} />
-                <span>Compare</span>
-              </>
-            )}
+            {compareMode === 'all_time' ? '📅 All Time' : '⚡ This Week'}
           </button>
         </div>
       </div>
 
-      {/* ── SUBVIEW 1: HEAD-TO-HEAD STATS ── */}
-      {viewMode === 'arena' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* ──────────────────────────────────────────────────────────
+          VIEW 1: CLASH ARENA (HERO SHOWDOWN + BENTO + 7-DAY MATRIX)
+         ────────────────────────────────────────────────────────── */}
+      {activeTab === 'arena' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           
-          {/* Main Hero Clash Card */}
+          {/* ── HERO BATTLE CARD ── */}
           <div 
             className="glass-card" 
             style={{
-              borderRadius: '18px',
-              padding: '14px 14px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              background: 'linear-gradient(180deg, var(--glass-card-bg) 0%, var(--surface-elevated) 100%)',
-              border: '1px solid var(--glass-card-border)',
+              borderRadius: 24,
+              padding: '20px',
               position: 'relative',
               overflow: 'hidden',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+              background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
             }}
           >
-            {/* Lead Status & Score Breakdown Button */}
-            <div 
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '4px 8px',
-                borderRadius: '8px',
-                background: isYouLeading ? 'rgba(34,197,94,0.1)' : isFriendLeading ? 'rgba(6,182,212,0.1)' : 'rgba(168,85,247,0.1)',
-                color: isYouLeading ? '#22c55e' : isFriendLeading ? '#06b6d4' : '#a855f7',
-                border: `1px solid ${isYouLeading ? 'rgba(34,197,94,0.2)' : isFriendLeading ? 'rgba(6,182,212,0.2)' : 'rgba(168,85,247,0.2)'}`,
-                fontSize: '11px',
-                fontWeight: '800',
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {/* Dynamic Ambient Background Glow */}
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              background: isYouLeading
+                ? 'radial-gradient(ellipse at 25% 40%, rgba(168,85,247,0.18) 0%, transparent 65%)'
+                : isFriendLeading
+                ? 'radial-gradient(ellipse at 75% 40%, rgba(6,182,212,0.18) 0%, transparent 65%)'
+                : 'radial-gradient(ellipse at 50% 40%, rgba(234,179,8,0.15) 0%, transparent 65%)',
+            }} />
+
+            {/* Top Match Outcome Banner */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: 16, position: 'relative', zIndex: 2
+            }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 12px', borderRadius: 9999,
+                fontSize: 12, fontWeight: 800,
+                background: isYouLeading ? 'rgba(34,197,94,0.14)' : isFriendLeading ? 'rgba(6,182,212,0.14)' : 'rgba(234,179,8,0.14)',
+                color: isYouLeading ? '#22c55e' : isFriendLeading ? '#06b6d4' : '#eab308',
+                border: `1px solid ${isYouLeading ? 'rgba(34,197,94,0.3)' : isFriendLeading ? 'rgba(6,182,212,0.3)' : 'rgba(234,179,8,0.3)'}`,
+              }}>
                 {isYouLeading ? (
                   <>
-                    <Crown size={13} /> You lead by {scoreDiff.toLocaleString()} XP
+                    <Crown size={14} />
+                    <span>You Lead by {scoreDiff.toLocaleString()} XP</span>
                   </>
                 ) : isFriendLeading ? (
                   <>
-                    <TrendingUp size={13} /> {friendDisplayName} leads by {scoreDiff.toLocaleString()} XP
+                    <TrendingUp size={14} />
+                    <span>{friendDisplayName} Leads by {scoreDiff.toLocaleString()} XP</span>
                   </>
                 ) : (
                   <>
-                    <Swords size={13} /> Tied score!
+                    <Swords size={14} />
+                    <span>Scores Tied! Dead Heat</span>
                   </>
                 )}
-              </span>
+              </div>
 
               <button
                 type="button"
                 onClick={() => setShowXPInspector(true)}
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  fontSize: '10.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  opacity: 0.9,
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4
                 }}
               >
-                <HelpCircle size={11} />
+                <HelpCircle size={12} />
                 <span>XP Details</span>
               </button>
             </div>
 
-            {/* Fighter Avatars & Clean Scores */}
-            <div 
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto 1fr',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              {/* You */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <div 
-                  style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '50%',
+            {/* Center Stage: Fighter Cards + VS Energy Nexus */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              alignItems: 'center',
+              gap: 16,
+              marginBottom: 18,
+              position: 'relative',
+              zIndex: 2,
+            }}>
+              {/* YOU */}
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                padding: '12px 8px', borderRadius: 18,
+                background: isYouLeading ? 'rgba(168,85,247,0.08)' : 'transparent',
+                border: isYouLeading ? '1px solid rgba(168,85,247,0.25)' : '1px solid transparent',
+              }}>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <div style={{
+                    width: 62, height: 62, borderRadius: '50%',
                     background: 'linear-gradient(135deg, #a855f7, #ec4899)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '18px',
-                    fontWeight: '800',
-                    color: '#fff',
-                    marginBottom: '4px',
-                    boxShadow: '0 3px 12px rgba(168,85,247,0.35)',
-                    position: 'relative',
-                  }}
-                >
-                  {myInitial}
-                  <span 
-                    style={{
-                      position: 'absolute',
-                      bottom: '-3px',
-                      right: '-3px',
-                      background: 'var(--surface-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '9px',
-                    }}
-                  >
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 24, fontWeight: 900, color: '#fff',
+                    boxShadow: '0 8px 24px rgba(168,85,247,0.4)',
+                  }}>
+                    {myInitial}
+                  </div>
+                  <div style={{
+                    position: 'absolute', bottom: -4, right: -4,
+                    width: 24, height: 24, borderRadius: '50%',
+                    background: 'var(--surface-elevated, #1a1a24)',
+                    border: '1.5px solid #a855f7',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12,
+                  }}>
                     {myData.rankIcon}
-                  </span>
+                  </div>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>You</span>
-                <span 
-                  style={{ 
-                    fontSize: '9.5px', 
-                    fontWeight: '800', 
-                    color: '#a855f7',
-                    background: 'rgba(168,85,247,0.1)',
-                    padding: '1px 5px',
-                    borderRadius: '5px',
-                    marginTop: '2px',
-                  }}
-                >
-                  Lv.{myData.level}
+
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {myDisplayName}
                 </span>
-                <span style={{ fontSize: '15px', fontWeight: '900', color: '#a855f7', fontFamily: 'monospace', marginTop: '2px' }}>
-                  {myData.score.toLocaleString()} XP
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#a855f7', marginTop: 1 }}>
+                  Lv.{myData.level} · {myData.rankTitle}
+                </span>
+                <div style={{
+                  fontSize: 20, fontWeight: 900, color: '#a855f7',
+                  fontFamily: 'monospace', marginTop: 4, letterSpacing: '-0.02em'
+                }}>
+                  {myData.score.toLocaleString()} <span style={{ fontSize: 11, fontWeight: 700 }}>XP</span>
+                </div>
+              </div>
+
+              {/* CENTER VS SHIELD */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                  border: '1.5px solid var(--border-subtle, rgba(255,255,255,0.15))',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--text-muted)', fontWeight: 900, fontSize: 13,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                }}>
+                  VS
+                </div>
+                <span style={{ fontSize: 9.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Head to Head
                 </span>
               </div>
 
-              {/* Center VS */}
-              <div 
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'var(--surface-input)',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  fontWeight: '900',
-                  fontStyle: 'italic',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                VS
-              </div>
-
-              {/* Friend */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <div 
-                  style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '50%',
+              {/* FRIEND */}
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                padding: '12px 8px', borderRadius: 18,
+                background: isFriendLeading ? 'rgba(6,182,212,0.08)' : 'transparent',
+                border: isFriendLeading ? '1px solid rgba(6,182,212,0.25)' : '1px solid transparent',
+              }}>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <div style={{
+                    width: 62, height: 62, borderRadius: '50%',
                     background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '18px',
-                    fontWeight: '800',
-                    color: '#fff',
-                    marginBottom: '4px',
-                    boxShadow: '0 3px 12px rgba(6,182,212,0.35)',
-                    position: 'relative',
-                  }}
-                >
-                  {friendInitial}
-                  <span 
-                    style={{
-                      position: 'absolute',
-                      bottom: '-3px',
-                      right: '-3px',
-                      background: 'var(--surface-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '9px',
-                    }}
-                  >
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 24, fontWeight: 900, color: '#fff',
+                    boxShadow: '0 8px 24px rgba(6,182,212,0.4)',
+                  }}>
+                    {friendInitial}
+                  </div>
+                  <div style={{
+                    position: 'absolute', bottom: -4, right: -4,
+                    width: 24, height: 24, borderRadius: '50%',
+                    background: 'var(--surface-elevated, #1a1a24)',
+                    border: '1.5px solid #06b6d4',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12,
+                  }}>
                     {theirData.rankIcon}
-                  </span>
+                  </div>
                 </div>
-                <span 
-                  style={{ 
-                    fontSize: '13px', 
-                    fontWeight: '800', 
-                    color: 'var(--text-primary)', 
-                    maxWidth: '100px', 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap' 
-                  }}
-                >
+
+                <span style={{
+                  fontSize: 15, fontWeight: 800, color: 'var(--text-primary)',
+                  maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                }}>
                   {friendDisplayName}
                 </span>
-                <span 
-                  style={{ 
-                    fontSize: '9.5px', 
-                    fontWeight: '800', 
-                    color: '#06b6d4',
-                    background: 'rgba(6,182,212,0.1)',
-                    padding: '1px 5px',
-                    borderRadius: '5px',
-                    marginTop: '2px',
-                  }}
-                >
-                  Lv.{theirData.level}
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#06b6d4', marginTop: 1 }}>
+                  Lv.{theirData.level} · {theirData.rankTitle}
                 </span>
-                <span style={{ fontSize: '15px', fontWeight: '900', color: '#06b6d4', fontFamily: 'monospace', marginTop: '2px' }}>
-                  {theirData.score.toLocaleString()} XP
-                </span>
+                <div style={{
+                  fontSize: 20, fontWeight: 900, color: '#06b6d4',
+                  fontFamily: 'monospace', marginTop: 4, letterSpacing: '-0.02em'
+                }}>
+                  {theirData.score.toLocaleString()} <span style={{ fontSize: 11, fontWeight: 700 }}>XP</span>
+                </div>
               </div>
             </div>
 
-            {/* Momentum Bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', fontWeight: '800' }}>
-                <span style={{ color: '#a855f7' }}>{myScoreShare}%</span>
-                <span style={{ color: '#06b6d4' }}>{theirScoreShare}%</span>
+            {/* Momentum Tug-of-War Bar */}
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800, marginBottom: 5 }}>
+                <span style={{ color: '#a855f7' }}>You: {myScoreShare}%</span>
+                <span style={{ color: '#06b6d4' }}>{friendDisplayName}: {theirScoreShare}%</span>
               </div>
-              <div 
-                style={{ 
-                  height: '6px', 
-                  borderRadius: '3px', 
-                  background: 'var(--surface-input)', 
-                  overflow: 'hidden',
-                  display: 'flex',
-                }}
-              >
-                <div
+              <div style={{
+                height: 8, borderRadius: 9999,
+                background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                overflow: 'hidden', display: 'flex',
+              }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${myScoreShare}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
                   style={{
-                    width: `${myScoreShare}%`,
+                    background: 'linear-gradient(90deg, #a855f7, #ec4899)',
                     height: '100%',
-                    background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 100%)',
-                    borderRadius: myScoreShare === 100 ? '3px' : '3px 0 0 3px',
                   }}
                 />
-                <div
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${theirScoreShare}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
                   style={{
-                    width: `${theirScoreShare}%`,
+                    background: 'linear-gradient(90deg, #06b6d4, #3b82f6)',
                     height: '100%',
-                    background: 'linear-gradient(270deg, #06b6d4 0%, #3b82f6 100%)',
-                    borderRadius: theirScoreShare === 100 ? '3px' : '0 3px 3px 0',
                   }}
                 />
               </div>
             </div>
           </div>
 
-          {/* ── 5-ATTRIBUTE STAT CLASH ── */}
-          <div 
-            className="glass-card" 
-            style={{
-              borderRadius: '16px',
-              padding: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                Stats Comparison
-              </span>
-              <span 
-                style={{
-                  fontSize: '10px',
-                  fontWeight: '800',
-                  padding: '2px 7px',
-                  borderRadius: '6px',
-                  background: myAttributeWins > theirAttributeWins ? 'rgba(34,197,94,0.12)' : 'rgba(168,85,247,0.12)',
-                  color: myAttributeWins > theirAttributeWins ? '#22c55e' : '#a855f7',
-                }}
-              >
-                {myAttributeWins > theirAttributeWins 
-                  ? `You lead ${myAttributeWins}/5` 
-                  : theirAttributeWins > myAttributeWins 
-                  ? `${friendDisplayName} leads ${theirAttributeWins}/5` 
-                  : 'Tied'}
+          {/* ── BENTO STAT CLASH MATRIX (2-COLUMN GRID) ── */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+                Attributes Breakdown
+              </h3>
+              <span style={{
+                fontSize: 10.5, fontWeight: 800, padding: '2px 8px', borderRadius: 9999,
+                background: myAttributeWins > theirAttributeWins ? 'rgba(34,197,94,0.12)' : 'rgba(168,85,247,0.12)',
+                color: myAttributeWins > theirAttributeWins ? '#22c55e' : '#a855f7',
+                border: '1px solid currentColor',
+              }}>
+                {myAttributeWins > theirAttributeWins
+                  ? `You hold ${myAttributeWins}/5 attributes`
+                  : theirAttributeWins > myAttributeWins
+                  ? `${friendDisplayName} holds ${theirAttributeWins}/5`
+                  : 'Tied 50/50'}
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {battleAttributes.map((attr) => {
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 10,
+            }}>
+              {battleAttributes.map(attr => {
                 const Icon = attr.icon;
                 const total = Math.max(1, (attr.myNum || 0) + (attr.theirNum || 0));
                 const myRatio = Math.round(((attr.myNum || 0) / total) * 100);
-                const theirRatio = 100 - myRatio;
 
                 return (
                   <div
                     key={attr.id}
+                    className="glass-card"
                     style={{
+                      padding: '12px 14px',
+                      borderRadius: 16,
+                      background: 'var(--surface-elevated, rgba(255,255,255,0.03))',
+                      border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '4px',
-                      padding: '8px 10px',
-                      borderRadius: '10px',
-                      background: 'var(--surface-input)',
-                      border: '1px solid var(--border-subtle)',
+                      gap: 8,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <Icon size={13} color={attr.color} />
-                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: 7,
+                          background: `${attr.color}20`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <Icon size={13} color={attr.color} />
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
                           {attr.label}
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
-                        <span 
-                          style={{ 
-                            fontSize: '12px', 
-                            fontWeight: '900', 
-                            color: attr.myLead ? '#22c55e' : '#a855f7',
-                          }}
-                        >
+                      {/* Lead Pill */}
+                      <span style={{
+                        fontSize: 9.5, fontWeight: 800,
+                        color: attr.myLead ? '#22c55e' : attr.theirLead ? '#06b6d4' : 'var(--text-muted)'
+                      }}>
+                        {attr.myLead ? 'You Lead 👑' : attr.theirLead ? `${friendDisplayName} Leads` : 'Tied'}
+                      </span>
+                    </div>
+
+                    {/* Stat Values */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontSize: 9.5, color: 'var(--text-muted)', display: 'block' }}>You</span>
+                        <span style={{
+                          fontSize: 16, fontWeight: 900,
+                          color: attr.myLead ? '#22c55e' : '#a855f7',
+                          fontFamily: 'monospace'
+                        }}>
                           {attr.myVal}
                         </span>
-                        <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>vs</span>
-                        <span 
-                          style={{ 
-                            fontSize: '12px', 
-                            fontWeight: '900', 
-                            color: attr.theirLead ? '#22c55e' : '#06b6d4',
-                          }}
-                        >
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: 9.5, color: 'var(--text-muted)', display: 'block' }}>{friendDisplayName}</span>
+                        <span style={{
+                          fontSize: 16, fontWeight: 900,
+                          color: attr.theirLead ? '#22c55e' : '#06b6d4',
+                          fontFamily: 'monospace'
+                        }}>
                           {attr.theirVal}
                         </span>
                       </div>
                     </div>
 
-                    {/* Comparison Mini-Bar */}
-                    <div style={{ height: '3px', borderRadius: '2px', background: 'var(--surface-elevated)', overflow: 'hidden', display: 'flex' }}>
+                    {/* Proportional Mini Bar */}
+                    <div style={{
+                      height: 4, borderRadius: 2,
+                      background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                      overflow: 'hidden', display: 'flex',
+                    }}>
                       <div style={{ width: `${myRatio}%`, background: '#a855f7' }} />
-                      <div style={{ width: `${theirRatio}%`, background: '#06b6d4' }} />
+                      <div style={{ width: `${100 - myRatio}%`, background: '#06b6d4' }} />
                     </div>
                   </div>
                 );
               })}
+
+              {/* 6th Card: Domination Summary */}
+              <div
+                className="glass-card"
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 16,
+                  background: 'linear-gradient(135deg, rgba(234,179,8,0.08), rgba(168,85,247,0.05))',
+                  border: '1px solid rgba(234,179,8,0.2)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: 7, background: 'rgba(234,179,8,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Trophy size={13} color="#eab308" />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Arena Status
+                  </span>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: '#eab308' }}>
+                    {myAttributeWins > theirAttributeWins ? 'Advantage You 🛡️' : theirAttributeWins > myAttributeWins ? `${friendDisplayName} in Control ⚔️` : 'Balanced Showdown 🤝'}
+                  </div>
+                  <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                    Calculated from streak, consistency & daily rate
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ── 7-DAY SHOWDOWN MATRIX ── */}
+          {/* ── 7-DAY BATTLE MATRIX ── */}
           <div 
             className="glass-card" 
             style={{
-              borderRadius: '16px',
-              padding: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
+              borderRadius: 20,
+              padding: '16px',
+              background: 'var(--surface-elevated, rgba(255,255,255,0.03))',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                7-Day Activity
-              </span>
-              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  7-Day Battle History
+                </h3>
+                <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                  Daily completions comparison
+                </span>
+              </div>
+
+              <span style={{
+                fontSize: 11, fontWeight: 800, color: 'var(--text-primary)',
+                padding: '3px 8px', borderRadius: 8,
+                background: 'var(--surface-input, rgba(255,255,255,0.06))',
+              }}>
                 {weeklyClash.myWins}W · {weeklyClash.theirWins}L · {weeklyClash.ties}T
               </span>
             </div>
 
-            {/* 7-Day Day Columns */}
-            <div 
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: '4px',
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, textAlign: 'center' }}>
               {weeklyClash.days.map((d, dIdx) => {
                 const youWonDay = d.winner === 'you';
                 const friendWonDay = d.winner === 'friend';
@@ -762,47 +816,34 @@ const CompareView = ({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '3px',
-                      padding: '6px 2px',
-                      borderRadius: '8px',
-                      background: d.isToday ? 'rgba(168,85,247,0.08)' : 'var(--surface-input)',
+                      gap: 4,
+                      padding: '8px 4px',
+                      borderRadius: 12,
+                      background: d.isToday ? 'rgba(168,85,247,0.1)' : 'var(--surface-input, rgba(255,255,255,0.04))',
                       border: d.isToday 
-                        ? '1px solid rgba(168,85,247,0.3)' 
-                        : '1px solid var(--border-subtle)',
+                        ? '1px solid rgba(168,85,247,0.35)' 
+                        : '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
                     }}
                   >
-                    <span 
-                      style={{ 
-                        fontSize: '9px', 
-                        fontWeight: '800', 
-                        color: d.isToday ? '#a855f7' : 'var(--text-muted)' 
-                      }}
-                    >
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      color: d.isToday ? '#a855f7' : 'var(--text-muted)'
+                    }}>
                       {d.dayLabel}
                     </span>
 
-                    {/* Winner Badge */}
-                    <div 
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: youWonDay 
-                          ? 'rgba(168,85,247,0.2)' 
-                          : friendWonDay 
-                          ? 'rgba(6,182,212,0.2)' 
-                          : 'transparent',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '9px',
-                        fontWeight: '800',
-                      }}
-                    >
+                    {/* Outcome Badge */}
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: youWonDay ? 'rgba(168,85,247,0.25)' : friendWonDay ? 'rgba(6,182,212,0.25)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11,
+                    }}>
                       {youWonDay ? '👑' : friendWonDay ? '🏃' : '·'}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '8.5px', fontWeight: '800', fontFamily: 'monospace' }}>
+                    {/* Numbers: You vs Friend */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 9.5, fontWeight: 800, fontFamily: 'monospace' }}>
                       <span style={{ color: '#a855f7' }}>{d.myVal}</span>
                       <span style={{ color: '#06b6d4' }}>{d.theirVal}</span>
                     </div>
@@ -815,251 +856,196 @@ const CompareView = ({
         </div>
       )}
 
-      {/* ── SUBVIEW 2: CO-OP SYNERGY & MUTUAL QUESTS ── */}
-      {viewMode === 'habit_match' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* ──────────────────────────────────────────────────────────
+          VIEW 2: HABIT DUELS & CO-OP DISCOVERY
+         ────────────────────────────────────────────────────────── */}
+      {activeTab === 'habits' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           
-          {/* Header Bar */}
-          <div 
-            className="glass-card" 
-            style={{
-              borderRadius: '14px',
-              padding: '10px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Sparkles size={15} style={{ color: '#ec4899' }} />
-              <span style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                Habit Synergy
-              </span>
+          {/* Section 1: Direct Matching Habits */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Common Habits ({habitClashData.common.length})
+                </h3>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Habits you both track actively
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRunAiMatch}
+                disabled={loadingAiMatch}
+                style={{
+                  padding: '5px 10px', borderRadius: 8,
+                  background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                  border: 'none', color: '#fff', fontSize: 11, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <Sparkles size={12} />
+                <span>{loadingAiMatch ? 'Analyzing...' : 'AI Synergy Scan'}</span>
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleRunAiMatch}
-              disabled={loadingAiMatch}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '7px',
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--surface-input)',
-                color: 'var(--text-primary)',
-                fontSize: '10.5px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              <RefreshCw size={11} className={loadingAiMatch ? 'spin' : ''} />
-              <span>{loadingAiMatch ? 'Analyzing...' : 'Re-Scan'}</span>
-            </button>
-          </div>
-
-          {loadingAiMatch ? (
-            <AppLoader variant="section" size="small" message="Scanning habit synergy..." />
-          ) : (
-            <>
-              {/* Mutual Quest Card */}
-              {mutualHabit && (
-                <div 
-                  className="glass-card" 
-                  style={{
-                    borderRadius: '14px',
-                    padding: '12px 14px',
-                    background: 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(168,85,247,0.06) 100%)',
-                    border: '1px solid rgba(236,72,153,0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                      <Rocket size={14} style={{ color: '#ec4899' }} />
-                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                        {mutualHabit.title}
-                      </span>
-                      <span 
-                        style={{ 
-                          fontSize: '8.5px', 
-                          fontWeight: '800', 
-                          padding: '1px 5px', 
-                          borderRadius: '4px', 
-                          background: 'rgba(236,72,153,0.2)', 
-                          color: '#ec4899' 
-                        }}
-                      >
-                        Mutual
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '10.5px', color: 'var(--text-secondary)', margin: 0 }}>
-                      Track together for co-op bonus XP
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAcceptHabit(mutualHabit.title)}
-                    disabled={isMutualAccepted}
+            {habitClashData.common.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {habitClashData.common.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="glass-card"
                     style={{
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: '800',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      border: 'none',
-                      cursor: isMutualAccepted ? 'default' : 'pointer',
-                      flexShrink: 0,
-                      background: isMutualAccepted ? 'rgba(34,197,94,0.15)' : 'linear-gradient(135deg, #ec4899, #a855f7)',
-                      color: isMutualAccepted ? '#22c55e' : '#fff',
+                      padding: '12px 14px', borderRadius: 16,
+                      background: 'var(--surface-elevated, rgba(255,255,255,0.03))',
+                      border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
                     }}
                   >
-                    {isMutualAccepted ? (
-                      <>
-                        <Check size={12} strokeWidth={2.5} />
-                        <span>Tracking</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={12} strokeWidth={2.5} />
-                        <span>Accept</span>
-                      </>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text-primary)' }}>
+                        {item.name}
+                      </span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 800,
+                        color: item.myLead ? '#22c55e' : item.friendLead ? '#06b6d4' : 'var(--text-muted)',
+                      }}>
+                        {item.myLead ? 'You Lead 👑' : item.friendLead ? `${friendDisplayName} Leads` : 'Tied'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
+                      <span style={{ color: '#a855f7', fontWeight: 700 }}>
+                        You: {item.myCompletions} completions
+                      </span>
+                      <span style={{ color: '#06b6d4', fontWeight: 700 }}>
+                        {friendDisplayName}: {item.friendCompletions} completions
+                      </span>
+                    </div>
+
+                    <div style={{
+                      height: 5, borderRadius: 3, marginTop: 6,
+                      background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                      overflow: 'hidden', display: 'flex',
+                    }}>
+                      <div style={{
+                        width: `${Math.round((item.myCompletions / Math.max(1, item.myCompletions + item.friendCompletions)) * 100)}%`,
+                        background: '#a855f7'
+                      }} />
+                      <div style={{
+                        width: `${Math.round((item.friendCompletions / Math.max(1, item.myCompletions + item.friendCompletions)) * 100)}%`,
+                        background: '#06b6d4'
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="glass-card" style={{ padding: '24px 16px', textAlign: 'center', borderRadius: 16 }}>
+                <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>
+                  No exact common habits found yet. Discover what {friendDisplayName} tracks below to start a shared pact!
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Discover Friend's Habits */}
+          {habitClashData.friendUnique.length > 0 && (
+            <div>
+              <div style={{ marginBottom: 10 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Discover {friendDisplayName}'s Habits ({habitClashData.friendUnique.length})
+                </h3>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Adopt these habits to track together with {friendDisplayName}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+                {habitClashData.friendUnique.map((h) => {
+                  const isAdopted = acceptedHabits.has(h.name) || myContextHabits.some(myH => myH.name.toLowerCase() === h.name.toLowerCase());
+
+                  return (
+                    <div
+                      key={h.id}
+                      className="glass-card"
+                      style={{
+                        padding: '12px', borderRadius: 14,
+                        background: 'var(--surface-input, rgba(255,255,255,0.03))',
+                        border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {h.name}
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                          Tracked by {friendDisplayName}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAcceptHabit(h.name)}
+                        disabled={isAdopted}
+                        style={{
+                          padding: '5px 10px', borderRadius: 8,
+                          background: isAdopted ? 'rgba(34,197,94,0.15)' : 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                          border: 'none', color: isAdopted ? '#22c55e' : '#fff',
+                          fontSize: 11, fontWeight: 700, cursor: isAdopted ? 'default' : 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
+                        }}
+                      >
+                        {isAdopted ? <Check size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
+                        <span>{isAdopted ? 'Tracking' : 'Adopt'}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: AI Co-Op Quests if scanned */}
+          {aiMatchResult && (
+            <div className="glass-card" style={{ padding: '16px', borderRadius: 18, border: '1px solid rgba(168,85,247,0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Rocket size={15} color="#ec4899" />
+                <h4 style={{ margin: 0, fontSize: 13.5, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  AI Synergy Recommendation
+                </h4>
+              </div>
+
+              {aiMatchResult.mutualSynergyHabit && (
+                <div style={{
+                  padding: '10px 12px', borderRadius: 12,
+                  background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
+                      "{aiMatchResult.mutualSynergyHabit.title}"
+                    </span>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                      Recommended mutual habit for you and {friendDisplayName}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleAcceptHabit(aiMatchResult.mutualSynergyHabit.title)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 8,
+                      background: 'linear-gradient(135deg, #ec4899, #a855f7)',
+                      border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer'
+                    }}
+                  >
+                    Start Habit
                   </button>
                 </div>
               )}
-
-              {/* Matched Habits List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {aiMatchResult?.matches && aiMatchResult.matches.length > 0 ? (
-                  aiMatchResult.matches.map((match, idx) => {
-                    const isBoth = match.status === 'both_tracking';
-                    const isSharedByMe = sharedHabitPermissions.has(match.habitTitle);
-                    const isAcceptedByMe = acceptedHabits.has(match.habitTitle) || myContextHabits.some(h => h.name.toLowerCase() === match.habitTitle.toLowerCase());
-
-                    const myH = myContextHabits.find(h => (h.name && h.name.toLowerCase().includes(match.habitTitle.toLowerCase())));
-                    const friendH = friendHabits.find(h => (h.name && h.name.toLowerCase().includes(match.habitTitle.toLowerCase())));
-                    const myComps = myH?.history?.filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed').length || 0;
-                    const friendComps = friendH?.history?.filter(e => (typeof e === 'string' ? 'completed' : e.status) === 'completed').length || 0;
-
-                    return (
-                      <div
-                        key={idx}
-                        className="glass-card"
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '12px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                              {match.habitTitle}
-                            </span>
-                            <span 
-                              style={{
-                                fontSize: '8.5px',
-                                fontWeight: '700',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                background: isBoth ? 'rgba(34,197,94,0.12)' : 'rgba(6,182,212,0.12)',
-                                color: isBoth ? '#22c55e' : '#06b6d4',
-                              }}
-                            >
-                              {isBoth ? 'Shared' : `By ${friendDisplayName}`}
-                            </span>
-                          </div>
-
-                          {isBoth ? (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleShareHabit(match.habitTitle)}
-                              style={{
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border-subtle)',
-                                background: isSharedByMe ? 'rgba(34,197,94,0.12)' : 'var(--surface-input)',
-                                color: isSharedByMe ? '#22c55e' : 'var(--text-muted)',
-                                fontSize: '9.5px',
-                                fontWeight: '700',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {isSharedByMe ? <Unlock size={11} /> : <Lock size={11} />}
-                              <span>{isSharedByMe ? 'Shared' : 'Private'}</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleAcceptHabit(match.habitTitle)}
-                              disabled={isAcceptedByMe}
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: '6px',
-                                fontSize: '10.5px',
-                                fontWeight: '800',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                border: 'none',
-                                cursor: isAcceptedByMe ? 'default' : 'pointer',
-                                background: isAcceptedByMe ? 'var(--surface-input)' : 'linear-gradient(135deg, #a855f7, #ec4899)',
-                                color: isAcceptedByMe ? '#22c55e' : '#fff',
-                              }}
-                            >
-                              {isAcceptedByMe ? <Check size={11} /> : <Plus size={11} />}
-                              <span>{isAcceptedByMe ? 'Tracking' : 'Add'}</span>
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Duel Bar if shared */}
-                        {isBoth && isSharedByMe && (
-                          <div 
-                            style={{
-                              background: 'var(--surface-input)',
-                              padding: '5px 8px',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '3px',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800' }}>
-                              <span style={{ color: '#a855f7' }}>You: {myComps}</span>
-                              <span style={{ color: '#06b6d4' }}>{friendDisplayName}: {friendComps}</span>
-                            </div>
-                            <div style={{ height: '3px', borderRadius: '2px', background: 'var(--surface-elevated)', overflow: 'hidden', display: 'flex' }}>
-                              <div style={{ width: `${Math.round((myComps / (Math.max(1, myComps + friendComps))) * 100)}%`, background: '#a855f7' }} />
-                              <div style={{ width: `${Math.round((friendComps / (Math.max(1, myComps + friendComps))) * 100)}%`, background: '#06b6d4' }} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="glass-card" style={{ padding: '16px', textAlign: 'center', borderRadius: '12px' }}>
-                    <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>Tap "Re-Scan" to match habits with {friendDisplayName}.</span>
-                  </div>
-                )}
-              </div>
-            </>
+            </div>
           )}
+
         </div>
       )}
 
@@ -1068,19 +1054,12 @@ const CompareView = ({
         {showXPInspector && (
           <div
             style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              position: 'fixed', inset: 0,
               background: 'rgba(0,0,0,0.7)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 10000,
-              padding: '20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10000, padding: 20,
             }}
             onClick={() => setShowXPInspector(false)}
           >
@@ -1088,15 +1067,13 @@ const CompareView = ({
               initial={{ opacity: 0, scale: 0.94, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               style={{
-                background: 'var(--surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '18px',
-                padding: '16px',
-                width: '100%',
-                maxWidth: '400px',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+                background: 'var(--surface-elevated, #1a1a24)',
+                border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                borderRadius: 20,
+                padding: 18,
+                width: '100%', maxWidth: 400,
+                boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                 color: 'var(--text-primary)',
                 position: 'relative',
                 maxHeight: '85vh',
@@ -1107,98 +1084,87 @@ const CompareView = ({
               <button
                 onClick={() => setShowXPInspector(false)}
                 style={{
-                  position: 'absolute',
-                  top: '14px',
-                  right: '14px',
-                  background: 'var(--surface-input)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '50%',
-                  width: '26px',
-                  height: '26px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
+                  position: 'absolute', top: 14, right: 14,
+                  background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%', width: 26, height: 26,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: 'var(--text-muted)',
                 }}
               >
                 <X size={13} />
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
                 <Award size={18} style={{ color: '#a855f7' }} />
-                <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0 }}>
-                  XP Breakdown
+                <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>
+                  XP Breakdown Formula
                 </h3>
               </div>
 
-              {/* Formula Items */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', background: 'var(--surface-input)' }}>
+              {/* Formula Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-input)' }}>
                   <div>
-                    <div style={{ fontSize: '11.5px', fontWeight: '700' }}>🎯 Check-ins</div>
-                    <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>+10 XP per completion</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700 }}>🎯 Check-ins</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>+10 XP per completion</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: '800', fontSize: '11.5px', color: '#a855f7' }}>
-                    +{myData.breakdown.checkinXP} XP
+                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#a855f7' }}>
+                    +{myData.breakdown?.checkinXP || 0} XP
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', background: 'var(--surface-input)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-input)' }}>
                   <div>
-                    <div style={{ fontSize: '11.5px', fontWeight: '700' }}>🔥 Streak Multipliers</div>
-                    <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>3+ and 7+ day streaks</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700 }}>🔥 Streak Multipliers</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>3+ and 7+ day streaks</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: '800', fontSize: '11.5px', color: '#f59e0b' }}>
-                    +{myData.breakdown.streakXP} XP
+                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#f59e0b' }}>
+                    +{myData.breakdown?.streakXP || 0} XP
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', background: 'var(--surface-input)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-input)' }}>
                   <div>
-                    <div style={{ fontSize: '11.5px', fontWeight: '700' }}>🛡️ Consistency</div>
-                    <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Schedule completion %</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700 }}>🛡️ Consistency</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>Schedule completion %</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: '800', fontSize: '11.5px', color: '#10b981' }}>
-                    +{myData.breakdown.consistencyXP} XP
+                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#10b981' }}>
+                    +{myData.breakdown?.consistencyXP || 0} XP
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', background: 'var(--surface-input)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-input)' }}>
                   <div>
-                    <div style={{ fontSize: '11.5px', fontWeight: '700' }}>⚡ Active Habits</div>
-                    <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>+10 XP per habit</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700 }}>⚡ Active Habits</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>+10 XP per habit</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: '800', fontSize: '11.5px', color: '#3b82f6' }}>
-                    +{myData.breakdown.arsenalXP} XP
+                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#3b82f6' }}>
+                    +{myData.breakdown?.arsenalXP || 0} XP
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', background: 'var(--surface-input)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-input)' }}>
                   <div>
-                    <div style={{ fontSize: '11.5px', fontWeight: '700' }}>🌟 Perfect Days</div>
-                    <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>+20 XP per 100% day</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700 }}>🌟 Perfect Days</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>+20 XP per 100% day</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: '800', fontSize: '11.5px', color: '#ec4899' }}>
-                    +{myData.breakdown.perfectDaysXP} XP
+                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#ec4899' }}>
+                    +{myData.breakdown?.perfectDaysXP || 0} XP
                   </div>
                 </div>
               </div>
 
               {/* Progress to Next Level */}
-              <div 
-                style={{
-                  padding: '10px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, rgba(168,85,247,0.1), rgba(236,72,153,0.06))',
-                  border: '1px solid rgba(168,85,247,0.25)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: '800', marginBottom: '5px' }}>
+              <div style={{
+                padding: 12, borderRadius: 12,
+                background: 'linear-gradient(135deg, rgba(168,85,247,0.1), rgba(236,72,153,0.06))',
+                border: '1px solid rgba(168,85,247,0.25)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, marginBottom: 6 }}>
                   <span>Lv.{myData.level} {myData.rankTitle}</span>
                   <span style={{ color: '#a855f7' }}>{myData.progressPercent}%</span>
                 </div>
-                <div style={{ height: '5px', borderRadius: '3px', background: 'var(--surface-input)', overflow: 'hidden' }}>
+                <div style={{ height: 6, borderRadius: 3, background: 'var(--surface-input)', overflow: 'hidden' }}>
                   <div style={{ width: `${myData.progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #ec4899)' }} />
                 </div>
               </div>
