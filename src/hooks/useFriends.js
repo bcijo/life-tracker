@@ -40,7 +40,7 @@ export const fetchHabitsForUser = async (userId) => {
   try {
     const { data: habits, error } = await supabase
       .from('habits')
-      .select('id, name, history, active_days')
+      .select('id, history, active_days')
       .eq('user_id', userId);
 
     if (error) {
