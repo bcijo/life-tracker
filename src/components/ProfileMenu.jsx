@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAppUpdate } from '../contexts/UpdateContext';
 import { useNavigate } from 'react-router-dom';
 import PrivacySettingsModal from './common/PrivacySettingsModal';
 
@@ -36,6 +37,7 @@ const ProfileMenu = ({ variant = 'default' }) => {
     const { user, signOut } = useAuth();
     const { profile, updateProfile } = useProfile();
     const { theme, setTheme, THEMES, currentTheme } = useTheme();
+    const { checkForUpdates, applyUpdate, isUpdateAvailable } = useAppUpdate();
     const [isOpen, setIsOpen] = useState(false);
     const [currentView, setCurrentView] = useState('main'); // 'main' | 'theme' | 'account' | 'edit-name'
     const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -101,21 +103,20 @@ const ProfileMenu = ({ variant = 'default' }) => {
     const handleUpdate = async () => {
         setUpdating(true);
         try {
-            if ('caches' in window) {
-                const keys = await caches.keys();
-                await Promise.all(keys.map(k => caches.delete(k)));
-            }
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(regs.map(r => r.unregister()));
+            const hasUpdate = await checkForUpdates();
+            if (hasUpdate || isUpdateAvailable) {
+                setIsOpen(false);
+                setUpdating(false);
+                return;
             }
             setUpdated(true);
             setTimeout(() => {
-                window.location.reload();
-            }, 800);
+                setUpdated(false);
+                setUpdating(false);
+            }, 1800);
         } catch (err) {
             console.error('Update error:', err);
-            window.location.reload();
+            setUpdating(false);
         }
     };
 

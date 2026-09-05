@@ -151,11 +151,11 @@ const GUIDE_SECTIONS = [
         topics: [
             {
                 title: "Claiming Your @username",
-                content: "Open the Profile Menu > Account Details to set your unique public username (e.g. @abhin). This allows friends to find and connect with you."
+                content: "Open the Profile Menu > Account Details to set your unique public username (e.g. @abhin). Your username is used to generate your personal invite link."
             },
             {
-                title: "Adding Friends & Invite Links",
-                content: "Search for friends by username in the Friends tab or share your personal invite link (lifetracker.app/invite/your_username) for instant friend connections."
+                title: "Private Invite Links",
+                content: "To protect your privacy and prevent unsolicited directory searches, friend connections in LifeTracker are strictly invite-only. Share your personal invite link (lifetracker.app/invite/your_username) with friends to connect and compare habit streaks."
             },
             {
                 title: "Habit Accountability Feed",

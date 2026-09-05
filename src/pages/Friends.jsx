@@ -8,7 +8,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import UsernameOnboarding from '../components/friends/UsernameOnboarding';
 import FriendCard from '../components/friends/FriendCard';
 import FriendRequestCard from '../components/friends/FriendRequestCard';
-import FriendSearchModal from '../components/friends/FriendSearchModal';
+import InviteModal from '../components/friends/InviteModal';
 import RemoveFriendModal from '../components/friends/RemoveFriendModal';
 import LeaderboardList from '../components/friends/LeaderboardList';
 import CompareView from '../components/friends/CompareView';
@@ -29,11 +29,9 @@ const Friends = () => {
     pendingSent,
     myScore,
     loading: friendsLoading,
-    sendFriendRequest,
     acceptRequest,
     declineRequest,
     removeFriend,
-    searchUsers,
     refresh: refreshFriends,
   } = useFriends();
   const {
@@ -46,7 +44,7 @@ const Friends = () => {
   } = useLeaderboard();
 
   const [activeTab, setActiveTab] = useState('friends');
-  const [showSearch, setShowSearch] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPending, setShowPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -195,10 +193,10 @@ const Friends = () => {
             {copied ? <Check size={14} /> : <Share2 size={14} />}
           </motion.button>
 
-          {/* Add Friend Search Modal Trigger */}
+          {/* Invite Friends Modal Trigger */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => setShowSearch(true)}
+            onClick={() => setShowInviteModal(true)}
             style={{
               width: 32, height: 32, borderRadius: 10,
               background: 'linear-gradient(135deg, #a855f7, #ec4899)',
@@ -206,7 +204,7 @@ const Friends = () => {
               color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
-            title="Add Friend"
+            title="Invite Friends"
           >
             <UserPlus size={15} />
           </motion.button>
@@ -408,11 +406,11 @@ const Friends = () => {
                   No friends yet
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: 12.5, marginBottom: 16, maxWidth: '280px', margin: '0 auto 16px' }}>
-                  Add friends to compare habit streaks, track consistency, and climb the leaderboard!
+                  Invite friends to compare habit streaks, track consistency, and climb the leaderboard!
                 </p>
                 <button
                   type="button"
-                  onClick={() => setShowSearch(true)}
+                  onClick={() => setShowInviteModal(true)}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '10px',
@@ -427,7 +425,7 @@ const Friends = () => {
                     gap: '6px'
                   }}
                 >
-                  <UserPlus size={14} /> Add Friend
+                  <UserPlus size={14} /> Invite Friends
                 </button>
               </motion.div>
             ) : filteredFriends.length === 0 ? (
@@ -509,12 +507,12 @@ const Friends = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Centered Add Friend Modal */}
-      <FriendSearchModal
-        isOpen={showSearch}
-        onClose={() => setShowSearch(false)}
-        onSendRequest={sendFriendRequest}
-        searchUsers={searchUsers}
+      {/* Floating Centered Invite Friends Modal */}
+      <InviteModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        username={profile?.username}
+        displayName={profile?.display_name || profile?.full_name}
       />
 
       {/* Remove Friend Confirmation Modal */}

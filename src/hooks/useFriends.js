@@ -198,58 +198,6 @@ export const useFriends = () => {
     };
   }, [user, fetchFriendsAndScores]);
 
-  const sendFriendRequest = async (username) => {
-    if (!user) return { success: false, error: 'Not authenticated' };
-    try {
-      const cleanUsername = username ? username.trim().replace(/^@/, '') : '';
-      if (!cleanUsername) return { success: false, error: 'Please enter a username' };
-
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, full_name')
-        .ilike('username', cleanUsername)
-        .limit(1);
-        
-      if (profileError) throw profileError;
-      if (!profiles || profiles.length === 0) {
-        return { success: false, error: `No user found with username "@${cleanUsername}"` };
-      }
-      
-      const targetUserId = profiles[0].id;
-      if (targetUserId === user.id) return { success: false, error: 'Cannot send a friend request to yourself' };
-
-      const { data: existing, error: existingError } = await supabase
-        .from('friendships')
-        .select('id, status, requester_id')
-        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${user.id})`)
-        .limit(1);
-        
-      if (existingError) throw existingError;
-
-      if (existing && existing.length > 0) {
-        const item = existing[0];
-        if (item.status === 'accepted') return { success: false, error: `You are already friends with @${cleanUsername}!` };
-        if (item.requester_id === user.id) return { success: false, error: `Friend request is already pending with @${cleanUsername}` };
-        return { success: false, error: `@${cleanUsername} has already sent you a request! Check incoming requests.` };
-      }
-
-      const { error: insertError } = await supabase
-        .from('friendships')
-        .insert({ requester_id: user.id, addressee_id: targetUserId, status: 'pending' });
-        
-      if (insertError) {
-        if (insertError.code === '23505') return { success: false, error: `A request is already pending with @${cleanUsername}` };
-        throw insertError;
-      }
-      
-      fetchFriendsAndScores();
-      return { success: true };
-    } catch (err) {
-      console.error('Error sending friend request:', err);
-      return { success: false, error: err.message || 'Failed to send friend request' };
-    }
-  };
-
   const acceptRequest = async (friendshipId) => {
     try {
       const { error } = await supabase
@@ -286,34 +234,11 @@ export const useFriends = () => {
     }
   };
 
-  const searchUsers = async (query) => {
-    if (!user || !query || query.trim().length < 2) return [];
-    try {
-      const cleanQuery = query.trim().replace(/^@/, '');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, full_name')
-        .ilike('username', `%${cleanQuery}%`)
-        .neq('id', user.id)
-        .limit(10);
-        
-      if (error) throw error;
-      
-      return data.map(profile => ({
-        ...profile,
-        isFriend: friends.some(f => f.id === profile.id),
-        isPending: pendingSent.some(p => p.addressee.id === profile.id) || pendingReceived.some(p => p.requester.id === profile.id)
-      }));
-    } catch (err) {
-      console.error('Error searching users:', err);
-      return [];
-    }
-  };
-
   return {
     friends, pendingReceived, pendingSent, myScore, loading, error,
-    sendFriendRequest, acceptRequest, declineRequest, removeFriend, searchUsers, refresh: fetchFriendsAndScores
+    acceptRequest, declineRequest, removeFriend, refresh: fetchFriendsAndScores
   };
 };
 
 export default useFriends;
+

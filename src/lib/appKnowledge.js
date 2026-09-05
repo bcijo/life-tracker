@@ -33,7 +33,7 @@ When users ask questions about how the app works, where to find features, how fo
   - Natural Language Expense Logging: users can type "Spent 45 on coffee" to log expenses.
   - App Expert: Explains any feature, guide, or formula in LifeTracker.
 - **Friends & Community (\`/friends\`)**:
-  - **Friends Hub**: View friends, level badges, XP scores, real-time search filter, and invite links (\`/invite/username\`).
+  - **Friends Hub**: View friends, level badges, XP scores, active habit streaks, and private invite links (\`/invite/username\`). Friend connections are strictly invite-only for user privacy.
   - **Leaderboard**: Global and Friends rankings powered by unified Gamified XP.
   - **Compare Tab**: Head-to-head showdown with another friend. Features:
     * Lead XP status banner & XP Details modal.

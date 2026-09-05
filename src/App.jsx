@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './contexts/AuthContext'
 import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { UpdateProvider } from './contexts/UpdateContext'
+import ForceUpdateModal from './components/common/ForceUpdateModal'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Layout from './components/Layout'
 import MigrationBanner from './components/MigrationBanner'
@@ -26,10 +28,12 @@ function App() {
     return (
         <ErrorBoundary>
             <ThemeProvider>
-                <AuthProvider>
-                    <EncryptionProvider>
-                        <MigrationBanner />
-                        <Router>
+                <UpdateProvider>
+                    <ForceUpdateModal />
+                    <AuthProvider>
+                        <EncryptionProvider>
+                            <MigrationBanner />
+                            <Router>
                         <Routes>
                             <Route path="/login" element={<Login />} />
                             <Route path="/signup" element={<Signup />} />
@@ -65,6 +69,7 @@ function App() {
                     <Analytics />
                     </EncryptionProvider>
                 </AuthProvider>
+                </UpdateProvider>
             </ThemeProvider>
         </ErrorBoundary>
     )
