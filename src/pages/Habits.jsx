@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, BarChart2, CalendarDays, Check } from 'lucide-react';
+import { Plus, BarChart2, CalendarDays, Check, Zap } from 'lucide-react';
 import useHabits, { parseLocalDate, getLocalDateStr } from '../hooks/useHabits';
+import useMutualHabits from '../hooks/useMutualHabits';
+import { useFriends } from '../hooks/useFriends';
 import HabitAnalytics from '../components/HabitAnalytics';
 import { format, subDays, parse, isToday as isDateToday, getDay } from 'date-fns';
 import { GradientOrbs } from '../components/habits/GradientOrbs';
@@ -34,10 +36,23 @@ const Habits = () => {
         togglePauseHabit,
     } = useHabits();
 
+    const {
+        habitToPactMap,
+        nudges,
+        sendPactInvite,
+        sendNudge,
+        cancelPact,
+        markNudgesAsRead,
+    } = useMutualHabits();
+
+    const { friends } = useFriends();
+
     const [showForm, setShowForm] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedDays, setSelectedDays] = useState(ALL_DAYS);
     const [newHabitTimeOfDay, setNewHabitTimeOfDay] = useState('morning');
+    const [enableDuoPact, setEnableDuoPact] = useState(false);
+    const [duoPartnerId, setDuoPartnerId] = useState('');
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [selectedHabitId, setSelectedHabitId] = useState(null);
     const [showReorder, setShowReorder] = useState(false);
@@ -101,10 +116,28 @@ const Habits = () => {
         e.preventDefault();
         if (!newHabitName.trim()) return;
         if (selectedDays.length === 0) { alert('Pick at least one day'); return; }
-        await addHabitDb(newHabitName, selectedDays, newHabitTimeOfDay);
+        const createdHabit = await addHabitDb(newHabitName, selectedDays, newHabitTimeOfDay);
+
+        // If accountability partner was selected, send pact invite
+        if (enableDuoPact && duoPartnerId && createdHabit?.id) {
+            try {
+                await sendPactInvite({
+                    partnerId: duoPartnerId,
+                    habitName: newHabitName,
+                    activeDays: selectedDays,
+                    timeOfDay: newHabitTimeOfDay,
+                    existingHabitId: createdHabit.id,
+                });
+            } catch (pactErr) {
+                console.error('Failed to send pact invite:', pactErr);
+            }
+        }
+
         setNewHabitName('');
         setSelectedDays(ALL_DAYS);
         setNewHabitTimeOfDay('morning');
+        setEnableDuoPact(false);
+        setDuoPartnerId('');
         setShowForm(false);
     };
 
@@ -184,6 +217,59 @@ const Habits = () => {
         <div className="page-container" style={{ position: 'relative', zIndex: 1, maxWidth: 1080, margin: '0 auto', width: '100%' }}>
             {/* Ambient orbs (only visible in dark theme) */}
             <GradientOrbs />
+
+            {/* Incoming Nudge / High-Five Alert Toast */}
+            <AnimatePresence>
+                {nudges && nudges.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                        style={{
+                            marginBottom: 16,
+                            padding: '10px 14px',
+                            borderRadius: 14,
+                            background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(168,85,247,0.18))',
+                            border: '1px solid rgba(245,158,11,0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            position: 'relative',
+                            zIndex: 10,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                                width: 28, height: 28, borderRadius: 8,
+                                background: '#f59e0b', color: '#000',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontWeight: 900, fontSize: 13
+                            }}>
+                                ⚡
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    {nudges[0].message}
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => markNudgesAsRead(nudges.map(n => n.id))}
+                            style={{
+                                padding: '5px 12px', borderRadius: 8,
+                                background: 'var(--surface-elevated, rgba(255,255,255,0.12))',
+                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+                                color: 'var(--text-primary)', fontSize: 11, fontWeight: 700,
+                                cursor: 'pointer', flexShrink: 0
+                            }}
+                        >
+                            Dismiss
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Header */}
             <motion.header
@@ -433,6 +519,50 @@ const Habits = () => {
                                         `${selectedDays.length} days/week`}
                         </p>
 
+                        {/* Track with Friend (Duo Pact) Option */}
+                        {friends && friends.length > 0 && (
+                            <div style={{
+                                marginBottom: 14, padding: '10px 12px', borderRadius: 12,
+                                background: enableDuoPact ? 'rgba(6,182,212,0.1)' : 'var(--surface-input, rgba(255,255,255,0.03))',
+                                border: `1px solid ${enableDuoPact ? 'rgba(6,182,212,0.3)' : 'var(--border-subtle, rgba(255,255,255,0.06))'}`,
+                                transition: 'all 0.2s',
+                            }}>
+                                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: enableDuoPact ? '#06b6d4' : 'var(--text-secondary)' }}>
+                                        🤝 Track with a Friend (Duo Pact)
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={enableDuoPact}
+                                        onChange={(e) => setEnableDuoPact(e.target.checked)}
+                                        style={{ cursor: 'pointer', accentColor: '#06b6d4', width: 16, height: 16 }}
+                                    />
+                                </label>
+                                {enableDuoPact && (
+                                    <div style={{ marginTop: 8 }}>
+                                        <select
+                                            value={duoPartnerId}
+                                            onChange={(e) => setDuoPartnerId(e.target.value)}
+                                            style={{
+                                                width: '100%', padding: '8px 10px', borderRadius: 8,
+                                                background: 'var(--surface-elevated, #1a1a24)',
+                                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+                                                color: 'var(--text-primary, #fff)', fontSize: 11.5,
+                                                outline: 'none',
+                                            }}
+                                        >
+                                            <option value="">-- Choose Accountability Partner --</option>
+                                            {friends.map(f => (
+                                                <option key={f.id} value={f.id}>
+                                                    {f.display_name || f.full_name || f.username} (@{f.username})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Submit */}
                         <button
                             type="submit"
@@ -534,6 +664,8 @@ const Habits = () => {
                         onSelectHabit={setSelectedHabitId}
                         onTogglePause={togglePauseHabit}
                         isCelebrating={habit.id === celebratingId}
+                        pactInfo={habitToPactMap[habit.id] || null}
+                        onSendNudge={sendNudge}
                     />
                 );
 
@@ -649,6 +781,17 @@ const Habits = () => {
                                 setHabitStatus(id, dateStr, nextStatus);
                             }}
                             onClose={() => setSelectedHabitId(null)}
+                            pactInfo={habitToPactMap[selectedHabit.id] || null}
+                            friends={friends}
+                            onInvitePartner={(partnerId, h) => sendPactInvite({
+                                partnerId,
+                                habitName: h.name,
+                                activeDays: h.active_days || ALL_DAYS,
+                                timeOfDay: h.time_of_day || 'morning',
+                                existingHabitId: h.id,
+                            })}
+                            onSendNudge={sendNudge}
+                            onCancelPact={cancelPact}
                         />
                     );
                 })()}

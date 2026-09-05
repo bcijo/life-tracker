@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw, Search, X } from 'lucide-react';
+import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw, Search, X, Handshake } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import useMutualHabits from '../hooks/useMutualHabits';
 import UsernameOnboarding from '../components/friends/UsernameOnboarding';
 import FriendCard from '../components/friends/FriendCard';
 import FriendRequestCard from '../components/friends/FriendRequestCard';
@@ -12,10 +13,12 @@ import InviteModal from '../components/friends/InviteModal';
 import RemoveFriendModal from '../components/friends/RemoveFriendModal';
 import LeaderboardList from '../components/friends/LeaderboardList';
 import CompareView from '../components/friends/CompareView';
+import DuoPactsView from '../components/friends/DuoPactsView';
 import AppLoader from '../components/common/AppLoader';
 
 const TABS = [
   { id: 'friends', label: 'Friends', icon: Users },
+  { id: 'pacts', label: 'Duo Pacts', icon: Handshake },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'compare', label: 'Compare', icon: Swords },
 ];
@@ -42,6 +45,8 @@ const Friends = () => {
     loading: leaderboardLoading,
     refresh: refreshLeaderboard,
   } = useLeaderboard();
+
+  const mutualHabitsState = useMutualHabits();
 
   const [activeTab, setActiveTab] = useState('friends');
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -225,7 +230,8 @@ const Friends = () => {
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
-          const hasBadge = tab.id === 'friends' && pendingReceived.length > 0;
+          const hasBadge = (tab.id === 'friends' && pendingReceived.length > 0) ||
+                           (tab.id === 'pacts' && mutualHabitsState?.pendingReceivedPacts?.length > 0);
           return (
             <button
               key={tab.id}
@@ -484,6 +490,21 @@ const Friends = () => {
               scope={scope}
               onScopeChange={setScope}
               loading={leaderboardLoading}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === 'pacts' && (
+          <motion.div
+            key="pacts"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <DuoPactsView
+              friends={friends}
+              mutualHabitsState={mutualHabitsState}
             />
           </motion.div>
         )}

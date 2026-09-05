@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Flame, Trash2, Edit2, ChevronLeft, X, Check, Trophy, Target, TrendingUp, PauseCircle, Play } from 'lucide-react';
+import { Flame, Trash2, Edit2, ChevronLeft, X, Check, Trophy, Target, TrendingUp, PauseCircle, Play, Handshake, Zap, UserPlus } from 'lucide-react';
 import { AuraSpringToggle } from './AuraSpringToggle';
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isFuture, isToday, subDays } from 'date-fns';
 import { parseLocalDate, getLocalDateStr } from '../../hooks/useHabits';
+import { computeDuoStreak, computeSynergyScore, getDuoBadge, computeDuoWeeklyMatrix, getPartnerDailyStatus } from '../../utils/duoHabitGamification';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -59,6 +60,11 @@ export function HabitDetailModal({
   onCalendarClick,
   onTogglePause,
   onClose,
+  pactInfo = null,
+  friends = [],
+  onInvitePartner = null,
+  onSendNudge = null,
+  onCancelPact = null,
 }) {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -66,6 +72,47 @@ export function HabitDetailModal({
   const [editingDays, setEditingDays] = useState(false);
   const [editDays, setEditDays] = useState([]);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [showInvitePartner, setShowInvitePartner] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [nudgeActionSent, setNudgeActionSent] = useState(false);
+
+  // Duo Gamification metrics
+  const duoStreak = pactInfo ? computeDuoStreak(pactInfo.pact, habit, pactInfo.partnerHabit) : 0;
+  const synergyScore = pactInfo ? computeSynergyScore(pactInfo.pact, habit, pactInfo.partnerHabit) : 0;
+  const duoBadge = getDuoBadge(duoStreak);
+  const weeklyDuoMatrix = pactInfo ? computeDuoWeeklyMatrix(pactInfo.pact, habit, pactInfo.partnerHabit) : [];
+  const partnerDaily = pactInfo ? getPartnerDailyStatus(pactInfo.partnerHabit, pactInfo.pact.active_days) : null;
+  const partnerName = pactInfo?.partnerProfile?.display_name || pactInfo?.partnerProfile?.username || 'Partner';
+  const partnerUsername = pactInfo?.partnerProfile?.username ? `@${pactInfo.partnerProfile.username}` : '';
+  const partnerInitial = partnerName[0]?.toUpperCase() || 'P';
+
+  const handleSendNudgeAction = (type) => {
+    if (onSendNudge && pactInfo) {
+      onSendNudge({
+        pactId: pactInfo.pact.id,
+        partnerId: pactInfo.partnerId,
+        type,
+        habitName: habit.name,
+      });
+      setNudgeActionSent(true);
+      setTimeout(() => setNudgeActionSent(false), 2500);
+    }
+  };
+
+  const handleInviteSubmit = async () => {
+    if (!selectedFriendId || !onInvitePartner) return;
+    setInviting(true);
+    try {
+      await onInvitePartner(selectedFriendId, habit);
+      setShowInvitePartner(false);
+      setSelectedFriendId('');
+    } catch (e) {
+      console.error('Failed to invite partner:', e);
+    } finally {
+      setInviting(false);
+    }
+  };
 
   // Listen to window resize for responsive mode
   useEffect(() => {
@@ -278,6 +325,303 @@ export function HabitDetailModal({
             );
           })}
         </div>
+      </motion.div>
+
+      {/* ── ACCOUNTABILITY PARTNERSHIP (DUO PACT) ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18 }}
+        style={{
+          padding: isMobile ? 12 : 16,
+          borderRadius: 18,
+          background: pactInfo
+            ? 'linear-gradient(135deg, rgba(6,182,212,0.08), rgba(168,85,247,0.06))'
+            : 'var(--surface-elevated, rgba(255,255,255,0.03))',
+          border: pactInfo
+            ? '1px solid rgba(6,182,212,0.25)'
+            : '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: 8,
+              background: 'rgba(6,182,212,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Handshake size={15} color="#06b6d4" />
+            </div>
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Accountability Partner
+              </span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block' }}>
+                {pactInfo ? 'Active Duo Pact' : 'Track together & share streaks'}
+              </span>
+            </div>
+          </div>
+
+          {pactInfo && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 10.5, fontWeight: 800, color: duoBadge.color,
+              background: `${duoBadge.color}15`, border: `1px solid ${duoBadge.color}30`,
+              padding: '2px 8px', borderRadius: 9999,
+            }}>
+              <span>{duoBadge.icon}</span>
+              <span>{duoBadge.name}</span>
+            </span>
+          )}
+        </div>
+
+        {pactInfo ? (
+          <div>
+            {/* Partner Info & Today's Status */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', borderRadius: 14,
+              background: 'var(--surface-input, rgba(255,255,255,0.04))',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+              marginBottom: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: '50%',
+                  background: partnerDaily?.status === 'completed'
+                    ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                    : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  color: '#fff', fontWeight: 800, fontSize: 14,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: partnerDaily?.status === 'completed' ? '0 0 10px rgba(34,197,94,0.35)' : 'none',
+                }}>
+                  {partnerInitial}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {partnerName}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    {partnerUsername} · <span style={{ color: partnerDaily?.color, fontWeight: 700 }}>{partnerDaily?.label} Today</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons: Nudge or High Five */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {partnerDaily?.status === 'pending' ? (
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={() => handleSendNudgeAction('nudge')}
+                    disabled={nudgeActionSent}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 12px', borderRadius: 10,
+                      background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
+                      color: '#f59e0b', fontSize: 11, fontWeight: 700, cursor: 'pointer'
+                    }}
+                  >
+                    {nudgeActionSent ? <Check size={12} strokeWidth={3} /> : <Zap size={12} fill="#f59e0b" />}
+                    <span>{nudgeActionSent ? 'Nudged!' : 'Nudge'}</span>
+                  </motion.button>
+                ) : partnerDaily?.status === 'completed' ? (
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={() => handleSendNudgeAction('high_five')}
+                    disabled={nudgeActionSent}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 12px', borderRadius: 10,
+                      background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                      color: '#22c55e', fontSize: 11, fontWeight: 700, cursor: 'pointer'
+                    }}
+                  >
+                    <span>{nudgeActionSent ? '🎉' : '✋'}</span>
+                    <span>{nudgeActionSent ? 'Sent!' : 'High-Five'}</span>
+                  </motion.button>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Duo Stats Row: Duo Streak & Synergy */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <div style={{
+                padding: '10px', borderRadius: 12,
+                background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.18)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 2 }}>
+                  Duo Streak
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#06b6d4', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <Flame size={16} fill="#06b6d4" />
+                  {duoStreak} <span style={{ fontSize: 11, fontWeight: 600 }}>days</span>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '10px', borderRadius: 12,
+                background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.18)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 2 }}>
+                  30-Day Synergy
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#a855f7' }}>
+                  {synergyScore}%
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Side-by-Side Synergy Grid */}
+            <div style={{
+              padding: '10px 12px', borderRadius: 12,
+              background: 'var(--surface-elevated, rgba(255,255,255,0.02))',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.05))',
+              marginBottom: 10,
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                7-Day Mutual Synergy
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, textAlign: 'center' }}>
+                {weeklyDuoMatrix.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 9.5, fontWeight: 600, color: item.isToday ? '#06b6d4' : 'var(--text-muted)' }}>
+                      {item.dayLabel}
+                    </span>
+                    {/* You dot */}
+                    <div
+                      title={`You: ${item.myStatus || 'none'}`}
+                      style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: item.myStatus === 'completed' ? '#22c55e' : item.myStatus === 'failed' ? '#ef4444' : 'rgba(255,255,255,0.1)',
+                      }}
+                    />
+                    {/* Partner dot */}
+                    <div
+                      title={`${partnerName}: ${item.partnerStatus || 'none'}`}
+                      style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: item.partnerStatus === 'completed' ? '#06b6d4' : item.partnerStatus === 'failed' ? '#ef4444' : 'rgba(255,255,255,0.1)',
+                      }}
+                    />
+                    {/* Synced star indicator */}
+                    <span style={{ fontSize: 8, height: 10, lineHeight: 1 }}>
+                      {item.isSynced ? '⭐' : ' '}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* End Pact Button */}
+            {onCancelPact && (
+              <button
+                onClick={() => {
+                  if (confirm(`End this accountability pact with ${partnerName}? Your personal habit will remain intact.`)) {
+                    onCancelPact(pactInfo.pact.id);
+                  }
+                }}
+                style={{
+                  background: 'none', border: 'none', color: '#ef4444',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '4px 0',
+                  display: 'block', margin: '6px auto 0', opacity: 0.8
+                }}
+              >
+                Leave Accountability Pact
+              </button>
+            )}
+          </div>
+        ) : (
+          /* No Pact Linked Yet */
+          <div>
+            <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '0 0 10px', lineHeight: 1.4 }}>
+              Invite a friend to track "{habit.name}" together. You'll share a Duo Streak and be able to keep each other motivated with live status & nudges.
+            </p>
+
+            {!showInvitePartner ? (
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowInvitePartner(true)}
+                style={{
+                  ...rowBtn,
+                  background: 'rgba(6,182,212,0.1)',
+                  border: '1px solid rgba(6,182,212,0.25)',
+                  color: '#06b6d4',
+                  justifyContent: 'center',
+                }}
+              >
+                <UserPlus size={15} color="#06b6d4" />
+                <span>Invite Accountability Partner</span>
+              </motion.button>
+            ) : (
+              <div style={{
+                padding: '12px', borderRadius: 14,
+                background: 'var(--surface-input, rgba(255,255,255,0.04))',
+                border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  Select a Friend
+                </div>
+                {friends && friends.length > 0 ? (
+                  <>
+                    <select
+                      value={selectedFriendId}
+                      onChange={(e) => setSelectedFriendId(e.target.value)}
+                      style={{
+                        width: '100%', padding: '8px 10px', borderRadius: 10,
+                        background: 'var(--surface-elevated, #1a1a24)',
+                        border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+                        color: 'var(--text-primary, #fff)', fontSize: 12, marginBottom: 10,
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">-- Choose Friend --</option>
+                      {friends.map(f => (
+                        <option key={f.id} value={f.id}>
+                          {f.display_name || f.full_name || f.username} (@{f.username})
+                        </option>
+                      ))}
+                    </select>
+
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => setShowInvitePartner(false)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 8,
+                          background: 'none', border: '1px solid var(--border-subtle)',
+                          color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleInviteSubmit}
+                        disabled={!selectedFriendId || inviting}
+                        style={{
+                          padding: '6px 14px', borderRadius: 8,
+                          background: 'linear-gradient(135deg, #06b6d4, #a855f7)',
+                          border: 'none', color: '#fff', fontSize: 11, fontWeight: 700,
+                          cursor: (!selectedFriendId || inviting) ? 'default' : 'pointer',
+                          opacity: (!selectedFriendId || inviting) ? 0.6 : 1,
+                        }}
+                      >
+                        {inviting ? 'Sending...' : 'Send Pact Invite'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      No friends yet. Add friends on the Friends page to start a pact!
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </motion.div>
 
       {/* ── SETTINGS ── */}

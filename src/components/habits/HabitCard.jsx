@@ -1,7 +1,8 @@
 import { motion, useAnimation } from 'framer-motion';
-import { useEffect } from 'react';
-import { Flame, Play, PauseCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Flame, Play, PauseCircle, Zap, Check } from 'lucide-react';
 import { AuraSpringToggle } from './AuraSpringToggle';
+import { computeDuoStreak, getPartnerDailyStatus } from '../../utils/duoHabitGamification';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -18,7 +19,10 @@ export function HabitCard({
   onSelectHabit,
   onTogglePause,
   isCelebrating = false,
+  pactInfo = null,
+  onSendNudge = null,
 }) {
+  const [nudged, setNudged] = useState(false);
   const timeOfDay = habit.time_of_day || 'morning';
   const accentColor = habit.is_paused ? '#eab308' : (timeOfDay === 'morning' ? '#f59e0b' : '#a855f7');
 
@@ -33,6 +37,25 @@ export function HabitCard({
       });
     }
   }, [isCelebrating]);
+
+  const duoStreak = pactInfo ? computeDuoStreak(pactInfo.pact, habit, pactInfo.partnerHabit) : 0;
+  const partnerDaily = pactInfo ? getPartnerDailyStatus(pactInfo.partnerHabit, pactInfo.pact.active_days) : null;
+  const partnerName = pactInfo?.partnerProfile?.display_name || pactInfo?.partnerProfile?.username || 'Partner';
+  const partnerInitial = partnerName[0]?.toUpperCase() || 'P';
+
+  const handleNudge = (e, type) => {
+    e.stopPropagation();
+    if (onSendNudge && pactInfo) {
+      onSendNudge({
+        pactId: pactInfo.pact.id,
+        partnerId: pactInfo.partnerId,
+        type,
+        habitName: habit.name,
+      });
+      setNudged(true);
+      setTimeout(() => setNudged(false), 2200);
+    }
+  };
 
   return (
     <motion.div
@@ -65,13 +88,13 @@ export function HabitCard({
         className="habit-glass-card"
         animate={isCelebrating
           ? { borderColor: ['var(--border-subtle, rgba(255,255,255,0.06))', 'rgba(34,197,94,0.7)', 'var(--border-subtle, rgba(255,255,255,0.06))'] }
-          : { borderColor: 'var(--border-subtle, rgba(255,255,255,0.06))' }
+          : { borderColor: pactInfo ? 'rgba(6,182,212,0.2)' : 'var(--border-subtle, rgba(255,255,255,0.06))' }
         }
         transition={{ duration: 0.3 }}
         style={{
           borderRadius: 20,
           position: 'relative',
-          border: `1px solid var(--border-subtle, rgba(255,255,255,0.06))`,
+          border: pactInfo ? `1px solid rgba(6,182,212,0.25)` : `1px solid var(--border-subtle, rgba(255,255,255,0.06))`,
           background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
           opacity: habit.is_paused ? 0.75 : 1,
         }}
@@ -84,6 +107,8 @@ export function HabitCard({
             width: 3, borderRadius: 9999,
             background: habit.is_paused
               ? 'linear-gradient(180deg, #eab308, rgba(234,179,8,0.3))'
+              : pactInfo
+              ? 'linear-gradient(180deg, #06b6d4, #a855f7)'
               : `linear-gradient(180deg, ${accentColor}, ${accentColor}40)`,
           }}
         />
@@ -92,8 +117,8 @@ export function HabitCard({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
             {/* Left Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              {/* Top line: Name + Streak / Paused badge */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+              {/* Top line: Name + Streak / Paused badge + Duo Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
                 <h3 style={{
                   margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -113,6 +138,21 @@ export function HabitCard({
                   </span>
                 )}
 
+                {/* Duo Streak Flame Pill */}
+                {pactInfo && (
+                  <span
+                    title={`Duo Pact with ${partnerName} (${duoStreak} days mutual streak)`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                      fontSize: 10, fontWeight: 800, color: '#06b6d4',
+                      background: 'rgba(6,182,212,0.14)', border: '1px solid rgba(6,182,212,0.28)',
+                      padding: '1px 6px', borderRadius: 9999, flexShrink: 0,
+                    }}
+                  >
+                    🤝 {duoStreak > 0 ? `${duoStreak}d Duo` : 'Duo'}
+                  </span>
+                )}
+
                 {habit.is_paused && (
                   <span style={{
                     fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 9999,
@@ -124,7 +164,7 @@ export function HabitCard({
                 )}
               </div>
 
-              {/* Bottom line: Time icon + Success % + Inline Weekly 7-Dots */}
+              {/* Bottom line: Time icon + Success % + Inline Weekly 7-Dots + Partner Status Pill */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{
                   fontSize: 10, fontWeight: 600, color: 'var(--text-muted)',
@@ -162,6 +202,71 @@ export function HabitCard({
                     );
                   })}
                 </div>
+
+                {/* Partner Accountability Live Status Pill */}
+                {pactInfo && partnerDaily && (
+                  <>
+                    <span style={{ color: 'var(--border-subtle, rgba(255,255,255,0.15))', fontSize: 10 }}>·</span>
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '1px 6px 1px 3px',
+                        borderRadius: 9999,
+                        background: partnerDaily.status === 'completed'
+                          ? 'rgba(34,197,94,0.12)'
+                          : 'rgba(245,158,11,0.12)',
+                        border: `1px solid ${partnerDaily.status === 'completed' ? 'rgba(34,197,94,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                      }}
+                      title={`${partnerName}: ${partnerDaily.label} today`}
+                    >
+                      <div style={{
+                        width: 14, height: 14, borderRadius: '50%',
+                        background: partnerDaily.status === 'completed' ? '#22c55e' : '#f59e0b',
+                        color: '#000', fontSize: 8.5, fontWeight: 900,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        {partnerInitial}
+                      </div>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700,
+                        color: partnerDaily.status === 'completed' ? '#22c55e' : '#f59e0b'
+                      }}>
+                        {partnerDaily.status === 'completed' ? 'Done' : 'Pending'}
+                      </span>
+
+                      {/* Quick Nudge / High-Five Action */}
+                      {partnerDaily.status === 'pending' ? (
+                        <button
+                          onClick={(e) => handleNudge(e, 'nudge')}
+                          disabled={nudged}
+                          title={`Nudge ${partnerName} to complete!`}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '0 2px', display: 'flex', alignItems: 'center',
+                            color: nudged ? '#22c55e' : '#f59e0b',
+                          }}
+                        >
+                          {nudged ? <Check size={10} strokeWidth={3} /> : <Zap size={10} fill="#f59e0b" />}
+                        </button>
+                      ) : partnerDaily.status === 'completed' ? (
+                        <button
+                          onClick={(e) => handleNudge(e, 'high_five')}
+                          disabled={nudged}
+                          title={`High five ${partnerName}!`}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '0 2px', fontSize: 9.5, lineHeight: 1
+                          }}
+                        >
+                          {nudged ? '🎉' : '✋'}
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
