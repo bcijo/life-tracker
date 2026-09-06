@@ -84,6 +84,7 @@ export function HabitDetailModal({
   const weeklyDuoMatrix = pactInfo ? computeDuoWeeklyMatrix(pactInfo.pact, habit, pactInfo.partnerHabit) : [];
   const partnerName = pactInfo?.partnerProfile?.display_name?.trim() || pactInfo?.partnerProfile?.full_name?.trim() || pactInfo?.partnerProfile?.username || 'Partner';
   const partnerInitial = partnerName[0]?.toUpperCase() || 'P';
+  const partnerDaily = pactInfo ? getPartnerDailyStatus(pactInfo.partnerHabit, pactInfo.pact.active_days) : null;
 
   const handleSendNudgeAction = (type) => {
     if (onSendNudge && pactInfo) {
@@ -356,7 +357,7 @@ export function HabitDetailModal({
                 Accountability Partner
               </span>
               <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block' }}>
-                {pactInfo ? 'Active Duo Pact' : 'Track together & share streaks'}
+                {pactInfo ? 'Active Duo' : 'Track together & share streaks'}
               </span>
             </div>
           </div>
@@ -517,7 +518,7 @@ export function HabitDetailModal({
             {onCancelPact && (
               <button
                 onClick={() => {
-                  if (confirm(`End this accountability pact with ${partnerName}? Your personal habit will remain intact.`)) {
+                  if (confirm(`End this duo with ${partnerName}? Your personal habit will remain intact.`)) {
                     onCancelPact(pactInfo.pact.id);
                   }
                 }}
@@ -527,7 +528,7 @@ export function HabitDetailModal({
                   display: 'block', margin: '6px auto 0', opacity: 0.8
                 }}
               >
-                Leave Accountability Pact
+                Leave Duo
               </button>
             )}
           </div>
@@ -608,14 +609,14 @@ export function HabitDetailModal({
                           opacity: (!selectedFriendId || inviting) ? 0.6 : 1,
                         }}
                       >
-                        {inviting ? 'Sending...' : 'Send Pact Invite'}
+                        {inviting ? 'Sending...' : 'Send Duo Invite'}
                       </button>
                     </div>
                   </>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '8px 0' }}>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      No friends yet. Add friends on the Friends page to start a pact!
+                      No friends yet. Add friends on the Friends page to start a duo!
                     </span>
                   </div>
                 )}

@@ -529,7 +529,7 @@ const Habits = () => {
                             }}>
                                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                                     <span style={{ fontSize: 12, fontWeight: 700, color: enableDuoPact ? '#06b6d4' : 'var(--text-secondary)' }}>
-                                        🤝 Track with a Friend (Duo Pact)
+                                        🤝 Track with a Friend (Duo)
                                     </span>
                                     <input
                                         type="checkbox"

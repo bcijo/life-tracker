@@ -18,7 +18,7 @@ import AppLoader from '../components/common/AppLoader';
 
 const TABS = [
   { id: 'friends', label: 'Friends', icon: Users },
-  { id: 'pacts', label: 'Duo Pacts', icon: Handshake },
+  { id: 'pacts', label: 'Duo', icon: Handshake },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'compare', label: 'Compare', icon: Swords },
 ];

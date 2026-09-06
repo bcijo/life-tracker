@@ -180,7 +180,7 @@ export default function DuoPactsView({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         <div className="glass-card" style={{ padding: '12px 10px', textAlign: 'center', borderRadius: 16 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Active Pacts
+            Active Duos
           </span>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
             {totalPacts}
@@ -210,7 +210,7 @@ export default function DuoPactsView({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
-            Duo Habit Pacts
+            Duo Habits
           </h2>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             Mutual habits with accountability partners
@@ -229,7 +229,7 @@ export default function DuoPactsView({
           }}
         >
           <Plus size={14} strokeWidth={3} />
-          <span>New Duo Pact</span>
+          <span>New Duo</span>
         </motion.button>
       </div>
 
@@ -238,7 +238,7 @@ export default function DuoPactsView({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Clock size={13} />
-            <span>Pact Invitations Received ({pendingReceivedPacts.length})</span>
+            <span>Duo Invitations Received ({pendingReceivedPacts.length})</span>
           </div>
 
           {pendingReceivedPacts.map(pact => {
@@ -338,7 +338,7 @@ export default function DuoPactsView({
                           border: 'none', color: '#000', fontSize: 11, fontWeight: 800, cursor: 'pointer'
                         }}
                       >
-                        Confirm & Join Pact
+                        Confirm & Join Duo
                       </button>
                     </div>
                   </div>
@@ -585,7 +585,7 @@ export default function DuoPactsView({
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <button
                     onClick={() => {
-                      if (confirm(`Leave accountability pact for "${pact.name}"? Your personal habit will remain intact.`)) {
+                      if (confirm(`Leave duo for "${pact.name}"? Your personal habit will remain intact.`)) {
                         cancelPact(pact.id);
                       }
                     }}
@@ -594,7 +594,7 @@ export default function DuoPactsView({
                       fontSize: 10, fontWeight: 600, cursor: 'pointer', opacity: 0.75
                     }}
                   >
-                    Leave Pact
+                    Leave Duo
                   </button>
                 </div>
               </motion.div>
@@ -612,10 +612,10 @@ export default function DuoPactsView({
             <Handshake size={24} color="#06b6d4" />
           </div>
           <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
-            No Active Duo Pacts
+            No Active Duos
           </h3>
           <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
-            Form a pact with a friend to share habit streaks, keep each other accountable with live updates, and earn duo milestones together.
+            Team up with a friend to share habit streaks, keep each other accountable with live updates, and earn duo milestones together.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -626,7 +626,7 @@ export default function DuoPactsView({
               cursor: 'pointer',
             }}
           >
-            Start Your First Pact ✨
+            Start Your First Duo ✨
           </button>
         </div>
       )}
@@ -663,7 +663,7 @@ export default function DuoPactsView({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Handshake size={20} color="#06b6d4" />
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
-                    Create Duo Habit Pact
+                    Create Duo Habit
                   </h3>
                 </div>
                 <button
@@ -704,7 +704,7 @@ export default function DuoPactsView({
                     </select>
                   ) : (
                     <div style={{ padding: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 10, fontSize: 11.5, color: '#ef4444' }}>
-                      You need to add friends first before you can start a pact!
+                      You need to add friends first before you can start a duo!
                     </div>
                   )}
                 </div>
@@ -848,7 +848,7 @@ export default function DuoPactsView({
                     opacity: (creatingPact || !selectedFriendId) ? 0.6 : 1,
                   }}
                 >
-                  {creatingPact ? 'Sending Invitation...' : 'Send Duo Pact Invitation 🤝'}
+                  {creatingPact ? 'Sending Invitation...' : 'Send Duo Invitation 🤝'}
                 </button>
               </form>
             </motion.div>

@@ -42,6 +42,7 @@ export function HabitCard({
   const partnerDaily = pactInfo ? getPartnerDailyStatus(pactInfo.partnerHabit, pactInfo.pact.active_days) : null;
   const partnerName = pactInfo?.partnerProfile?.display_name?.trim() || pactInfo?.partnerProfile?.full_name?.trim() || pactInfo?.partnerProfile?.username || 'Partner';
   const partnerInitial = partnerName[0]?.toUpperCase() || 'P';
+  const bothCompleted = pactInfo && todayStatus === 'completed' && partnerDaily?.status === 'completed';
 
   const handleNudge = (e, type) => {
     e.stopPropagation();
@@ -141,7 +142,7 @@ export function HabitCard({
                 {/* Duo Streak Flame Pill */}
                 {pactInfo && (
                   <span
-                    title={`Duo Pact with ${partnerName} (${duoStreak} days mutual streak)`}
+                    title={`Duo with ${partnerName} (${duoStreak} days mutual streak)`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 3,
                       fontSize: 10, fontWeight: 800, color: '#06b6d4',
@@ -202,76 +203,164 @@ export function HabitCard({
                     );
                   })}
                 </div>
-
-                {/* Partner Accountability Live Status Pill */}
-                {pactInfo && partnerDaily && (
-                  <>
-                    <span style={{ color: 'var(--border-subtle, rgba(255,255,255,0.15))', fontSize: 10 }}>·</span>
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        padding: '1px 6px 1px 3px',
-                        borderRadius: 9999,
-                        background: partnerDaily.status === 'completed'
-                          ? 'rgba(34,197,94,0.12)'
-                          : 'rgba(245,158,11,0.12)',
-                        border: `1px solid ${partnerDaily.status === 'completed' ? 'rgba(34,197,94,0.25)' : 'rgba(245,158,11,0.25)'}`,
-                      }}
-                      title={`${partnerName}: ${partnerDaily.label} today`}
-                    >
-                      <div style={{
-                        width: 14, height: 14, borderRadius: '50%',
-                        background: partnerDaily.status === 'completed' ? '#22c55e' : '#f59e0b',
-                        color: '#000', fontSize: 8.5, fontWeight: 900,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        {partnerInitial}
-                      </div>
-                      <span style={{
-                        fontSize: 9, fontWeight: 700,
-                        color: partnerDaily.status === 'completed' ? '#22c55e' : '#f59e0b'
-                      }}>
-                        {partnerDaily.status === 'completed' ? 'Done' : 'Pending'}
-                      </span>
-
-                      {/* Quick Nudge / High-Five Action */}
-                      {partnerDaily.status === 'pending' ? (
-                        <button
-                          onClick={(e) => handleNudge(e, 'nudge')}
-                          disabled={nudged}
-                          title={`Nudge ${partnerName} to complete!`}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            padding: '0 2px', display: 'flex', alignItems: 'center',
-                            color: nudged ? '#22c55e' : '#f59e0b',
-                          }}
-                        >
-                          {nudged ? <Check size={10} strokeWidth={3} /> : <Zap size={10} fill="#f59e0b" />}
-                        </button>
-                      ) : partnerDaily.status === 'completed' ? (
-                        <button
-                          onClick={(e) => handleNudge(e, 'high_five')}
-                          disabled={nudged}
-                          title={`High five ${partnerName}!`}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            padding: '0 2px', fontSize: 9.5, lineHeight: 1
-                          }}
-                        >
-                          {nudged ? '🎉' : '✋'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </>
-                )}
               </div>
             </div>
 
-            {/* Right Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {/* Right Controls / Dual Status Hub */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexShrink: 0,
+              padding: bothCompleted ? '2px 6px' : '0px',
+              borderRadius: 9999,
+              background: bothCompleted ? 'rgba(34,197,94,0.08)' : 'transparent',
+              border: bothCompleted ? '1px solid rgba(34,197,94,0.25)' : '1px solid transparent',
+              boxShadow: bothCompleted ? '0 0 12px rgba(34,197,94,0.15)' : 'none',
+              transition: 'all 0.3s ease',
+            }}>
+              {/* Partner Status Avatar Button */}
+              {pactInfo && partnerDaily && (
+                <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  {partnerDaily.status === 'completed' ? (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => handleNudge(e, 'high_five')}
+                      disabled={nudged}
+                      title={`${partnerName} completed today! Tap to send a high-five 👋`}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        padding: 0,
+                        border: '1.5px solid #22c55e',
+                        background: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(16,185,129,0.12))',
+                        boxShadow: '0 0 8px rgba(34,197,94,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        position: 'relative',
+                      }}
+                    >
+                      {nudged ? (
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>🎉</span>
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#22c55e' }}>
+                          {partnerInitial}
+                        </span>
+                      )}
+
+                      {/* Micro Check badge */}
+                      {!nudged && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: -2,
+                          right: -2,
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          background: '#22c55e',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                        }}>
+                          <Check size={8} strokeWidth={3.5} color="#000" />
+                        </div>
+                      )}
+                    </motion.button>
+                  ) : partnerDaily.status === 'pending' ? (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => handleNudge(e, 'nudge')}
+                      disabled={nudged}
+                      title={`${partnerName} is pending. Tap to nudge! ⚡`}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        padding: 0,
+                        border: nudged ? '1.5px solid #22c55e' : '1.5px dashed rgba(245,158,11,0.55)',
+                        background: nudged ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'border 0.2s, background 0.2s',
+                      }}
+                    >
+                      {nudged ? (
+                        <Check size={13} strokeWidth={3} color="#22c55e" />
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#f59e0b' }}>
+                          {partnerInitial}
+                        </span>
+                      )}
+
+                      {/* Micro Zap badge */}
+                      {!nudged && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: -2,
+                          right: -2,
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          background: '#f59e0b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                        }}>
+                          <Zap size={7} fill="#000" color="#000" />
+                        </div>
+                      )}
+                    </motion.button>
+                  ) : partnerDaily.status === 'failed' ? (
+                    <div
+                      title={`${partnerName} missed today`}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        border: '1.5px solid rgba(239,68,68,0.4)',
+                        background: 'rgba(239,68,68,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: '#ef4444',
+                      }}
+                    >
+                      {partnerInitial}
+                    </div>
+                  ) : (
+                    <div
+                      title={`${partnerName} has a rest day today`}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        border: '1px dashed var(--border-subtle, rgba(255,255,255,0.15))',
+                        background: 'rgba(255,255,255,0.03)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 10,
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      {partnerInitial}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {habit.is_paused ? (
                 <button
                   onClick={(e) => {
