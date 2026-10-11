@@ -730,19 +730,48 @@ const ShoppingView = () => {
                             }} />
                         </div>
 
-                        {/* Subcategory Picker (if any) */}
-                        {expenseSubcategories.length > 0 && (
+                        {/* Subcategory Picker */}
+                        {expensePromptItem?.category && (
                             <div>
-                                <span style={{
-                                    display: 'block',
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    color: 'var(--text-muted)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.8px',
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
                                     marginBottom: '8px',
-                                }}>Subcategory (Optional)</span>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                }}>
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        color: 'var(--text-muted)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.8px',
+                                    }}>Subcategory (Optional)</span>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowSubcategoryInput(prev => !prev);
+                                            if (showSubcategoryInput) setNewSubcategoryName('');
+                                        }}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: showSubcategoryInput ? '#f87171' : '#10b981',
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                            padding: '2px 4px',
+                                        }}
+                                    >
+                                        {showSubcategoryInput ? <X size={11} /> : <Plus size={11} />}
+                                        <span>{showSubcategoryInput ? 'Cancel' : 'Add Subcategory'}</span>
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                     {expenseSubcategories.map(sub => {
                                         const isSel = selectedSubcategory === sub.id;
                                         return (
@@ -766,6 +795,87 @@ const ShoppingView = () => {
                                             </button>
                                         );
                                     })}
+
+                                    {!showSubcategoryInput && expenseSubcategories.length === 0 && (
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '2px 4px' }}>
+                                            No subcategories yet
+                                        </span>
+                                    )}
+
+                                    {showSubcategoryInput && (
+                                        <div style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1.5px solid #10b981',
+                                            borderRadius: '12px',
+                                            padding: '2px 6px 2px 10px',
+                                        }}>
+                                            <input
+                                                type="text"
+                                                value={newSubcategoryName}
+                                                onChange={e => setNewSubcategoryName(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleAddSubcategory();
+                                                    } else if (e.key === 'Escape') {
+                                                        setShowSubcategoryInput(false);
+                                                        setNewSubcategoryName('');
+                                                    }
+                                                }}
+                                                placeholder="Subcategory..."
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    outline: 'none',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '12px',
+                                                    fontFamily: 'inherit',
+                                                    width: '110px',
+                                                    padding: '3px 0',
+                                                }}
+                                                autoFocus
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleAddSubcategory}
+                                                disabled={!newSubcategoryName.trim()}
+                                                style={{
+                                                    background: '#10b981',
+                                                    border: 'none',
+                                                    borderRadius: '50%',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#fff',
+                                                    cursor: newSubcategoryName.trim() ? 'pointer' : 'not-allowed',
+                                                    opacity: newSubcategoryName.trim() ? 1 : 0.4,
+                                                }}
+                                            >
+                                                <Check size={11} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowSubcategoryInput(false);
+                                                    setNewSubcategoryName('');
+                                                }}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'var(--text-muted)',
+                                                    cursor: 'pointer',
+                                                    padding: '2px',
+                                                }}
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

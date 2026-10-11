@@ -24,7 +24,7 @@ const PAGE_SIZE = 25;
 const ExpensesView = () => {
     const { transactions, addTransaction: addTransactionDb, updateTransaction: updateTransactionDb, deleteTransaction: deleteTransactionDb } = useTransactions();
     const { items: shoppingItems, markAddedToExpenses } = useShopping();
-    const { cards, addCard, getBudgetProgress, initializeDefaults, loading: cardsLoading, fetchSubcategories } = useExpenseCards();
+    const { cards, addCard, getBudgetProgress, initializeDefaults, loading: cardsLoading, fetchSubcategories, addSubcategory } = useExpenseCards();
     const { budgets } = useBudgets();
     const { recurringExpenses, getMonthlyTotal: getRecurringMonthlyTotal } = useRecurringExpenses();
 
@@ -1232,6 +1232,8 @@ const ExpensesView = () => {
                 cards={cards}
                 onAddExpense={addTransactionDb}
                 fetchSubcategories={fetchSubcategories}
+                onAddCategory={addCard}
+                onAddSubcategory={addSubcategory}
             />
 
             {/* Quick Edit Expense Modal */}
@@ -1243,6 +1245,8 @@ const ExpensesView = () => {
                 onUpdateExpense={updateTransactionDb}
                 onDeleteExpense={deleteTransactionDb}
                 fetchSubcategories={fetchSubcategories}
+                onAddCategory={addCard}
+                onAddSubcategory={addSubcategory}
             />
 
             {/* Circular Floating Add Expense Action Button */}

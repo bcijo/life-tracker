@@ -37,6 +37,19 @@ export default defineConfig(({ mode }) => {
     define: {
       __APP_BUILD_ID__: JSON.stringify(buildId),
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-motion': ['framer-motion'],
+            'vendor-charts': ['recharts'],
+            'vendor-markdown': ['react-markdown', 'remark-gfm'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+          },
+        },
+      },
+    },
     plugins: [
       react(),
       tailwindcss(),

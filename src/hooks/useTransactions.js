@@ -1,7 +1,7 @@
 import useSupabaseData from './useSupabaseData';
 
 function useTransactions() {
-    const { data: transactions, loading, error, insert, remove } = useSupabaseData('transactions', 'date', false);
+    const { data: transactions, loading, error, insert, update, remove } = useSupabaseData('transactions', 'date', false);
 
     const addTransaction = async (transactionData) => {
         const newTransaction = {

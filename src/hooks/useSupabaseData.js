@@ -21,21 +21,25 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Update localStorage whenever data changes
+    // Update localStorage whenever data changes (debounced to avoid blocking on every change)
     useEffect(() => {
-        if (data.length > 0) {
-            localStorage.setItem(`supa_cache_${table}`, JSON.stringify(data));
-        }
+        if (data.length === 0) return;
+        const timer = setTimeout(() => {
+            try {
+                localStorage.setItem(`supa_cache_${table}`, JSON.stringify(data));
+            } catch (e) {
+                console.warn(`Error caching ${table}`, e);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
     }, [data, table]);
 
     useEffect(() => {
-        // Fetch initial data
-        const fetchData = async () => {
-            try {
-                // Determine if we show loading state:
-                // If we have cached data, don't show full loading, just background refresh
-                if (data.length === 0) setLoading(true);
+        let cancelled = false;
+        let channel = null;
 
+        const init = async () => {
+            try {
                 // Get current user from local session quickly without extra network round-trips
                 const { data: { session } } = await supabase.auth.getSession();
                 let userId = session?.user?.id;
@@ -43,6 +47,51 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                     const { data: { user } } = await supabase.auth.getUser();
                     userId = user?.id;
                 }
+                if (cancelled) return;
+
+                // Subscribe first (server-side filtered to this user's rows only)
+                if (userId) {
+                    channel = supabase
+                        .channel(`${table}_changes_${Math.random().toString(36).slice(2, 9)}`)
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: '*',
+                                schema: 'public',
+                                table: table,
+                                filter: `user_id=eq.${userId}`,
+                            },
+                            (payload) => {
+                                if (payload.eventType === 'INSERT') {
+                                    setData((current) => {
+                                        // Prevent duplicates if already added by optimistic update
+                                        if (current.some(item => item.id === payload.new.id)) return current;
+                                        return [payload.new, ...current];
+                                    });
+                                } else if (payload.eventType === 'UPDATE') {
+                                    setData((current) =>
+                                        current.map((item) =>
+                                            item.id === payload.new.id ? payload.new : item
+                                        )
+                                    );
+                                }
+                            }
+                        )
+                        // Realtime filters are not supported for DELETE events; match by id instead
+                        .on(
+                            'postgres_changes',
+                            { event: 'DELETE', schema: 'public', table: table },
+                            (payload) => {
+                                const deletedId = payload.old?.id;
+                                if (deletedId === undefined) return;
+                                setData((current) => current.filter((item) => item.id !== deletedId));
+                            }
+                        )
+                        .subscribe();
+                }
+
+                // If we have cached data, don't show full loading, just background refresh
+                if (data.length === 0) setLoading(true);
 
                 const { data: fetchedData, error: fetchError } = await supabase
                     .from(table)
@@ -51,67 +100,36 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                     .order(orderBy, { ascending });
 
                 if (fetchError) throw fetchError;
+                if (cancelled) return;
 
-                // Only update state if data is different
                 setData(fetchedData || []);
                 setError(null);
             } catch (err) {
                 console.error(`Error fetching ${table}:`, err);
-                setError(err.message);
+                if (!cancelled) setError(err.message);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
-        fetchData();
-
-        // Subscribe to real-time changes
-        const channel = supabase
-            .channel(`${table}_changes`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: table,
-                },
-                async (payload) => {
-                    // Get current user to filter events
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const userId = session?.user?.id || '00000000-0000-0000-0000-000000000000';
-
-                    if (payload.eventType === 'INSERT' && payload.new.user_id === userId) {
-                        setData((current) => {
-                            // Prevent duplicates if already added by optimistic update
-                            if (current.some(item => item.id === payload.new.id)) return current;
-                            return [payload.new, ...current];
-                        });
-                    } else if (payload.eventType === 'UPDATE' && payload.new.user_id === userId) {
-                        setData((current) =>
-                            current.map((item) =>
-                                item.id === payload.new.id ? payload.new : item
-                            )
-                        );
-                    } else if (payload.eventType === 'DELETE' && payload.old.user_id === userId) {
-                        setData((current) =>
-                            current.filter((item) => item.id !== payload.old.id)
-                        );
-                    }
-                }
-            )
-            .subscribe();
+        init();
 
         // Cleanup subscription
         return () => {
-            supabase.removeChannel(channel);
+            cancelled = true;
+            if (channel) supabase.removeChannel(channel);
         };
     }, [table, orderBy, ascending]); // Keep dependencies stable
 
     // Generic CRUD operations
     const insert = async (newItem) => {
         try {
-            // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
+            // Get current user from local session (no network round-trip)
+            const { data: { session } } = await supabase.auth.getSession();
+            let user = session?.user;
+            if (!user) {
+                ({ data: { user } } = await supabase.auth.getUser());
+            }
             const payload = { ...newItem, user_id: user?.id, created_at: new Date().toISOString() };
 
             // Optimistic update

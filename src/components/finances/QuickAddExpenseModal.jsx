@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Loader2, ArrowRight, Users, X, Minus, Plus, ChevronDown } from 'lucide-react';
+import { Calendar, Loader2, ArrowRight, Users, X, Minus, Plus, ChevronDown, Check } from 'lucide-react';
 import Modal from '../Modal';
-import { CategoryIcon } from '../../utils/categoryIcons';
+import { CategoryIcon, NAME_KEYWORDS_MAP } from '../../utils/categoryIcons';
+import { supabase } from '../../lib/supabase';
 import { format, subDays } from 'date-fns';
 
 /* ── animation presets ───────────────────────────────── */
@@ -13,13 +14,27 @@ const stepReveal = {
     transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
 };
 
+const PALETTE_COLORS = [
+    '#a855f7', '#ec4899', '#3b82f6', '#06b6d4', '#10b981', 
+    '#f59e0b', '#f97316', '#ef4444', '#6366f1', '#14b8a6'
+];
+
+const POPULAR_ICONS = [
+    'utensils', 'coffee', 'shopping-bag', 'shirt', 'car', 'fuel', 
+    'zap', 'home', 'film', 'gamepad-2', 'heart-pulse', 'pill', 
+    'dumbbell', 'plane', 'gift', 'sparkles', 'wrench', 'smartphone',
+    'wifi', 'wallet', 'briefcase', 'dog'
+];
+
 const QuickAddExpenseModal = ({
     isOpen,
     onClose,
     cards = [],
     onAddExpense,
     fetchSubcategories,
-    initialCardId = null
+    initialCardId = null,
+    onAddCategory,
+    onAddSubcategory
 }) => {
     /* ── state ───────────────────────────────────────── */
     const [amount, setAmount] = useState('');
@@ -31,12 +46,29 @@ const QuickAddExpenseModal = ({
     const [showCustomDate, setShowCustomDate] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // On-the-fly Category Creation
+    const [isDescFocused, setIsDescFocused] = useState(false);
+    const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryColor, setNewCategoryColor] = useState('#a855f7');
+    const [newCategoryIcon, setNewCategoryIcon] = useState('wallet');
+    const [userCustomizedIcon, setUserCustomizedIcon] = useState(false);
+    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+    const [localNewCards, setLocalNewCards] = useState([]);
+
+    // On-the-fly Subcategory Creation
+    const [showNewSubcategoryInput, setShowNewSubcategoryInput] = useState(false);
+    const [newSubcategoryName, setNewSubcategoryName] = useState('');
+    const [isCreatingSubcategory, setIsCreatingSubcategory] = useState(false);
+
     // Split
     const [isSplitActive, setIsSplitActive] = useState(false);
     const [splitPeopleCount, setSplitPeopleCount] = useState(2);
 
     const amountRef = useRef(null);
     const descRef = useRef(null);
+    const newCatInputRef = useRef(null);
+    const subInputRef = useRef(null);
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
@@ -51,7 +83,14 @@ const QuickAddExpenseModal = ({
         ? Math.round((rawTotal / safeSplit) * 100) / 100
         : rawTotal;
 
-    const selectedCat = cards.find(c => c.id === selectedCardId);
+    // Merge prop cards with locally created cards for instant availability
+    const mergedCards = useMemo(() => {
+        const existingIds = new Set(cards.map(c => c.id));
+        const extra = localNewCards.filter(c => !existingIds.has(c.id));
+        return [...cards, ...extra];
+    }, [cards, localNewCards]);
+
+    const selectedCat = mergedCards.find(c => c.id === selectedCardId);
     const accent = selectedCat?.color || '#a855f7';
 
     /* ── effects ──────────────────────────────────────── */
@@ -62,6 +101,18 @@ const QuickAddExpenseModal = ({
     useEffect(() => {
         if (initialCardId) setSelectedCardId(initialCardId);
     }, [initialCardId]);
+
+    useEffect(() => {
+        if (showNewCategoryForm) {
+            setTimeout(() => newCatInputRef.current?.focus(), 150);
+        }
+    }, [showNewCategoryForm]);
+
+    useEffect(() => {
+        if (showNewSubcategoryInput) {
+            setTimeout(() => subInputRef.current?.focus(), 150);
+        }
+    }, [showNewSubcategoryInput]);
 
     useEffect(() => {
         (async () => {
@@ -76,7 +127,19 @@ const QuickAddExpenseModal = ({
         })();
     }, [selectedCardId, fetchSubcategories]);
 
-    // Remove automatic focus jump to description so user is not interrupted
+    // Intelligent icon suggestion based on typed category name
+    const handleCategoryNameChange = (val) => {
+        setNewCategoryName(val);
+        if (!userCustomizedIcon && val.trim()) {
+            const lower = val.toLowerCase();
+            for (const entry of NAME_KEYWORDS_MAP) {
+                if (entry.keywords.some(k => lower.includes(k))) {
+                    setNewCategoryIcon(entry.icon);
+                    break;
+                }
+            }
+        }
+    };
 
     /* ── reset on close ──────────────────────────────── */
     useEffect(() => {
@@ -89,10 +152,103 @@ const QuickAddExpenseModal = ({
             setSplitPeopleCount(2);
             setDate(format(new Date(), 'yyyy-MM-dd'));
             setShowCustomDate(false);
+            setShowNewCategoryForm(false);
+            setNewCategoryName('');
+            setUserCustomizedIcon(false);
+            setShowNewSubcategoryInput(false);
+            setNewSubcategoryName('');
         }
-    }, [isOpen]);
+    }, [isOpen, initialCardId]);
 
-    /* ── submit ───────────────────────────────────────── */
+    /* ── create category on the fly ─────────────────── */
+    const handleCreateCategory = async (e) => {
+        if (e) e.preventDefault();
+        const trimmed = newCategoryName.trim();
+        if (!trimmed || isCreatingCategory) return;
+
+        setIsCreatingCategory(true);
+        try {
+            let created = null;
+            if (onAddCategory) {
+                const res = await onAddCategory(
+                    trimmed,
+                    newCategoryColor,
+                    [trimmed.toLowerCase()],
+                    newCategoryIcon
+                );
+                created = res?.data || res;
+            } else {
+                const { data: { session } } = await supabase.auth.getSession();
+                const userId = session?.user?.id;
+                const maxOrder = mergedCards.reduce((max, c) => Math.max(max, c.sort_order || 0), 0);
+                const { data, error } = await supabase
+                    .from('expense_cards')
+                    .insert([{
+                        name: trimmed,
+                        icon: newCategoryIcon,
+                        color: newCategoryColor,
+                        category_ids: [trimmed.toLowerCase()],
+                        is_default: false,
+                        sort_order: maxOrder + 1,
+                        user_id: userId,
+                        created_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+                if (error) throw error;
+                created = data;
+            }
+
+            if (created && created.id) {
+                setLocalNewCards(prev => [...prev, created]);
+                setSelectedCardId(created.id);
+            }
+            setShowNewCategoryForm(false);
+            setNewCategoryName('');
+            setUserCustomizedIcon(false);
+        } catch (err) {
+            console.error('Error creating category on the go:', err);
+        } finally {
+            setIsCreatingCategory(false);
+        }
+    };
+
+    /* ── create subcategory on the fly ──────────────── */
+    const handleCreateSubcategory = async (e) => {
+        if (e) e.preventDefault();
+        const trimmed = newSubcategoryName.trim();
+        if (!trimmed || !selectedCardId || isCreatingSubcategory) return;
+
+        setIsCreatingSubcategory(true);
+        try {
+            let createdSub = null;
+            if (onAddSubcategory) {
+                createdSub = await onAddSubcategory(selectedCardId, trimmed);
+            } else {
+                const { data, error } = await supabase
+                    .from('expense_subcategories')
+                    .insert([{ card_id: selectedCardId, name: trimmed }])
+                    .select()
+                    .single();
+                if (error) throw error;
+                createdSub = data;
+            }
+
+            if (createdSub && createdSub.id) {
+                setSubcategories(prev => {
+                    if (prev.some(s => s.id === createdSub.id)) return prev;
+                    return [...prev, createdSub];
+                });
+                setSelectedSubcategoryId(createdSub.id);
+            }
+            setShowNewSubcategoryInput(false);
+            setNewSubcategoryName('');
+        } catch (err) {
+            console.error('Error creating subcategory on the go:', err);
+        } finally {
+            setIsCreatingSubcategory(false);
+        }
+    };
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         if (share <= 0 || !selectedCardId || isSubmitting) return;
@@ -134,7 +290,11 @@ const QuickAddExpenseModal = ({
         .qaem-amount-input,
         .qaem-amount-input:focus,
         .qaem-amount-input:focus-visible,
-        .qaem-amount-input:active {
+        .qaem-amount-input:active,
+        .qaem-bare-input,
+        .qaem-bare-input:focus,
+        .qaem-bare-input:focus-visible,
+        .qaem-bare-input:active {
             outline: none !important;
             border: none !important;
             border-color: transparent !important;
@@ -326,17 +486,21 @@ const QuickAddExpenseModal = ({
                                 gap: '10px',
                                 padding: '12px 14px',
                                 borderRadius: '14px',
-                                border: `1px solid ${hasDescription ? `color-mix(in srgb, ${accent} 40%, transparent)` : 'rgba(255,255,255,0.07)'}`,
-                                background: 'rgba(255,255,255,0.03)',
-                                transition: 'border-color 0.25s ease',
+                                border: `1px solid ${isDescFocused ? accent : (hasDescription ? `color-mix(in srgb, ${accent} 40%, transparent)` : 'rgba(255,255,255,0.07)')}`,
+                                background: isDescFocused ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                                boxShadow: isDescFocused ? `0 0 16px color-mix(in srgb, ${accent} 15%, transparent)` : 'none',
+                                transition: 'all 0.25s ease',
                             }}>
                                 <span style={{ fontSize: '14px', color: 'var(--text-muted)', flexShrink: 0 }}>✏️</span>
                                 <input
                                     ref={descRef}
                                     type="text"
+                                    className="qaem-bare-input"
                                     placeholder="What's this for?"
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
+                                    onFocus={() => setIsDescFocused(true)}
+                                    onBlur={() => setIsDescFocused(false)}
                                     style={{
                                         flex: 1,
                                         fontSize: '14px',
@@ -345,6 +509,7 @@ const QuickAddExpenseModal = ({
                                         background: 'transparent',
                                         border: 'none',
                                         outline: 'none',
+                                        boxShadow: 'none',
                                         fontFamily: 'inherit',
                                     }}
                                 />
@@ -360,23 +525,248 @@ const QuickAddExpenseModal = ({
                 <AnimatePresence>
                     {hasAmount && hasDescription && (
                         <motion.div {...stepReveal} style={{ overflow: 'hidden', marginBottom: '6px' }}>
-                            <span style={{
-                                display: 'block',
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                color: 'var(--text-muted)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.8px',
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
                                 marginBottom: '8px',
                                 paddingLeft: '2px',
-                            }}>Category</span>
+                            }}>
+                                <span style={{
+                                    display: 'block',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    color: 'var(--text-muted)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.8px',
+                                }}>Category</span>
 
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewCategoryForm(prev => !prev)}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: showNewCategoryForm ? '#f87171' : accent,
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '3px',
+                                        padding: '2px 4px',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                >
+                                    {showNewCategoryForm ? <X size={12} /> : <Plus size={12} />}
+                                    <span>{showNewCategoryForm ? 'Cancel' : 'New Category'}</span>
+                                </button>
+                            </div>
+
+                            {/* ── INLINE NEW CATEGORY FORM ─── */}
+                            <AnimatePresence>
+                                {showNewCategoryForm && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0, scale: 0.98 }}
+                                        animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                                        exit={{ opacity: 0, height: 0, scale: 0.98 }}
+                                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                                        style={{
+                                            overflow: 'hidden',
+                                            marginBottom: '12px',
+                                            padding: '12px',
+                                            borderRadius: '16px',
+                                            background: 'rgba(255, 255, 255, 0.04)',
+                                            border: `1px solid color-mix(in srgb, ${newCategoryColor} 45%, rgba(255,255,255,0.1))`,
+                                            boxShadow: `0 8px 24px color-mix(in srgb, ${newCategoryColor} 15%, transparent)`,
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <CategoryIcon icon={newCategoryIcon} size={15} color={newCategoryColor} />
+                                                Create New Category
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowNewCategoryForm(false);
+                                                    setNewCategoryName('');
+                                                }}
+                                                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                            >
+                                                <X size={13} />
+                                            </button>
+                                        </div>
+
+                                        {/* Category Name Input */}
+                                        <input
+                                            ref={newCatInputRef}
+                                            type="text"
+                                            value={newCategoryName}
+                                            onChange={e => handleCategoryNameChange(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleCreateCategory();
+                                                } else if (e.key === 'Escape') {
+                                                    setShowNewCategoryForm(false);
+                                                    setNewCategoryName('');
+                                                }
+                                            }}
+                                            placeholder="Name (e.g. Pet Care, Games, Tuition)"
+                                            style={{
+                                                width: '100%',
+                                                padding: '9px 12px',
+                                                borderRadius: '10px',
+                                                background: 'rgba(255, 255, 255, 0.05)',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '13px',
+                                                fontFamily: 'inherit',
+                                                outline: 'none',
+                                                boxSizing: 'border-box',
+                                                marginBottom: '10px',
+                                            }}
+                                        />
+
+                                        {/* Color Palette */}
+                                        <div style={{ marginBottom: '10px' }}>
+                                            <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>
+                                                Color
+                                            </span>
+                                            <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                {PALETTE_COLORS.map(col => {
+                                                    const isSel = newCategoryColor === col;
+                                                    return (
+                                                        <button
+                                                            key={col}
+                                                            type="button"
+                                                            onClick={() => setNewCategoryColor(col)}
+                                                            style={{
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                borderRadius: '50%',
+                                                                background: col,
+                                                                border: isSel ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)',
+                                                                boxShadow: isSel ? `0 0 10px ${col}` : 'none',
+                                                                transform: isSel ? 'scale(1.2)' : 'scale(1)',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.15s ease',
+                                                                padding: 0,
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Quick Icons */}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <span style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>
+                                                Icon
+                                            </span>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fill, minmax(28px, 1fr))',
+                                                gap: '5px',
+                                                maxHeight: '74px',
+                                                overflowY: 'auto',
+                                                padding: '4px',
+                                                background: 'rgba(255, 255, 255, 0.02)',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                            }}>
+                                                {POPULAR_ICONS.map(ic => {
+                                                    const isSelected = newCategoryIcon === ic;
+                                                    return (
+                                                        <button
+                                                            key={ic}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setNewCategoryIcon(ic);
+                                                                setUserCustomizedIcon(true);
+                                                            }}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                height: '28px',
+                                                                borderRadius: '8px',
+                                                                border: isSelected ? `1.5px solid ${newCategoryColor}` : '1px solid transparent',
+                                                                background: isSelected ? `color-mix(in srgb, ${newCategoryColor} 25%, transparent)` : 'transparent',
+                                                                color: isSelected ? newCategoryColor : 'var(--text-muted)',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.15s ease',
+                                                            }}
+                                                            title={ic}
+                                                        >
+                                                            <CategoryIcon icon={ic} size={14} />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Submit category */}
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowNewCategoryForm(false);
+                                                    setNewCategoryName('');
+                                                }}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                    background: 'transparent',
+                                                    color: 'var(--text-muted)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleCreateCategory}
+                                                disabled={!newCategoryName.trim() || isCreatingCategory}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    borderRadius: '8px',
+                                                    border: 'none',
+                                                    background: newCategoryName.trim()
+                                                        ? `linear-gradient(135deg, ${newCategoryColor}, color-mix(in srgb, ${newCategoryColor} 70%, #000))`
+                                                        : 'rgba(255, 255, 255, 0.05)',
+                                                    color: '#ffffff',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700',
+                                                    cursor: newCategoryName.trim() ? 'pointer' : 'not-allowed',
+                                                    opacity: newCategoryName.trim() ? 1 : 0.4,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    boxShadow: newCategoryName.trim() ? `0 4px 12px color-mix(in srgb, ${newCategoryColor} 40%, transparent)` : 'none',
+                                                    transition: 'all 0.15s ease',
+                                                }}
+                                            >
+                                                {isCreatingCategory ? <Loader2 size={12} className="spin" /> : <Check size={12} />}
+                                                <span>Save & Select</span>
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Category Grid */}
                             <div style={{
                                 display: 'grid',
                                 gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
                                 gap: '8px',
                             }}>
-                                {cards.map(card => {
+                                {mergedCards.map(card => {
                                     const sel = selectedCardId === card.id;
                                     const c = card.color || '#a855f7';
                                     return (
@@ -435,33 +825,60 @@ const QuickAddExpenseModal = ({
 
                             {/* ── SUBCATEGORIES (Animated slide-down) ─── */}
                             <AnimatePresence>
-                                {hasCategory && subcategories.length > 0 && (
+                                {hasCategory && (
                                     <motion.div
                                         initial={{ opacity: 0, height: 0, y: -8 }}
                                         animate={{ opacity: 1, height: 'auto', y: 0 }}
                                         exit={{ opacity: 0, height: 0, y: -8 }}
                                         transition={{ duration: 0.25, ease: 'easeOut' }}
-                                        style={{ overflow: 'hidden', marginTop: '10px' }}
+                                        style={{ overflow: 'hidden', marginTop: '12px' }}
                                     >
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px',
-                                            marginBottom: '6px',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '7px',
                                         }}>
-                                            <ChevronDown size={12} color={accent} />
-                                            <span style={{
-                                                fontSize: '10px',
-                                                fontWeight: '700',
-                                                color: accent,
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.6px',
-                                            }}>
-                                                Subcategory
-                                            </span>
-                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: '2px' }}>(optional)</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <ChevronDown size={12} color={accent} />
+                                                <span style={{
+                                                    fontSize: '10px',
+                                                    fontWeight: '700',
+                                                    color: accent,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.6px',
+                                                }}>
+                                                    Subcategory
+                                                </span>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: '2px' }}>(optional)</span>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowNewSubcategoryInput(prev => !prev);
+                                                    if (showNewSubcategoryInput) setNewSubcategoryName('');
+                                                }}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: showNewSubcategoryInput ? '#f87171' : accent,
+                                                    fontSize: '11px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '3px',
+                                                    padding: '2px 4px',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                {showNewSubcategoryInput ? <X size={11} /> : <Plus size={11} />}
+                                                <span>{showNewSubcategoryInput ? 'Cancel' : 'Add Subcategory'}</span>
+                                            </button>
                                         </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                             {subcategories.map(sub => {
                                                 const isSel = selectedSubcategoryId === sub.id;
                                                 return (
@@ -485,6 +902,101 @@ const QuickAddExpenseModal = ({
                                                     </button>
                                                 );
                                             })}
+
+                                            {!showNewSubcategoryInput && subcategories.length === 0 && (
+                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '2px 4px' }}>
+                                                    No subcategories yet
+                                                </span>
+                                            )}
+
+                                            {/* Inline Add Subcategory input */}
+                                            {showNewSubcategoryInput && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '5px',
+                                                        background: 'rgba(255,255,255,0.05)',
+                                                        border: `1.5px solid ${accent}`,
+                                                        borderRadius: '20px',
+                                                        padding: '2px 6px 2px 10px',
+                                                        boxShadow: `0 0 10px color-mix(in srgb, ${accent} 25%, transparent)`,
+                                                    }}
+                                                >
+                                                    <input
+                                                        ref={subInputRef}
+                                                        type="text"
+                                                        className="qaem-bare-input"
+                                                        value={newSubcategoryName}
+                                                        onChange={e => setNewSubcategoryName(e.target.value)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                handleCreateSubcategory();
+                                                            } else if (e.key === 'Escape') {
+                                                                setShowNewSubcategoryInput(false);
+                                                                setNewSubcategoryName('');
+                                                            }
+                                                        }}
+                                                        placeholder="New subcategory..."
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: 'none',
+                                                            outline: 'none',
+                                                            color: 'var(--text-primary)',
+                                                            fontSize: '12px',
+                                                            fontFamily: 'inherit',
+                                                            width: '130px',
+                                                            padding: '3px 0',
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCreateSubcategory}
+                                                        disabled={!newSubcategoryName.trim() || isCreatingSubcategory}
+                                                        style={{
+                                                            background: accent,
+                                                            border: 'none',
+                                                            borderRadius: '50%',
+                                                            width: '22px',
+                                                            height: '22px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#fff',
+                                                            cursor: newSubcategoryName.trim() ? 'pointer' : 'not-allowed',
+                                                            opacity: newSubcategoryName.trim() ? 1 : 0.4,
+                                                            flexShrink: 0,
+                                                            transition: 'all 0.15s ease',
+                                                        }}
+                                                        title="Add subcategory"
+                                                    >
+                                                        {isCreatingSubcategory ? <Loader2 size={11} className="spin" /> : <Check size={12} />}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowNewSubcategoryInput(false);
+                                                            setNewSubcategoryName('');
+                                                        }}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: 'none',
+                                                            color: 'var(--text-muted)',
+                                                            cursor: 'pointer',
+                                                            padding: '2px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                        }}
+                                                        title="Cancel"
+                                                    >
+                                                        <X size={13} />
+                                                    </button>
+                                                </motion.div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}

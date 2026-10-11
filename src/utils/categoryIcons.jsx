@@ -82,7 +82,7 @@ const EMOJI_TO_ICON_MAP = {
     '💰': 'trending-up'
 };
 
-const NAME_KEYWORDS_MAP = [
+export const NAME_KEYWORDS_MAP = [
     { keywords: ['food', 'dining', 'eat', 'restaurant', 'meal', 'lunch', 'dinner', 'breakfast', 'swiggy', 'zomato'], icon: 'utensils' },
     { keywords: ['coffee', 'tea', 'chai', 'cafe', 'drink', 'beverage', 'starbucks'], icon: 'coffee' },
     { keywords: ['fuel', 'petrol', 'diesel', 'gas'], icon: 'fuel' },

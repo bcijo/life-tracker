@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './contexts/AuthContext'
@@ -7,22 +7,25 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { UpdateProvider } from './contexts/UpdateContext'
 import ForceUpdateModal from './components/common/ForceUpdateModal'
 import ErrorBoundary from './components/common/ErrorBoundary'
+import AppLoader from './components/common/AppLoader'
 import Layout from './components/Layout'
 import MigrationBanner from './components/MigrationBanner'
 import ProtectedRoute from './components/ProtectedRoute'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import Dashboard from './pages/Dashboard'
-import Todos from './pages/Todos'
-import Habits from './pages/Habits'
-import Finances from './pages/Finances'
-import BillSplitter from './pages/BillSplitter'
-import Friends from './pages/Friends'
-import InviteLanding from './pages/InviteLanding'
-import Assistant from './pages/Assistant'
-import Journal from './pages/Journal'
-import Feedback from './pages/Feedback'
-import UserGuide from './pages/UserGuide'
+
+// Pages are code-split so each one is only downloaded when first visited
+const Login = lazy(() => import('./pages/Login'))
+const Signup = lazy(() => import('./pages/Signup'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Todos = lazy(() => import('./pages/Todos'))
+const Habits = lazy(() => import('./pages/Habits'))
+const Finances = lazy(() => import('./pages/Finances'))
+const BillSplitter = lazy(() => import('./pages/BillSplitter'))
+const Friends = lazy(() => import('./pages/Friends'))
+const InviteLanding = lazy(() => import('./pages/InviteLanding'))
+const Assistant = lazy(() => import('./pages/Assistant'))
+const Journal = lazy(() => import('./pages/Journal'))
+const Feedback = lazy(() => import('./pages/Feedback'))
+const UserGuide = lazy(() => import('./pages/UserGuide'))
 
 function App() {
     return (
@@ -34,6 +37,7 @@ function App() {
                         <EncryptionProvider>
                             <MigrationBanner />
                             <Router>
+                        <Suspense fallback={<AppLoader variant="fullscreen" size="large" />}>
                         <Routes>
                             <Route path="/login" element={<Login />} />
                             <Route path="/signup" element={<Signup />} />
@@ -65,6 +69,7 @@ function App() {
                             </Route>
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
+                        </Suspense>
                     </Router>
                     <Analytics />
                     </EncryptionProvider>
