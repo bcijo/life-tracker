@@ -5,9 +5,9 @@ import { APP_KNOWLEDGE_BASE } from './appKnowledge';
 // Add VITE_GROQ_API_KEY to your .env file
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const PRIMARY_MODEL = 'llama-3.3-70b-versatile';
-const FALLBACK_MODEL = 'llama-3.1-8b-instant';
-const VISION_MODEL_NAME = 'llama-3.2-11b-vision-preview';
+const PRIMARY_MODEL = 'openai/gpt-oss-120b';
+const FALLBACK_MODEL = 'openai/gpt-oss-20b';
+const VISION_MODEL_NAME = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 /**
  * Converts a raw SQL query into a human-understandable activity phrase
@@ -198,7 +198,8 @@ async function callGroq(messages, systemPrompt, jsonMode = false) {
             ...messages
         ],
         temperature: 0.4,
-        max_tokens: 1000,
+        max_tokens: 3000,
+        reasoning_effort: "low",
     };
 
     if (jsonMode) {
@@ -265,7 +266,8 @@ ${APP_KNOWLEDGE_BASE}
                     ...messages
                 ],
                 temperature: 0.3,
-                max_tokens: 1000,
+                max_tokens: 6000,
+                reasoning_effort: "low",
                 tools: [SQL_TOOL],
                 tool_choice: "auto"
             }, apiKey, 1);
@@ -278,7 +280,8 @@ ${APP_KNOWLEDGE_BASE}
                     ...messages
                 ],
                 temperature: 0.3,
-                max_tokens: 1000,
+                max_tokens: 6000,
+                reasoning_effort: "low",
                 tools: [SQL_TOOL],
                 tool_choice: "auto"
             }, apiKey, 2);
@@ -511,7 +514,7 @@ Return only valid JSON, no markdown fences, no extra text. Example structure:
 
 // 4. Speech-to-Text Transcription via Groq Whisper Large V3
 const AUDIO_TRANSCRIPTION_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
-const WHISPER_MODEL = 'whisper-large-v3';
+const WHISPER_MODEL = 'whisper-large-v3-turbo';
 
 /**
  * Transcribes an audio blob using Groq's whisper-large-v3 model.
