@@ -156,11 +156,12 @@ export function HabitCard({
 
                 {habit.is_paused && (
                   <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 9999,
+                    fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 9999,
                     background: 'rgba(234,179,8,0.18)', color: '#eab308',
+                    border: '1px solid rgba(234,179,8,0.3)',
                     display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0,
                   }}>
-                    <PauseCircle size={10} /> Paused
+                    <PauseCircle size={10} /> {streak > 0 ? `${streak}d frozen` : 'Paused'}
                   </span>
                 )}
               </div>
@@ -173,7 +174,7 @@ export function HabitCard({
                 }}>
                   <span>{timeOfDay === 'morning' ? '☀️' : '🌙'}</span>
                   {habit.is_paused
-                    ? `Paused`
+                    ? (streak > 0 ? `Streak frozen (${streak}d)` : `Paused`)
                     : successRate !== null ? `${successRate}%` : `${streak}d streak`
                   }
                 </span>
@@ -188,6 +189,7 @@ export function HabitCard({
                     let bg = 'var(--border-subtle, rgba(255,255,255,0.08))';
                     if (s === 'completed') bg = '#22c55e';
                     else if (s === 'failed') bg = '#ef4444';
+                    else if (s === 'paused') bg = '#eab308';
                     else if (!isActive) bg = 'transparent';
 
                     return (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, BarChart2, CalendarDays, Check, Zap } from 'lucide-react';
-import useHabits, { parseLocalDate, getLocalDateStr } from '../hooks/useHabits';
+import { Plus, BarChart2, CalendarDays, Check, Zap, Palmtree, Play, PauseCircle, ShieldCheck } from 'lucide-react';
+import useHabits, { parseLocalDate, getLocalDateStr, calculateHabitStreak } from '../hooks/useHabits';
 import useMutualHabits from '../hooks/useMutualHabits';
 import { useFriends } from '../hooks/useFriends';
 import HabitAnalytics from '../components/HabitAnalytics';
@@ -34,6 +34,8 @@ const Habits = () => {
         batchUpdateHabitOrders,
         calculateCheckinStreak,
         togglePauseHabit,
+        pauseAllHabits,
+        unpauseAllHabits,
     } = useHabits();
 
     const {
@@ -62,6 +64,9 @@ const Habits = () => {
     const [celebratingId, setCelebratingId] = useState(null);
     const [completedPulse, setCompletedPulse] = useState(false);
     const [selectedDate, setSelectedDate] = useState(() => getLocalDateStr(new Date()));
+    const [showVacationModal, setShowVacationModal] = useState(false);
+    const [vacationStartDate, setVacationStartDate] = useState(() => getLocalDateStr(new Date()));
+    const [vacationLoading, setVacationLoading] = useState(false);
 
     const isViewingToday = selectedDate === getLocalDateStr(new Date());
 
@@ -142,44 +147,7 @@ const Habits = () => {
     };
 
     const calculateStreak = (habit) => {
-        if (!habit || !habit.history || habit.history.length === 0) return 0;
-        const activeDays = habit.active_days || ALL_DAYS;
-        let streak = 0;
-        const today = new Date();
-        
-        for (let i = 0; i <= 365; i++) {
-            const checkDate = subDays(today, i);
-            const dateStr = getLocalDateStr(checkDate);
-            // Respect global tracking start date
-            if (trackingStartDate && dateStr < trackingStartDate) break;
-            if (habit.tracking_start_date && dateStr < habit.tracking_start_date) break;
-            
-            const dayOfWeek = checkDate.getDay();
-            if (!activeDays.includes(dayOfWeek)) continue; // Scheduled rest day
-            
-            const status = getStatusForDate(habit, dateStr);
-            if (status === 'completed') {
-                streak++;
-            } else if (status === 'failed') {
-                if (i === 0) {
-                    // If today is marked failed, today is not completed
-                    break;
-                }
-                break;
-            } else {
-                // Neutral (unmarked)
-                if (i === 0) {
-                    // Today not logged yet, continue to count yesterday's active streak
-                    continue;
-                } else if (habit.is_paused) {
-                    // Paused habit preserves streak up to last active log
-                    break;
-                } else {
-                    break;
-                }
-            }
-        }
-        return streak;
+        return calculateHabitStreak(habit, trackingStartDate || null);
     };
 
     const getDateStatus = (habit) => {
@@ -308,6 +276,36 @@ const Habits = () => {
                         </span>
                     </div>
 
+                    {/* Vacation Mode Toggle */}
+                    <motion.button
+                        whileTap={{ scale: 0.88 }}
+                        onClick={() => {
+                            setVacationStartDate(getLocalDateStr(new Date()));
+                            setShowVacationModal(true);
+                        }}
+                        style={{
+                            height: 36,
+                            padding: '0 10px',
+                            borderRadius: 12,
+                            background: habits.some(h => h.is_paused)
+                                ? 'linear-gradient(135deg, rgba(234,179,8,0.22), rgba(245,158,11,0.12))'
+                                : 'var(--surface-input, rgba(255,255,255,0.04))',
+                            border: habits.some(h => h.is_paused)
+                                ? '1px solid rgba(234,179,8,0.45)'
+                                : '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                            color: habits.some(h => h.is_paused) ? '#eab308' : 'var(--text-secondary, rgba(255,255,255,0.7))',
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            cursor: 'pointer',
+                            fontSize: 12, fontWeight: 700,
+                        }}
+                        title={habits.some(h => h.is_paused) ? "Vacation Mode Active - Click to manage or resume" : "Vacation Mode - Pause all habits"}
+                    >
+                        <Palmtree size={15} color={habits.some(h => h.is_paused) ? '#eab308' : 'var(--text-secondary)'} />
+                        <span style={{ fontSize: 11 }}>
+                            {habits.length > 0 && habits.every(h => h.is_paused) ? 'Vacation' : habits.some(h => h.is_paused) ? 'Paused' : 'Vacation'}
+                        </span>
+                    </motion.button>
+
                     {/* Analytics */}
                     <motion.button
                         whileTap={{ scale: 0.88 }}
@@ -413,6 +411,268 @@ const Habits = () => {
                     )}
                 </AnimatePresence>
             </motion.div>
+
+            {/* Vacation Mode Active Banner */}
+            {habits.some(h => h.is_paused) && (
+                <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                        position: 'relative', zIndex: 2, marginBottom: 16,
+                        padding: '12px 14px', borderRadius: 16,
+                        background: 'linear-gradient(135deg, rgba(234,179,8,0.15), rgba(245,158,11,0.08))',
+                        border: '1px solid rgba(234,179,8,0.35)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <div style={{
+                            width: 34, height: 34, borderRadius: 10,
+                            background: 'rgba(234,179,8,0.22)', border: '1px solid rgba(234,179,8,0.35)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 18, flexShrink: 0,
+                        }}>
+                            🌴
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: '#eab308' }}>
+                                    {habits.length > 0 && habits.every(h => h.is_paused)
+                                        ? 'Vacation Mode Active'
+                                        : `${habits.filter(h => h.is_paused).length} Habits Paused`}
+                                </span>
+                                <span style={{
+                                    fontSize: 9.5, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
+                                    background: 'rgba(234,179,8,0.2)', color: '#eab308',
+                                    border: '1px solid rgba(234,179,8,0.3)',
+                                }}>
+                                    Streaks Frozen ⏸️
+                                </span>
+                            </div>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginTop: 2 }}>
+                                Missed habit penalties are suspended. Resume when you're back to continue your streak!
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <motion.button
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.95 }}
+                            disabled={vacationLoading}
+                            onClick={async () => {
+                                setVacationLoading(true);
+                                try {
+                                    await unpauseAllHabits();
+                                } finally {
+                                    setVacationLoading(false);
+                                }
+                            }}
+                            style={{
+                                padding: '7px 13px', borderRadius: 10,
+                                background: 'linear-gradient(135deg, #eab308, #f59e0b)',
+                                border: 'none', color: '#000', fontSize: 12, fontWeight: 800,
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                                boxShadow: '0 2px 8px rgba(234,179,8,0.3)',
+                            }}
+                        >
+                            {vacationLoading ? 'Resuming…' : '✨ Resume All'}
+                        </motion.button>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Vacation Mode Modal */}
+            <AnimatePresence>
+                {showVacationModal && (
+                    <div
+                        style={{
+                            position: 'fixed', inset: 0, zIndex: 100,
+                            background: 'rgba(0, 0, 0, 0.72)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 16,
+                        }}
+                        onClick={() => !vacationLoading && setShowVacationModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.94, y: 12 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                width: '100%', maxWidth: 420,
+                                background: 'var(--surface-elevated, #161622)',
+                                border: '1px solid rgba(234, 179, 8, 0.35)',
+                                borderRadius: 24, padding: '24px 22px',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(234,179,8,0.12)',
+                                position: 'relative', overflow: 'hidden',
+                            }}
+                        >
+                            {/* Ambient decorative glow */}
+                            <div style={{
+                                position: 'absolute', top: -40, right: -40, width: 120, height: 120,
+                                background: 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, transparent 70%)',
+                                pointerEvents: 'none',
+                            }} />
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                                <div style={{
+                                    width: 44, height: 44, borderRadius: 14,
+                                    background: 'linear-gradient(135deg, rgba(234,179,8,0.25), rgba(245,158,11,0.15))',
+                                    border: '1px solid rgba(234,179,8,0.4)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 22,
+                                }}>
+                                    🌴
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                                        {habits.some(h => h.is_paused) ? 'Vacation Mode Active' : 'Go on Vacation'}
+                                    </h3>
+                                    <span style={{ fontSize: 12, color: '#eab308', fontWeight: 600 }}>
+                                        Streak Protection & Freeze
+                                    </span>
+                                </div>
+                            </div>
+
+                            {habits.some(h => h.is_paused) ? (
+                                <>
+                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 16px' }}>
+                                        {habits.every(h => h.is_paused)
+                                            ? `All ${habits.length} habits are currently paused. Your streaks are safe and frozen from any missed day penalties.`
+                                            : `${habits.filter(h => h.is_paused).length} of ${habits.length} habits are currently paused with protected streaks.`
+                                        }
+                                    </p>
+
+                                    <div style={{
+                                        padding: '12px 14px', borderRadius: 14,
+                                        background: 'rgba(234,179,8,0.08)',
+                                        border: '1px solid rgba(234,179,8,0.2)',
+                                        marginBottom: 20,
+                                        display: 'flex', flexDirection: 'column', gap: 6,
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
+                                            <ShieldCheck size={16} color="#eab308" />
+                                            <span>Streaks will resume smoothly upon unpausing</span>
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                                            Vacation days are recorded as protected break days. Today will be ready for you to complete your habits!
+                                        </p>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                        <button
+                                            type="button"
+                                            disabled={vacationLoading}
+                                            onClick={async () => {
+                                                setVacationLoading(true);
+                                                try {
+                                                    await unpauseAllHabits();
+                                                    setShowVacationModal(false);
+                                                } finally {
+                                                    setVacationLoading(false);
+                                                }
+                                            }}
+                                            style={{
+                                                flex: 1, padding: '12px', borderRadius: 14,
+                                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                                border: 'none', color: '#fff', fontSize: 13, fontWeight: 800,
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                boxShadow: '0 4px 16px rgba(34,197,94,0.3)',
+                                            }}
+                                        >
+                                            {vacationLoading ? 'Resuming…' : '✨ Resume All Habits'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowVacationModal(false)}
+                                            style={{
+                                                padding: '12px 16px', borderRadius: 14,
+                                                background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                                                color: 'var(--text-muted)', fontSize: 13, fontWeight: 600,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 16px' }}>
+                                        Going on vacation or traveling? Pause all your habits at once. We'll freeze your active streaks so you won't lose your progress while you're away.
+                                    </p>
+
+                                    <div style={{ marginBottom: 18 }}>
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>
+                                            Vacation begins:
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={vacationStartDate}
+                                            max={getLocalDateStr(new Date())}
+                                            onChange={(e) => setVacationStartDate(e.target.value)}
+                                            style={{
+                                                width: '100%', padding: '10px 12px', borderRadius: 12,
+                                                background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                                                border: '1px solid rgba(234,179,8,0.3)',
+                                                color: 'var(--text-primary, #fff)', fontSize: 13, outline: 'none',
+                                                fontFamily: 'inherit',
+                                            }}
+                                        />
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                                            Missed habit penalties will be suspended starting from this date.
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                        <button
+                                            type="button"
+                                            disabled={vacationLoading}
+                                            onClick={async () => {
+                                                setVacationLoading(true);
+                                                try {
+                                                    await pauseAllHabits(vacationStartDate);
+                                                    setShowVacationModal(false);
+                                                } finally {
+                                                    setVacationLoading(false);
+                                                }
+                                            }}
+                                            style={{
+                                                flex: 1, padding: '12px', borderRadius: 14,
+                                                background: 'linear-gradient(135deg, #eab308, #f59e0b)',
+                                                border: 'none', color: '#000', fontSize: 13, fontWeight: 800,
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                boxShadow: '0 4px 16px rgba(234,179,8,0.3)',
+                                            }}
+                                        >
+                                            {vacationLoading ? 'Pausing…' : `🌴 Pause All Habits (${habits.length})`}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowVacationModal(false)}
+                                            style={{
+                                                padding: '12px 16px', borderRadius: 14,
+                                                background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                                                color: 'var(--text-muted)', fontSize: 13, fontWeight: 600,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Analytics Page */}
             <AnimatePresence>
@@ -694,6 +954,23 @@ const Habits = () => {
                                 <span style={{ fontSize: 13, fontWeight: 700, color, flex: 1, textAlign: 'left' }}>
                                     {habitsList.length} {label}
                                 </span>
+                                {habitsList === pausedHabits && (
+                                    <span
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            await unpauseAllHabits();
+                                        }}
+                                        style={{
+                                            fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
+                                            background: 'rgba(234,179,8,0.2)', color: '#eab308',
+                                            border: '1px solid rgba(234,179,8,0.4)',
+                                            marginRight: 6, cursor: 'pointer',
+                                        }}
+                                        title="Resume all paused habits"
+                                    >
+                                        Resume All
+                                    </span>
+                                )}
                                 <motion.span
                                     animate={{ rotate: show ? 180 : 0 }}
                                     transition={{ duration: 0.2 }}

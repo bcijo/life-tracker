@@ -21,6 +21,63 @@ export const getLocalDateStr = (date = new Date()) => {
     return `${year}-${month}-${day}`;
 };
 
+// Calculate streak for a single habit, supporting paused / vacation days
+export const calculateHabitStreak = (habit, trackingStartDate = null) => {
+    if (!habit || !habit.history || !Array.isArray(habit.history) || habit.history.length === 0) {
+        return 0;
+    }
+    const activeDays = habit.active_days || ALL_DAYS;
+
+    const statusByDate = {};
+    habit.history.forEach(entry => {
+        if (typeof entry === 'string') {
+            statusByDate[entry.split('T')[0]] = 'completed';
+        } else if (entry && entry.date) {
+            statusByDate[entry.date] = entry.status || 'completed';
+        }
+    });
+
+    const today = new Date();
+    let streak = 0;
+
+    for (let i = 0; i <= 365; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        const dateStr = getLocalDateStr(checkDate);
+
+        if (trackingStartDate && dateStr < trackingStartDate) break;
+        if (habit.tracking_start_date && dateStr < habit.tracking_start_date) break;
+
+        const dow = checkDate.getDay();
+        if (!activeDays.includes(dow)) continue; // Scheduled rest day
+
+        const status = statusByDate[dateStr] || null;
+
+        if (status === 'completed') {
+            streak++;
+        } else if (status === 'paused') {
+            // Paused / vacation day preserves streak
+            continue;
+        } else if (status === 'failed') {
+            break;
+        } else {
+            // Neutral (unmarked)
+            if (i === 0) {
+                // Today not logged yet: continue looking for previous days
+                continue;
+            } else if (habit.is_paused && streak === 0) {
+                // Habit is currently paused and we haven't reached the pre-pause streak yet:
+                // skip neutral days during the pause window
+                continue;
+            } else {
+                break;
+            }
+        }
+    }
+
+    return streak;
+};
+
 function useHabits() {
     const { data: habits, loading, error, insert, update, remove } = useSupabaseData('habits');
 
@@ -174,12 +231,15 @@ function useHabits() {
         return await update(id, { history: newHistory });
     };
 
-    // Calculate Habit Check-in Streak
+    // Calculate Habit Check-in Streak across all habits
     const calculateCheckinStreak = () => {
         if (!habits || habits.length === 0) return 0;
         
-        // Get all unique dates where ANY habit was logged as completed
+        // Get all unique dates where ANY habit was logged as completed or paused
         const checkinDates = new Set();
+        const pausedDates = new Set();
+        const allHabitsPaused = habits.length > 0 && habits.every(h => h.is_paused);
+
         habits.forEach(habit => {
             if (habit.history && Array.isArray(habit.history)) {
                 habit.history.forEach(h => {
@@ -187,6 +247,8 @@ function useHabits() {
                         checkinDates.add(h.split('T')[0]);
                     } else if (h.status === 'completed') {
                         checkinDates.add(h.date);
+                    } else if (h.status === 'paused') {
+                        pausedDates.add(h.date);
                     }
                 });
             }
@@ -195,28 +257,23 @@ function useHabits() {
         if (checkinDates.size === 0) return 0;
 
         let streak = 0;
-        const today = new Date();
-        const todayStr = getLocalDateStr(today);
+        let currentDate = new Date();
         
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = getLocalDateStr(yesterday);
-        
-        // If user hasn't checked in today or yesterday, streak is broken
-        if (!checkinDates.has(todayStr) && !checkinDates.has(yesterdayStr)) {
-            return 0;
-        }
-
-        let currentDate = new Date(checkinDates.has(todayStr) ? today : yesterday);
-        
-        for (let i = 0; i < 365; i++) {
+        for (let i = 0; i <= 365; i++) {
             const dateStr = getLocalDateStr(currentDate);
             if (checkinDates.has(dateStr)) {
                 streak++;
-                currentDate.setDate(currentDate.getDate() - 1);
+            } else if (pausedDates.has(dateStr)) {
+                // Paused / vacation day: preserve checkin streak
+                // continues to previous day
+            } else if (i === 0) {
+                // Today not logged yet: continue looking for previous days
+            } else if (allHabitsPaused && streak === 0) {
+                // All habits currently paused on vacation: skip neutral days
             } else {
                 break;
             }
+            currentDate.setDate(currentDate.getDate() - 1);
         }
         
         return streak;
@@ -235,11 +292,179 @@ function useHabits() {
         return await remove(id);
     };
 
-    // Toggle habit paused status (streak protection)
+    // Toggle habit paused status (streak protection for individual habit)
     const togglePauseHabit = async (id) => {
         const habit = habits.find(h => h.id === id);
         if (!habit) return { error: 'Habit not found' };
-        return await update(id, { is_paused: !habit.is_paused });
+
+        const todayStr = getLocalDateStr(new Date());
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = getLocalDateStr(yesterday);
+        const activeDays = habit.active_days || ALL_DAYS;
+
+        let newHistory = (habit.history || []).map(h => {
+            if (typeof h === 'string') {
+                return { date: h.split('T')[0], status: 'completed' };
+            }
+            return { ...h };
+        });
+
+        if (!habit.is_paused) {
+            // Pausing this habit
+            localStorage.setItem(`life_tracker_pause_${id}`, todayStr);
+            const todayIndex = newHistory.findIndex(h => h.date === todayStr);
+            if (todayIndex < 0 && activeDays.includes(new Date().getDay())) {
+                newHistory.unshift({ date: todayStr, status: 'paused' });
+            }
+            newHistory.sort((a, b) => b.date.localeCompare(a.date));
+            return await update(id, { is_paused: true, history: newHistory });
+        } else {
+            // Resuming this habit
+            const pauseStartStr = localStorage.getItem(`life_tracker_pause_${id}`) || todayStr;
+            const startD = parseLocalDate(pauseStartStr);
+            const endD = parseLocalDate(yesterdayStr);
+
+            if (startD <= endD) {
+                let cursor = new Date(startD);
+                while (cursor <= endD) {
+                    const curStr = getLocalDateStr(cursor);
+                    if (activeDays.includes(cursor.getDay())) {
+                        const existingIndex = newHistory.findIndex(h => h.date === curStr);
+                        if (existingIndex >= 0) {
+                            if (newHistory[existingIndex].status !== 'completed') {
+                                newHistory[existingIndex].status = 'paused';
+                            }
+                        } else {
+                            newHistory.unshift({ date: curStr, status: 'paused' });
+                        }
+                    }
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+            }
+
+            // If today was marked 'paused', remove it so today is ready to be logged!
+            const todayIndex = newHistory.findIndex(h => h.date === todayStr);
+            if (todayIndex >= 0 && newHistory[todayIndex].status === 'paused') {
+                newHistory.splice(todayIndex, 1);
+            }
+
+            localStorage.removeItem(`life_tracker_pause_${id}`);
+            newHistory.sort((a, b) => b.date.localeCompare(a.date));
+            return await update(id, { is_paused: false, history: newHistory });
+        }
+    };
+
+    // Pause all habits (Vacation Mode)
+    const pauseAllHabits = async (startDate = null) => {
+        if (!habits || habits.length === 0) return;
+        const todayStr = getLocalDateStr(new Date());
+        const vacationStartStr = startDate || todayStr;
+        localStorage.setItem('life_tracker_vacation_start', vacationStartStr);
+
+        const promises = habits.map(async (habit) => {
+            let newHistory = (habit.history || []).map(h => {
+                if (typeof h === 'string') {
+                    return { date: h.split('T')[0], status: 'completed' };
+                }
+                return { ...h };
+            });
+
+            // Backfill from vacationStartStr to today if startDate is earlier or today
+            const startD = parseLocalDate(vacationStartStr);
+            const todayD = parseLocalDate(todayStr);
+            let cursor = new Date(startD);
+
+            while (cursor <= todayD) {
+                const curStr = getLocalDateStr(cursor);
+                const activeDays = habit.active_days || ALL_DAYS;
+
+                if (activeDays.includes(cursor.getDay())) {
+                    const existingIndex = newHistory.findIndex(h => h.date === curStr);
+                    if (existingIndex >= 0) {
+                        if (newHistory[existingIndex].status !== 'completed') {
+                            newHistory[existingIndex].status = 'paused';
+                        }
+                    } else {
+                        newHistory.unshift({ date: curStr, status: 'paused' });
+                    }
+                }
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            newHistory.sort((a, b) => b.date.localeCompare(a.date));
+            return update(habit.id, { is_paused: true, history: newHistory });
+        });
+
+        return await Promise.all(promises);
+    };
+
+    // Unpause all habits (End Vacation)
+    const unpauseAllHabits = async () => {
+        if (!habits || habits.length === 0) return;
+        const todayStr = getLocalDateStr(new Date());
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = getLocalDateStr(yesterday);
+
+        const storedVacationStart = localStorage.getItem('life_tracker_vacation_start');
+
+        const promises = habits.map(async (habit) => {
+            if (!habit.is_paused) return;
+
+            let newHistory = (habit.history || []).map(h => {
+                if (typeof h === 'string') {
+                    return { date: h.split('T')[0], status: 'completed' };
+                }
+                return { ...h };
+            });
+
+            // Find start of pause: from storedVacationStart, or from earliest consecutive pause entries
+            let pauseStartStr = storedVacationStart;
+            if (!pauseStartStr) {
+                const pausedEntries = newHistory.filter(h => h.status === 'paused').map(h => h.date).sort();
+                if (pausedEntries.length > 0) {
+                    pauseStartStr = pausedEntries[0];
+                } else {
+                    pauseStartStr = todayStr;
+                }
+            }
+
+            // Fill all active days from pauseStartStr to yesterdayStr with status 'paused'
+            const startD = parseLocalDate(pauseStartStr);
+            const endD = parseLocalDate(yesterdayStr);
+            const activeDays = habit.active_days || ALL_DAYS;
+
+            if (startD <= endD) {
+                let cursor = new Date(startD);
+                while (cursor <= endD) {
+                    const curStr = getLocalDateStr(cursor);
+                    if (activeDays.includes(cursor.getDay())) {
+                        const existingIndex = newHistory.findIndex(h => h.date === curStr);
+                        if (existingIndex >= 0) {
+                            if (newHistory[existingIndex].status !== 'completed') {
+                                newHistory[existingIndex].status = 'paused';
+                            }
+                        } else {
+                            newHistory.unshift({ date: curStr, status: 'paused' });
+                        }
+                    }
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+            }
+
+            // If today was marked 'paused' earlier, remove it so today becomes active/ready for logging!
+            const todayIndex = newHistory.findIndex(h => h.date === todayStr);
+            if (todayIndex >= 0 && newHistory[todayIndex].status === 'paused') {
+                newHistory.splice(todayIndex, 1);
+            }
+
+            newHistory.sort((a, b) => b.date.localeCompare(a.date));
+            return update(habit.id, { is_paused: false, history: newHistory });
+        });
+
+        localStorage.removeItem('life_tracker_vacation_start');
+        return await Promise.all(promises);
     };
 
     // Mark habits as missed for yesterday if no status was set (only for active days)
@@ -294,7 +519,7 @@ function useHabits() {
         }
     };
 
-    // Calculate success rate since tracking started (only counting active days)
+    // Calculate success rate since tracking started (only counting active days, excluding paused days)
     const calculateSuccessRate = (habit, globalStartDate = null) => {
         if (!habit || !habit.history || habit.history.length === 0) {
             return { rate: null, completedDays: 0, totalDays: 0, startDate: null };
@@ -326,11 +551,15 @@ function useHabits() {
         today.setHours(0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
 
-        // Count active days from start to today
+        // Count active days from start to today (excluding paused/vacation days)
         let totalActiveDays = 0;
         let currentDate = new Date(startDate);
         while (currentDate <= today) {
-            if (activeDays.includes(currentDate.getDay())) totalActiveDays++;
+            const curStr = getLocalDateStr(currentDate);
+            const status = getStatusForDate(habit, curStr);
+            if (activeDays.includes(currentDate.getDay()) && status !== 'paused') {
+                totalActiveDays++;
+            }
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
@@ -390,7 +619,10 @@ function useHabits() {
         resetHabitStats,
         batchUpdateHabitOrders,
         calculateCheckinStreak,
+        calculateStreak: (h) => calculateHabitStreak(h, localStorage.getItem('life_tracker_tracking_start')),
         togglePauseHabit,
+        pauseAllHabits,
+        unpauseAllHabits,
     };
 }
 

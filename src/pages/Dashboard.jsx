@@ -197,8 +197,14 @@ const Dashboard = () => {
                             <div style={{ background: 'var(--surface-input)', padding: '14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Habits Completed</p>
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                    <span style={{ fontSize: '24px', fontWeight: '800' }}>{habitsDoneToday}</span>
-                                    <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/{habitsActiveToday.length}</span>
+                                    {habits.length > 0 && habits.every(h => h.is_paused) ? (
+                                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#eab308' }}>🌴 Vacation</span>
+                                    ) : (
+                                        <>
+                                            <span style={{ fontSize: '24px', fontWeight: '800' }}>{habitsDoneToday}</span>
+                                            <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/{habitsActiveToday.length}</span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <div style={{ background: 'var(--surface-input)', padding: '14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>

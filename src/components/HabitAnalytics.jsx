@@ -82,7 +82,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
         const globalTrackingStart = localStorage.getItem('life_tracker_tracking_start');
         let bestStreak = 0;
 
-        habits.filter(h => !h.is_paused).forEach(habit => {
+        habits.forEach(habit => {
             const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
             const startDateStr = globalTrackingStart || habit.tracking_start_date;
             let current = 0;
@@ -98,9 +98,15 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                 if (status === 'completed') {
                     current++;
                     maxForHabit = Math.max(maxForHabit, current);
+                } else if (status === 'paused') {
+                    // Paused / vacation day does not reset streak
+                    continue;
                 } else if (status === 'failed') {
                     current = 0;
                 } else if (i > 0) {
+                    if (habit.is_paused && current === 0) {
+                        continue;
+                    }
                     current = 0;
                 }
             }

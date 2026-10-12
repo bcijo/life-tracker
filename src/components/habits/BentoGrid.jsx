@@ -46,9 +46,10 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
   const checkinStreak = calculateCheckinStreak ? calculateCheckinStreak() : 0;
 
   // ── 3. TODAY'S PROGRESS ──────────────────────────────────────────────────
+  const allHabitsPaused = habits.length > 0 && habits.every(h => h.is_paused);
   const activeTodayHabits = habits.filter((h) => !h.is_paused && isTodayActive(h));
   const completedToday = activeTodayHabits.filter((h) => getTodayStatus(h) === 'completed').length;
-  const todayPct = activeTodayHabits.length > 0 ? Math.round((completedToday / activeTodayHabits.length) * 100) : 0;
+  const todayPct = activeTodayHabits.length > 0 ? Math.round((completedToday / activeTodayHabits.length) * 100) : (allHabitsPaused ? 100 : 0);
   const remainingToday = activeTodayHabits.length - completedToday;
 
   // ── 4. THIS WEEK ─────────────────────────────────────────────────────────
@@ -81,7 +82,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
     overflow: 'hidden',
   };
 
-  const progressColor = todayPct === 100 ? '#22c55e' : todayPct >= 50 ? '#38bdf8' : '#a855f7';
+  const progressColor = allHabitsPaused ? '#eab308' : (todayPct === 100 ? '#22c55e' : todayPct >= 50 ? '#38bdf8' : '#a855f7');
 
   return (
     <div style={{ padding: '0 0 16px' }}>
@@ -143,7 +144,9 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
               margin: '4px 0 0', fontSize: 11, color: 'var(--text-secondary, rgba(255,255,255,0.7))',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {todayPct === 100
+              {allHabitsPaused
+                ? '🌴 Vacation Mode · Streaks frozen & protected'
+                : todayPct === 100
                 ? '🎉 All habits completed today!'
                 : remainingToday > 0
                 ? `${remainingToday} habit${remainingToday > 1 ? 's' : ''} left to crush`
@@ -271,7 +274,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>days</span>
             </div>
             <span style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
-              consecutive tracking
+              {allHabitsPaused ? 'frozen on vacation' : 'consecutive tracking'}
             </span>
           </div>
         </motion.div>

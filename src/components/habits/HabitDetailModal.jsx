@@ -194,6 +194,10 @@ export function HabitDetailModal({
       bg = 'rgba(239, 68, 68, 0.16)';
       color = '#ef4444';
       borderStyle = isCurrentDay ? '1.5px solid #ef4444' : '1px solid rgba(239, 68, 68, 0.3)';
+    } else if (status === 'paused') {
+      bg = 'rgba(234, 179, 8, 0.16)';
+      color = '#eab308';
+      borderStyle = isCurrentDay ? '1.5px solid #eab308' : '1px solid rgba(234, 179, 8, 0.35)';
     }
 
     return {
@@ -238,7 +242,7 @@ export function HabitDetailModal({
         transition={{ delay: 0.1 }}
         style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: isMobile ? 6 : 8, marginBottom: 16 }}
       >
-        {statCard(<Flame size={isMobile ? 15 : 18} />, streak, 'STREAK', '#f59e0b')}
+        {statCard(habit.is_paused ? <PauseCircle size={isMobile ? 15 : 18} /> : <Flame size={isMobile ? 15 : 18} />, streak, habit.is_paused ? 'FROZEN' : 'STREAK', habit.is_paused ? '#eab308' : '#f59e0b')}
         {statCard(<Trophy size={isMobile ? 15 : 18} />, bestStreak, 'BEST', '#a855f7')}
         {statCard(<Target size={isMobile ? 15 : 18} />, `${successRate ?? 0}%`, 'SUCCESS', '#22c55e')}
         {statCard(<TrendingUp size={isMobile ? 15 : 18} />, totalCompleted, 'TOTAL', '#38bdf8')}
@@ -277,7 +281,7 @@ export function HabitDetailModal({
             const isCurrentDay = isToday(day);
             const isFutureDay = isFuture(day);
             const isActive = activeDays.includes(day.getDay());
-            const hasStatus = status === 'completed' || status === 'failed';
+            const hasStatus = status === 'completed' || status === 'failed' || status === 'paused';
 
             return (
               <motion.div key={dateStr} whileTap={{ scale: 0.88 }}
@@ -312,6 +316,14 @@ export function HabitDetailModal({
                         strokeWidth={3.2}
                         color="#ef4444"
                         style={{ marginTop: 2, filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.4))' }}
+                      />
+                    )}
+                    {status === 'paused' && (
+                      <PauseCircle
+                        size={isMobile ? 16 : 18}
+                        strokeWidth={2.8}
+                        color="#eab308"
+                        style={{ marginTop: 2, filter: 'drop-shadow(0 0 4px rgba(234,179,8,0.4))' }}
                       />
                     )}
                   </>

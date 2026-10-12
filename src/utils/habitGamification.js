@@ -80,39 +80,51 @@ export const calculateHabitStreak = (habit) => {
     return 0;
   }
   const completedDates = new Set();
+  const pausedDates = new Set();
   habit.history.forEach((entry) => {
     const dStr = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
     const status = typeof entry === 'string' ? 'completed' : entry.status;
     if (status === 'completed' && dStr) {
       completedDates.add(dStr);
+    } else if (status === 'paused' && dStr) {
+      pausedDates.add(dStr);
     }
   });
 
   if (completedDates.size === 0) return 0;
 
   const now = new Date();
-  const todayStr = getLocalDateStr(now);
-  const yesterdayStr = getLocalDateStr(subDays(now, 1));
   const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
 
   let streak = 0;
-  // Check if today or yesterday was completed
-  let cursor = completedDates.has(todayStr) ? now : subDays(now, 1);
-  if (!completedDates.has(todayStr) && !completedDates.has(yesterdayStr)) {
-    return 0;
-  }
+  let cursor = new Date(now);
 
-  for (let i = 0; i < 365; i++) {
+  for (let i = 0; i <= 365; i++) {
     const dStr = getLocalDateStr(cursor);
     const dow = cursor.getDay();
-    if (activeDays.includes(dow)) {
-      if (completedDates.has(dStr)) {
-        streak++;
-      } else {
-        break;
-      }
+    if (!activeDays.includes(dow)) {
+      cursor = subDays(cursor, 1);
+      continue;
     }
-    cursor = subDays(cursor, 1);
+
+    if (completedDates.has(dStr)) {
+      streak++;
+      cursor = subDays(cursor, 1);
+    } else if (pausedDates.has(dStr)) {
+      // Paused / vacation day: preserve streak
+      cursor = subDays(cursor, 1);
+      continue;
+    } else if (i === 0) {
+      // Today not logged yet
+      cursor = subDays(cursor, 1);
+      continue;
+    } else if (habit.is_paused && streak === 0) {
+      // Habit is currently paused on vacation: skip neutral days during pause window
+      cursor = subDays(cursor, 1);
+      continue;
+    } else {
+      break;
+    }
   }
 
   return streak;
@@ -201,9 +213,12 @@ export const computeGamifiedHabitMetrics = (habits, mode = 'all_time', fallbackS
   const dayCompletedMap = {}; // { 'YYYY-MM-DD': Set(habitId) }
   const dayScheduledMap = {}; // { 'YYYY-MM-DD': number }
 
+  const allHabitsPaused = habits.length > 0 && habits.every(h => h.is_paused);
+
   habits.forEach((habit) => {
-    if (habit.is_paused === true) return;
-    activeHabitsCount++;
+    if (!habit.is_paused || allHabitsPaused) {
+      activeHabitsCount++;
+    }
 
     const history = habit.history || [];
     const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
@@ -213,6 +228,7 @@ export const computeGamifiedHabitMetrics = (habits, mode = 'all_time', fallbackS
     }
 
     const completedDates = new Set();
+    const pausedDates = new Set();
     history.forEach((entry) => {
       const date = typeof entry === 'string' ? entry.split('T')[0] : entry.date;
       const status = typeof entry === 'string' ? 'completed' : entry.status;
@@ -232,6 +248,8 @@ export const computeGamifiedHabitMetrics = (habits, mode = 'all_time', fallbackS
         if (date >= fromDateStr && date <= todayStr) {
           periodCompletions++;
         }
+      } else if (status === 'paused' && date) {
+        pausedDates.add(date);
       }
     });
 
@@ -239,7 +257,7 @@ export const computeGamifiedHabitMetrics = (habits, mode = 'all_time', fallbackS
     while (cursor <= now) {
       const dow = cursor.getDay();
       const dStr = getLocalDateStr(cursor);
-      if (activeDays.includes(dow)) {
+      if (activeDays.includes(dow) && !pausedDates.has(dStr) && !(habit.is_paused && !completedDates.has(dStr))) {
         scheduledDaysTotal++;
         dayScheduledMap[dStr] = (dayScheduledMap[dStr] || 0) + 1;
         if (completedDates.has(dStr)) {
