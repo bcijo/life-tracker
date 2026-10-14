@@ -17,7 +17,7 @@ const PRESET_COLORS = [
     '#6366F1', '#8B5CF6', '#F43F5E', '#14B8A6'
 ];
 
-const ExpenseCardDetail = ({ card, onClose, onEdit }) => {
+const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCategory }) => {
     if (!card) return null;
 
     const { deleteTransaction, transactions } = useTransactions();
@@ -149,12 +149,14 @@ const ExpenseCardDetail = ({ card, onClose, onEdit }) => {
 
     const handleSaveSettings = async () => {
         setIsSavingSettings(true);
-        await updateCard(card.id, {
+        const updates = {
             name: editName.trim(),
             icon: editIcon,
             color: editColor,
             budget_amount: editBudget ? parseFloat(editBudget) : null
-        });
+        };
+        const updateFn = onUpdateCategory || updateCard;
+        await updateFn(card.id, updates);
         setIsSavingSettings(false);
         onClose();
     };
@@ -163,8 +165,10 @@ const ExpenseCardDetail = ({ card, onClose, onEdit }) => {
         if (!card) return;
         if (window.confirm(`Are you sure you want to delete "${card.name}" and remove all its subcategories?`)) {
             const cardId = card.id;
+            const deleteFn = onDeleteCategory || deleteCard;
+            const deletePromise = deleteFn(cardId);
             onClose();
-            await deleteCard(cardId);
+            await deletePromise;
         }
     };
 

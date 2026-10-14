@@ -24,6 +24,8 @@ const Expenses = () => {
     const {
         cards,
         addCard,
+        deleteCard,
+        updateCard,
         getBudgetProgress,
         initializeDefaults,
         loading
@@ -261,6 +263,8 @@ const Expenses = () => {
                 <ExpenseCardDetail
                     card={selectedCard}
                     onClose={() => setSelectedCard(null)}
+                    onDeleteCategory={deleteCard}
+                    onUpdateCategory={updateCard}
                 />
             )}
 

@@ -19,7 +19,7 @@ const PRESET_COLORS = [
 ];
 
 const CategoriesView = () => {
-    const { cards, addCard, deleteCard, getBudgetProgress, fetchAllSubcategories } = useExpenseCards();
+    const { cards, addCard, deleteCard, updateCard, getBudgetProgress, fetchAllSubcategories } = useExpenseCards();
     const { transactions } = useTransactions();
 
     const [selectedCard, setSelectedCard] = useState(null);
@@ -255,6 +255,14 @@ const CategoriesView = () => {
                         setSelectedCard(null);
                         setEditingCategory(target);
                     }}
+                    onDeleteCategory={async (id) => {
+                        await deleteCard(id);
+                        loadSubcategories();
+                    }}
+                    onUpdateCategory={async (id, updates) => {
+                        await updateCard(id, updates);
+                        loadSubcategories();
+                    }}
                 />
             )}
 
@@ -264,6 +272,14 @@ const CategoriesView = () => {
                     card={editingCategory}
                     onClose={() => {
                         setEditingCategory(null);
+                        loadSubcategories();
+                    }}
+                    onDeleteCategory={async (id) => {
+                        await deleteCard(id);
+                        loadSubcategories();
+                    }}
+                    onUpdateCategory={async (id, updates) => {
+                        await updateCard(id, updates);
                         loadSubcategories();
                     }}
                 />

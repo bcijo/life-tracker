@@ -1,5 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+
+// Module-level broadcaster for cross-hook synchronization within the same window
+const tableListeners = new Map();
+
+const broadcastChange = (table, event, sourceListener) => {
+    const listeners = tableListeners.get(table);
+    if (listeners) {
+        listeners.forEach(listener => {
+            if (listener !== sourceListener) {
+                try {
+                    listener(event);
+                } catch (err) {
+                    console.error(`Error notifying listener for ${table}:`, err);
+                }
+            }
+        });
+    }
+};
 
 /**
  * Generic hook for real-time Supabase data synchronization with LocalStorage caching
@@ -20,19 +38,73 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const listenerRef = useRef(null);
+
+    // Register cross-hook listener for the same table across components
+    useEffect(() => {
+        if (!tableListeners.has(table)) {
+            tableListeners.set(table, new Set());
+        }
+
+        const listener = (event) => {
+            if (event.type === 'INSERT') {
+                setData((current) => {
+                    if (current.some(item => item.id === event.item.id)) return current;
+                    return [event.item, ...current];
+                });
+            } else if (event.type === 'UPDATE') {
+                setData((current) =>
+                    current.map((item) =>
+                        item.id === event.id ? { ...item, ...event.updates } : item
+                    )
+                );
+            } else if (event.type === 'DELETE') {
+                setData((current) => current.filter((item) => item.id !== event.id));
+            } else if (event.type === 'REPLACE_TEMP') {
+                setData((current) =>
+                    current.map((item) =>
+                        item.id === event.tempId ? event.finalItem : item
+                    )
+                );
+            } else if (event.type === 'ROLLBACK_INSERT') {
+                setData((current) => current.filter((item) => item.id !== event.tempId));
+            } else if (event.type === 'ROLLBACK_DELETE') {
+                setData((current) => [event.item, ...current]);
+            } else if (event.type === 'ROLLBACK_UPDATE') {
+                setData((current) =>
+                    current.map((item) =>
+                        item.id === event.id ? event.oldItem : item
+                    )
+                );
+            }
+        };
+
+        listenerRef.current = listener;
+        tableListeners.get(table).add(listener);
+
+        return () => {
+            const listeners = tableListeners.get(table);
+            if (listeners) {
+                listeners.delete(listener);
+                if (listeners.size === 0) {
+                    tableListeners.delete(table);
+                }
+            }
+        };
+    }, [table]);
 
     // Update localStorage whenever data changes (debounced to avoid blocking on every change)
     useEffect(() => {
-        if (data.length === 0) return;
+        if (loading) return;
         const timer = setTimeout(() => {
             try {
                 localStorage.setItem(`supa_cache_${table}`, JSON.stringify(data));
             } catch (e) {
                 console.warn(`Error caching ${table}`, e);
             }
-        }, 500);
+        }, 300);
         return () => clearTimeout(timer);
-    }, [data, table]);
+    }, [data, table, loading]);
 
     useEffect(() => {
         let cancelled = false;
@@ -68,12 +140,14 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                                         if (current.some(item => item.id === payload.new.id)) return current;
                                         return [payload.new, ...current];
                                     });
+                                    broadcastChange(table, { type: 'INSERT', item: payload.new }, listenerRef.current);
                                 } else if (payload.eventType === 'UPDATE') {
                                     setData((current) =>
                                         current.map((item) =>
                                             item.id === payload.new.id ? payload.new : item
                                         )
                                     );
+                                    broadcastChange(table, { type: 'UPDATE', id: payload.new.id, updates: payload.new }, listenerRef.current);
                                 }
                             }
                         )
@@ -85,6 +159,7 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
                                 const deletedId = payload.old?.id;
                                 if (deletedId === undefined) return;
                                 setData((current) => current.filter((item) => item.id !== deletedId));
+                                broadcastChange(table, { type: 'DELETE', id: deletedId }, listenerRef.current);
                             }
                         )
                         .subscribe();
@@ -136,7 +211,14 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
             const tempId = 'temp-' + Date.now();
             const optimisticItem = { ...payload, id: tempId };
 
-            setData(current => [optimisticItem, ...current]);
+            setData(current => {
+                const next = [optimisticItem, ...current];
+                try {
+                    localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                } catch (e) {}
+                return next;
+            });
+            broadcastChange(table, { type: 'INSERT', item: optimisticItem }, listenerRef.current);
 
             // Strip client-side transient fields before sending to Supabase
             const { client_id, ...dbPayload } = payload;
@@ -149,14 +231,28 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
 
             if (insertError) {
                 // Rollback
-                setData(current => current.filter(item => item.id !== tempId));
+                setData(current => {
+                    const next = current.filter(item => item.id !== tempId);
+                    try {
+                        localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                    } catch (e) {}
+                    return next;
+                });
+                broadcastChange(table, { type: 'ROLLBACK_INSERT', tempId }, listenerRef.current);
                 throw insertError;
             }
 
             // Replace temp item with real item, preserving client_id for seamless animations
             if (insertedData) {
                 const finalItem = { ...optimisticItem, ...insertedData };
-                setData(current => current.map(item => item.id === tempId ? finalItem : item));
+                setData(current => {
+                    const next = current.map(item => item.id === tempId ? finalItem : item);
+                    try {
+                        localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                    } catch (e) {}
+                    return next;
+                });
+                broadcastChange(table, { type: 'REPLACE_TEMP', tempId, finalItem }, listenerRef.current);
             }
 
             return { data: insertedData, error: null };
@@ -170,9 +266,14 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
         try {
             // Optimistic update
             const oldData = data.find(item => item.id === id);
-            setData(current =>
-                current.map(item => item.id === id ? { ...item, ...updates } : item)
-            );
+            setData(current => {
+                const next = current.map(item => item.id === id ? { ...item, ...updates } : item);
+                try {
+                    localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                } catch (e) {}
+                return next;
+            });
+            broadcastChange(table, { type: 'UPDATE', id, updates }, listenerRef.current);
 
             const { data: updatedData, error: updateError } = await supabase
                 .from(table)
@@ -184,9 +285,14 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
             if (updateError) {
                 // Rollback
                 if (oldData) {
-                    setData(current =>
-                        current.map(item => item.id === id ? oldData : item)
-                    );
+                    setData(current => {
+                        const next = current.map(item => item.id === id ? oldData : item);
+                        try {
+                            localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                        } catch (e) {}
+                        return next;
+                    });
+                    broadcastChange(table, { type: 'ROLLBACK_UPDATE', id, oldItem: oldData }, listenerRef.current);
                 }
                 throw updateError;
             }
@@ -202,7 +308,14 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
         try {
             // Optimistic update
             const oldData = data.find(item => item.id === id);
-            setData(current => current.filter(item => item.id !== id));
+            setData(current => {
+                const next = current.filter(item => item.id !== id);
+                try {
+                    localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                } catch (e) {}
+                return next;
+            });
+            broadcastChange(table, { type: 'DELETE', id }, listenerRef.current);
 
             const { error: deleteError } = await supabase
                 .from(table)
@@ -212,7 +325,14 @@ function useSupabaseData(table, orderBy = 'created_at', ascending = false) {
             if (deleteError) {
                 // Rollback
                 if (oldData) {
-                    setData(current => [oldData, ...current]);
+                    setData(current => {
+                        const next = [oldData, ...current];
+                        try {
+                            localStorage.setItem(`supa_cache_${table}`, JSON.stringify(next));
+                        } catch (e) {}
+                        return next;
+                    });
+                    broadcastChange(table, { type: 'ROLLBACK_DELETE', item: oldData }, listenerRef.current);
                 }
                 throw deleteError;
             }

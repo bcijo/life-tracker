@@ -5,7 +5,7 @@ import CurrencyInput from './CurrencyInput';
 import Modal from './Modal';
 import { CategoryIcon, CATEGORY_ICON_LIST } from '../utils/categoryIcons';
 
-const CategorySettingsModal = ({ card, onClose }) => {
+const CategorySettingsModal = ({ card, onClose, onDeleteCategory, onUpdateCategory }) => {
     if (!card) return null;
 
     const { updateCard, deleteCard, fetchSubcategories, addSubcategory, deleteSubcategory } = useExpenseCards();
@@ -30,21 +30,25 @@ const CategorySettingsModal = ({ card, onClose }) => {
     const handleSaveSettings = async () => {
         if (!card?.id) return;
         setIsSaving(true);
-        await updateCard(card.id, {
+        const updates = {
             name: editName,
             icon: editIcon,
             budget_amount: editBudget ? parseFloat(editBudget) : null
-        });
+        };
+        const updateFn = onUpdateCategory || updateCard;
+        await updateFn(card.id, updates);
         setIsSaving(false);
         onClose();
     };
 
     const handleDeleteCard = async () => {
         if (!card?.id) return;
-        if (window.confirm(`Delete "${card.name}" and all its transactions?`)) {
+        if (window.confirm(`Are you sure you want to delete "${card.name}" and remove all its subcategories?`)) {
             const cardId = card.id;
+            const deleteFn = onDeleteCategory || deleteCard;
+            const deletePromise = deleteFn(cardId);
             onClose();
-            await deleteCard(cardId);
+            await deletePromise;
         }
     };
 
