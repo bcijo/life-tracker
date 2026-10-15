@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, BarChart2, CalendarDays, Check, Zap, Palmtree, Play, PauseCircle, ShieldCheck } from 'lucide-react';
+import { Plus, BarChart2, CalendarDays, Check, Zap, Palmtree, Play, PauseCircle, ShieldCheck, Share2 } from 'lucide-react';
 import useHabits, { parseLocalDate, getLocalDateStr, calculateHabitStreak } from '../hooks/useHabits';
 import useMutualHabits from '../hooks/useMutualHabits';
 import { useFriends } from '../hooks/useFriends';
@@ -12,6 +12,7 @@ import { HabitCard } from '../components/habits/HabitCard';
 import { WeeklySummary } from '../components/habits/WeeklySummary';
 import { HabitDetailModal } from '../components/habits/HabitDetailModal';
 import { HabitReorderPage } from '../components/habits/HabitReorderPage';
+import { ShareHabitsModal } from '../components/habits/ShareHabitsModal';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -67,6 +68,7 @@ const Habits = () => {
     const [showVacationModal, setShowVacationModal] = useState(false);
     const [vacationStartDate, setVacationStartDate] = useState(() => getLocalDateStr(new Date()));
     const [vacationLoading, setVacationLoading] = useState(false);
+    const [shareData, setShareData] = useState(null);
 
     const isViewingToday = selectedDate === getLocalDateStr(new Date());
 
@@ -180,6 +182,20 @@ const Habits = () => {
 
     const today = new Date();
     const accentColor = '#a855f7';
+
+    // Snapshot the selected day's habits for the share card
+    const openShare = () => {
+        const dayHabits = sortedHabits
+            .filter(h => !h.is_paused && isDateActive(h))
+            .map(h => ({ name: h.name, status: getDateStatus(h), streak: calculateStreak(h) || 0 }));
+        const bestStreak = dayHabits.reduce((m, h) => Math.max(m, h.streak), 0);
+        setShareData({
+            dateLabel: format(parseLocalDate(selectedDate), 'EEE, MMM d'),
+            isToday: isViewingToday,
+            habits: dayHabits,
+            bestStreak,
+        });
+    };
 
     return (
         <div className="page-container" style={{ position: 'relative', zIndex: 1, maxWidth: 1080, margin: '0 auto', width: '100%' }}>
@@ -321,6 +337,25 @@ const Habits = () => {
                     >
                         <BarChart2 size={18} />
                     </motion.button>
+
+                    {/* Share */}
+                    {habits.length > 0 && (
+                        <motion.button
+                            id="share-habits-button"
+                            whileTap={{ scale: 0.88 }}
+                            onClick={openShare}
+                            style={{
+                                width: 36, height: 36, borderRadius: 12,
+                                background: 'rgba(37,211,102,0.12)',
+                                border: 'none',
+                                color: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer',
+                            }}
+                            title="Share your habits"
+                        >
+                            <Share2 size={17} />
+                        </motion.button>
+                    )}
 
                     {/* Add habit */}
                     <motion.button
@@ -1087,6 +1122,16 @@ const Habits = () => {
                             setShowReorder(false);
                         }}
                         onClose={() => setShowReorder(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Share overlay */}
+            <AnimatePresence>
+                {shareData && (
+                    <ShareHabitsModal
+                        {...shareData}
+                        onClose={() => setShareData(null)}
                     />
                 )}
             </AnimatePresence>
