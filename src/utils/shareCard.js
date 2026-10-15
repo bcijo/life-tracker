@@ -1,17 +1,26 @@
-// Renders a shareable PNG card of habits for a given day using the Canvas API,
-// and shares it via the Web Share API (WhatsApp, Instagram, etc.) with fallbacks.
+// Renders shareable PNG cards of habit progress using the Canvas API,
+// and shares them via the Web Share API (WhatsApp, Instagram, etc.) with fallbacks.
+//
+// Two card styles:
+//   - 'checklist': list of the day's habits, with privacy modes for names
+//       'show'   -> full habit names
+//       'redact' -> first letter of each word + redaction bars ("M▇▇▇▇ w▇▇")
+//       'hide'   -> generic labels ("☀️ Habit 1")
+//   - 'summary':   no habit names at all — progress ring, stats and a 7-day chart
 
 const W = 1080;
 const H = 1350;
+const PAD = 80;
 const FONT = `'Inter', 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
 
 const rr = (ctx, x, y, w, h, r) => {
+    const rad = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
     ctx.closePath();
 };
 
@@ -30,26 +39,16 @@ const truncate = (ctx, text, maxWidth) => {
     return t + '…';
 };
 
-/**
- * @param {Object} opts
- * @param {string} opts.dateLabel    e.g. "Thu, Oct 15"
- * @param {boolean} opts.isToday
- * @param {Array<{name:string,status:'completed'|'failed'|null,streak:number}>} opts.habits
- * @param {number} opts.doneCount
- * @param {number} opts.totalCount
- * @param {number} opts.bestStreak
- * @param {'all'|'completed'} opts.mode
- * @returns {Promise<Blob>}
- */
-export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCount, totalCount, bestStreak, mode = 'all' }) {
-    try { await document.fonts?.ready; } catch { /* ignore */ }
+const brandGradient = (ctx, x0, x1) => {
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, '#a855f7');
+    g.addColorStop(1, '#ec4899');
+    return g;
+};
 
-    const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext('2d');
+// ── Shared pieces ────────────────────────────────────────────────────────────
 
-    // ── Background ──
+const drawBackground = (ctx) => {
     const bg = ctx.createLinearGradient(0, 0, W, H);
     bg.addColorStop(0, '#0f0a1f');
     bg.addColorStop(0.55, '#140d24');
@@ -59,11 +58,10 @@ export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCou
     glow(ctx, 120, 140, 520, 'rgba(168,85,247,0.35)');
     glow(ctx, W - 80, H - 160, 560, 'rgba(236,72,153,0.28)');
     glow(ctx, W - 200, 380, 300, 'rgba(34,197,94,0.10)');
+};
 
-    const PAD = 80;
-    const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
-
-    // ── Header ──
+const drawHeader = (ctx, { dateLabel, isToday, title, subtitle }) => {
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.font = `600 30px ${FONT}`;
@@ -74,17 +72,14 @@ export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCou
     titleGrad.addColorStop(1, '#e9d5ff');
     ctx.fillStyle = titleGrad;
     ctx.font = `800 76px ${FONT}`;
-    ctx.fillText(mode === 'completed' ? 'Habits crushed' : 'My Habits', PAD, 240);
+    ctx.fillText(title, PAD, 240);
 
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.font = `500 34px ${FONT}`;
-    const subtitle = pct === 100 && totalCount > 0
-        ? 'Perfect day! Every habit done 🎉'
-        : `${doneCount} of ${totalCount} habits done`;
     ctx.fillText(subtitle, PAD, 298);
+};
 
-    // ── Progress ring ──
-    const cx = W - PAD - 110, cy = 210, R = 105, LW = 22;
+const drawRing = (ctx, cx, cy, R, LW, pct, doneCount, totalCount, big = false) => {
     ctx.lineCap = 'round';
     ctx.lineWidth = LW;
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
@@ -100,15 +95,74 @@ export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCou
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.font = `800 58px ${FONT}`;
-    ctx.fillText(`${pct}%`, cx, cy + 12);
+    ctx.font = `800 ${big ? 120 : 58}px ${FONT}`;
+    ctx.fillText(`${pct}%`, cx, cy + (big ? 30 : 12));
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = `600 22px ${FONT}`;
-    ctx.fillText(`${doneCount}/${totalCount}`, cx, cy + 48);
+    ctx.font = `600 ${big ? 34 : 22}px ${FONT}`;
+    ctx.fillText(big ? `${doneCount} of ${totalCount} done` : `${doneCount}/${totalCount}`, cx, cy + (big ? 90 : 48));
     ctx.textAlign = 'left';
+};
 
-    // ── Habit list ──
-    const list = mode === 'completed' ? habits.filter(h => h.status === 'completed') : habits;
+const drawFooter = (ctx, bestStreak, showStreak) => {
+    const footerTop = H - 200;
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(PAD, footerTop + 30); ctx.lineTo(W - PAD, footerTop + 30); ctx.stroke();
+
+    if (showStreak && bestStreak > 0) {
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = `600 24px ${FONT}`;
+        ctx.fillText('BEST STREAK', PAD, footerTop + 90);
+        ctx.fillStyle = '#fff';
+        ctx.font = `800 44px ${FONT}`;
+        ctx.fillText(`🔥 ${bestStreak} day${bestStreak === 1 ? '' : 's'}`, PAD, footerTop + 145);
+    }
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = brandGradient(ctx, W - PAD - 300, W - PAD);
+    ctx.font = `800 38px ${FONT}`;
+    ctx.fillText('Life Tracker', W - PAD, footerTop + 110);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = `500 24px ${FONT}`;
+    ctx.fillText('Stay consistent ✨', W - PAD, footerTop + 145);
+    ctx.textAlign = 'left';
+};
+
+// Draws "M▇▇▇▇ w▇▇" — first letter of each word, the rest as rounded redaction bars.
+const drawRedactedName = (ctx, text, x, baseline, maxWidth, textColor, barColor) => {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    const space = ctx.measureText(' ').width;
+    let cx = x;
+    for (const word of words) {
+        const first = word[0];
+        const firstW = ctx.measureText(first).width;
+        const restW = word.length > 1 ? Math.max(ctx.measureText(word.slice(1)).width, 18) : 0;
+        if (cx + firstW + restW > x + maxWidth) {
+            // Out of room — draw a trailing short bar to imply more
+            if (cx + 30 <= x + maxWidth) {
+                rr(ctx, cx, baseline - 24, 30, 26, 9);
+                ctx.fillStyle = barColor; ctx.fill();
+            }
+            break;
+        }
+        ctx.fillStyle = textColor;
+        ctx.fillText(first, cx, baseline);
+        cx += firstW + 3;
+        if (restW > 0) {
+            rr(ctx, cx, baseline - 24, restW, 26, 9);
+            ctx.fillStyle = barColor;
+            ctx.fill();
+            cx += restW;
+        }
+        cx += space;
+    }
+};
+
+// ── Checklist card ───────────────────────────────────────────────────────────
+
+const drawChecklist = (ctx, { habits, completedOnly, privacy }) => {
+    const list = completedOnly ? habits.filter(h => h.status === 'completed') : habits;
     const listTop = 380;
     const footerTop = H - 200;
     const ROW_H = 92, GAP = 14;
@@ -120,7 +174,7 @@ export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCou
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.font = `600 36px ${FONT}`;
-        ctx.fillText(mode === 'completed' ? 'Nothing completed yet — on it! 💪' : 'No habits scheduled', W / 2, listTop + 160);
+        ctx.fillText(completedOnly ? 'Nothing completed yet — on it! 💪' : 'No habits scheduled', W / 2, listTop + 160);
         ctx.textAlign = 'left';
     }
 
@@ -165,11 +219,22 @@ export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCou
             rightEdge = px - 20;
         }
 
-        // Name
+        // Name (respecting privacy mode)
         ctx.font = `${done ? 700 : 600} 36px ${FONT}`;
-        ctx.fillStyle = done ? '#ffffff' : failed ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.7)';
+        const textColor = done ? '#ffffff' : failed ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.7)';
         const nx = bx + 48;
-        ctx.fillText(truncate(ctx, h.name, rightEdge - nx), nx, by + 12);
+        const maxW = rightEdge - nx;
+        if (privacy === 'redact') {
+            const barColor = done ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.14)';
+            drawRedactedName(ctx, h.name, nx, by + 12, maxW, textColor, barColor);
+        } else if (privacy === 'hide') {
+            const icon = h.timeOfDay === 'evening' ? '🌙' : '☀️';
+            ctx.fillStyle = textColor;
+            ctx.fillText(`${icon}  Habit ${habits.indexOf(h) + 1}`, nx, by + 12);
+        } else {
+            ctx.fillStyle = textColor;
+            ctx.fillText(truncate(ctx, h.name, maxW), nx, by + 12);
+        }
     });
 
     if (overflow) {
@@ -180,42 +245,117 @@ export async function renderHabitShareCard({ dateLabel, isToday, habits, doneCou
         ctx.fillText(`+ ${overflow} more`, W / 2, y + ROW_H / 2 + 10);
         ctx.textAlign = 'left';
     }
+};
 
-    // ── Footer ──
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(PAD, footerTop + 30); ctx.lineTo(W - PAD, footerTop + 30); ctx.stroke();
+// ── Summary card (no habit names) ────────────────────────────────────────────
 
-    if (bestStreak > 0) {
+const drawSummary = (ctx, { pct, doneCount, totalCount, bestStreak, week }) => {
+    // Big ring
+    drawRing(ctx, W / 2, 530, 190, 34, pct, doneCount, totalCount, true);
+
+    // Stat tiles
+    const perfectDays = week.filter(d => d.total > 0 && d.done === d.total).length;
+    const weekDone = week.reduce((s, d) => s + d.done, 0);
+    const weekTotal = week.reduce((s, d) => s + d.total, 0);
+    const weekPct = weekTotal > 0 ? Math.round((weekDone / weekTotal) * 100) : 0;
+    const tiles = [
+        { label: 'BEST STREAK', value: `🔥 ${bestStreak}` },
+        { label: 'PERFECT DAYS', value: `${perfectDays}/7` },
+        { label: '7-DAY RATE', value: `${weekPct}%` },
+    ];
+    const tileY = 775, tileH = 150, tileGap = 20;
+    const tileW = (W - PAD * 2 - tileGap * 2) / 3;
+    tiles.forEach((t, i) => {
+        const x = PAD + i * (tileW + tileGap);
+        rr(ctx, x, tileY, tileW, tileH, 24);
+        ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = `600 24px ${FONT}`;
-        ctx.fillText('BEST STREAK', PAD, footerTop + 90);
+        ctx.font = `700 22px ${FONT}`;
+        ctx.fillText(t.label, x + tileW / 2, tileY + 52);
         ctx.fillStyle = '#fff';
-        ctx.font = `800 44px ${FONT}`;
-        ctx.fillText(`🔥 ${bestStreak} day${bestStreak === 1 ? '' : 's'}`, PAD, footerTop + 145);
-    }
+        ctx.font = `800 50px ${FONT}`;
+        ctx.fillText(t.value, x + tileW / 2, tileY + 115);
+    });
 
-    ctx.textAlign = 'right';
-    const brand = ctx.createLinearGradient(W - PAD - 300, 0, W - PAD, 0);
-    brand.addColorStop(0, '#a855f7');
-    brand.addColorStop(1, '#ec4899');
-    ctx.fillStyle = brand;
-    ctx.font = `800 38px ${FONT}`;
-    ctx.fillText('Life Tracker', W - PAD, footerTop + 110);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = `500 24px ${FONT}`;
-    ctx.fillText('Stay consistent ✨', W - PAD, footerTop + 145);
+    // 7-day bar chart
+    const chartTop = 975, barMaxH = 115, barW = 64;
+    const colW = (W - PAD * 2) / 7;
+    week.forEach((d, i) => {
+        const cx = PAD + colW * i + colW / 2;
+        const bx = cx - barW / 2;
+        rr(ctx, bx, chartTop, barW, barMaxH, 16);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+        if (d.total > 0 && d.done > 0) {
+            const h = Math.max(20, (d.done / d.total) * barMaxH);
+            rr(ctx, bx, chartTop + barMaxH - h, barW, h, 16);
+            const g = ctx.createLinearGradient(0, chartTop + barMaxH - h, 0, chartTop + barMaxH);
+            const perfect = d.done === d.total;
+            g.addColorStop(0, perfect ? '#4ade80' : '#c084fc');
+            g.addColorStop(1, perfect ? '#16a34a' : '#ec4899');
+            ctx.fillStyle = g; ctx.fill();
+        }
+        if (d.isSelected) {
+            rr(ctx, bx - 4, chartTop - 4, barW + 8, barMaxH + 8, 19);
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+        }
+        ctx.textAlign = 'center';
+        ctx.fillStyle = d.isSelected ? '#fff' : 'rgba(255,255,255,0.45)';
+        ctx.font = `700 24px ${FONT}`;
+        ctx.fillText(d.label, cx, chartTop + barMaxH + 38);
+    });
     ctx.textAlign = 'left';
+};
+
+// ── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * @param {Object} opts
+ * @param {'checklist'|'summary'} opts.style
+ * @param {'show'|'redact'|'hide'} opts.privacy       (checklist only)
+ * @param {boolean} opts.completedOnly                (checklist only)
+ * @param {string} opts.dateLabel                     e.g. "Thu, Oct 15"
+ * @param {boolean} opts.isToday
+ * @param {Array<{name,status,streak,timeOfDay}>} opts.habits
+ * @param {number} opts.bestStreak
+ * @param {Array<{label,done,total,isSelected}>} opts.week  last 7 days ending on the selected day
+ * @returns {Promise<Blob>}
+ */
+export async function renderHabitShareCard({
+    style = 'checklist', privacy = 'redact', completedOnly = false,
+    dateLabel, isToday, habits, bestStreak, week = [],
+}) {
+    try { await document.fonts?.ready; } catch { /* ignore */ }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    const doneCount = habits.filter(h => h.status === 'completed').length;
+    const totalCount = habits.length;
+    const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+    const subtitle = pct === 100 && totalCount > 0
+        ? 'Perfect day! Every habit done 🎉'
+        : `${doneCount} of ${totalCount} habits done`;
+
+    drawBackground(ctx);
+
+    if (style === 'summary') {
+        drawHeader(ctx, { dateLabel, isToday, title: isToday ? "Today's progress" : 'Daily progress', subtitle });
+        drawSummary(ctx, { pct, doneCount, totalCount, bestStreak, week });
+        drawFooter(ctx, bestStreak, false);
+    } else {
+        drawHeader(ctx, { dateLabel, isToday, title: completedOnly ? 'Habits crushed' : 'My Habits', subtitle });
+        drawRing(ctx, W - PAD - 110, 210, 105, 22, pct, doneCount, totalCount);
+        drawChecklist(ctx, { habits, completedOnly, privacy });
+        drawFooter(ctx, bestStreak, true);
+    }
 
     return new Promise((resolve, reject) =>
         canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Failed to render image'))), 'image/png')
     );
-}
-
-export function buildShareText({ dateLabel, habits, doneCount, totalCount, mode }) {
-    const list = mode === 'completed' ? habits.filter(h => h.status === 'completed') : habits;
-    const lines = list.map(h => `${h.status === 'completed' ? '✅' : h.status === 'failed' ? '❌' : '⬜'} ${h.name}${h.streak > 0 ? ` 🔥${h.streak}` : ''}`);
-    return `My habits · ${dateLabel} — ${doneCount}/${totalCount} done\n\n${lines.join('\n')}`;
 }
 
 export function downloadBlob(blob, filename) {
@@ -240,23 +380,19 @@ export function canShareFiles(blob) {
 
 /**
  * Share the image via the native share sheet. Returns 'shared' | 'cancelled' | 'downloaded'.
+ *
+ * IMPORTANT: we share ONLY the file — no `text`/`title`. When text is included,
+ * WhatsApp (especially on Android) often picks the text and drops the image.
  */
-export async function shareImage(blob, text, filename = 'my-habits.png') {
+export async function shareImage(blob, filename = 'my-habits.png') {
     const file = new File([blob], filename, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-            // Note: some apps (e.g. WhatsApp) drop `text` when files are present.
-            await navigator.share({ files: [file], text });
+            await navigator.share({ files: [file] });
             return 'shared';
         } catch (err) {
             if (err?.name === 'AbortError') return 'cancelled';
-            // Some targets reject text+files; retry with files only
-            try {
-                await navigator.share({ files: [file] });
-                return 'shared';
-            } catch (err2) {
-                if (err2?.name === 'AbortError') return 'cancelled';
-            }
+            console.error('Share failed:', err);
         }
     }
     downloadBlob(blob, filename);

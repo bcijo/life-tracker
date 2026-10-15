@@ -187,13 +187,36 @@ const Habits = () => {
     const openShare = () => {
         const dayHabits = sortedHabits
             .filter(h => !h.is_paused && isDateActive(h))
-            .map(h => ({ name: h.name, status: getDateStatus(h), streak: calculateStreak(h) || 0 }));
+            .map(h => ({
+                name: h.name,
+                status: getDateStatus(h),
+                streak: calculateStreak(h) || 0,
+                timeOfDay: h.time_of_day || 'morning',
+            }));
         const bestStreak = dayHabits.reduce((m, h) => Math.max(m, h.streak), 0);
+
+        // 7-day trend ending on selectedDate for summary card
+        const baseDate = parseLocalDate(selectedDate);
+        const week = Array.from({ length: 7 }).map((_, i) => {
+            const d = subDays(baseDate, 6 - i);
+            const dStr = getLocalDateStr(d);
+            const dow = getDay(d);
+            const active = sortedHabits.filter(h => !h.is_paused && (h.active_days || ALL_DAYS).includes(dow));
+            const done = active.filter(h => getStatusForDate(h, dStr) === 'completed').length;
+            return {
+                label: format(d, 'EEE'),
+                done,
+                total: active.length,
+                isSelected: dStr === selectedDate,
+            };
+        });
+
         setShareData({
             dateLabel: format(parseLocalDate(selectedDate), 'EEE, MMM d'),
             isToday: isViewingToday,
             habits: dayHabits,
             bestStreak,
+            week,
         });
     };
 
