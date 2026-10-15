@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Share2, Download, Copy, X, Check, EyeOff, Shield, BarChart3, ListFilter } from 'lucide-react';
+import { Share2, Download, Copy, X, Check, EyeOff, Shield, BarChart3, ListFilter, Sparkles, Shuffle } from 'lucide-react';
 import { renderHabitShareCard, shareImage, downloadBlob, copyImage, canShareFiles } from '../../utils/shareCard';
 
 /**
- * Preview + share modal for the day's habits with privacy masking options.
+ * Preview + share modal for the day's habits with funny & privacy options.
  * props: dateLabel, isToday, habits [{name,status,streak,timeOfDay}], bestStreak, week, onClose
  */
 export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week = [], onClose }) => {
     // Card style: 'checklist' or 'summary' (summary has no habit names at all)
     const [cardStyle, setCardStyle] = useState('checklist');
-    // Privacy for checklist: 'redact' (first letter + bars), 'hide' (generic Habit 1..), 'show' (full names)
-    const [privacy, setPrivacy] = useState('redact');
+    // Privacy for checklist: 'funny' (satirical/humorous aliases), 'redact' (first letter + bars), 'hide' (generic Habit 1..), 'show' (full names)
+    const [privacy, setPrivacy] = useState('funny');
+    const [funnySeed, setFunnySeed] = useState(0);
     // Checklist filter: 'all' or 'completed'
     const [filterMode, setFilterMode] = useState('all');
 
@@ -29,6 +30,7 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
         renderHabitShareCard({
             style: cardStyle,
             privacy,
+            funnySeed,
             completedOnly: filterMode === 'completed',
             dateLabel,
             isToday,
@@ -47,7 +49,7 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
             cancelled = true;
             if (url) URL.revokeObjectURL(url);
         };
-    }, [cardStyle, privacy, filterMode, dateLabel, isToday, habits, bestStreak, week]);
+    }, [cardStyle, privacy, funnySeed, filterMode, dateLabel, isToday, habits, bestStreak, week]);
 
     const flash = (msg) => {
         setToast(msg);
@@ -61,7 +63,7 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
         if (!blob) return;
         setBusy(true);
         try {
-            // NOTE: We share ONLY the image file so WhatsApp attaches the image directly instead of converting to text
+            // Share ONLY the image file so WhatsApp doesn't discard image in favor of text
             const res = await shareImage(blob, filename);
             if (res === 'downloaded') flash('Image downloaded (direct share not supported on this device/browser)');
         } finally {
@@ -168,21 +170,53 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
                     }}>
                         {/* Privacy / Masking */}
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                                <Shield size={12} color="#a855f7" />
-                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Habit Names Privacy</span>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <Sparkles size={13} color="#ec4899" />
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Habit Names</span>
+                                </div>
+                                {privacy === 'funny' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFunnySeed(s => s + 1)}
+                                        style={{
+                                            background: 'rgba(168,85,247,0.15)',
+                                            border: '1px solid rgba(168,85,247,0.3)',
+                                            color: '#c084fc',
+                                            borderRadius: 8,
+                                            padding: '2px 8px',
+                                            fontSize: 10.5,
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                            cursor: 'pointer',
+                                        }}
+                                        title="Generate another set of funny habit names"
+                                    >
+                                        <Shuffle size={11} /> Re-roll names
+                                    </button>
+                                )}
                             </div>
                             <div style={{
-                                display: 'flex', gap: 3, padding: 3, borderRadius: 10,
+                                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3, padding: 3, borderRadius: 10,
                                 background: 'var(--surface-input, rgba(255,255,255,0.04))',
                             }}>
+                                <button
+                                    id="privacy-funny"
+                                    onClick={() => setPrivacy('funny')}
+                                    style={pillBtn(privacy === 'funny')}
+                                    title="Replace with hilarious names (e.g. Hydrate or Diedrate, Touching Actual Grass)"
+                                >
+                                    🎭 Funny
+                                </button>
                                 <button
                                     id="privacy-redact"
                                     onClick={() => setPrivacy('redact')}
                                     style={pillBtn(privacy === 'redact')}
                                     title="M▇▇▇▇ W▇▇ (masked bars)"
                                 >
-                                    🔒 Masked (M▇▇)
+                                    🔒 Masked
                                 </button>
                                 <button
                                     id="privacy-hide"
@@ -190,7 +224,7 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
                                     style={pillBtn(privacy === 'hide')}
                                     title="Habit 1, Habit 2..."
                                 >
-                                    <EyeOff size={12} /> Anonymous
+                                    <EyeOff size={11} /> Anonymous
                                 </button>
                                 <button
                                     id="privacy-show"
@@ -198,7 +232,7 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
                                     style={pillBtn(privacy === 'show')}
                                     title="Full habit names visible"
                                 >
-                                    Show names
+                                    Original
                                 </button>
                             </div>
                         </div>

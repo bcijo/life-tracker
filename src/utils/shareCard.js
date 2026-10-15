@@ -1,11 +1,12 @@
 // Renders shareable PNG cards of habit progress using the Canvas API,
 // and shares them via the Web Share API (WhatsApp, Instagram, etc.) with fallbacks.
 //
-// Two card styles:
-//   - 'checklist': list of the day's habits, with privacy modes for names
-//       'show'   -> full habit names
+// Card styles:
+//   - 'checklist': list of the day's habits, with privacy / funny modes:
+//       'funny'  -> replaces habit names with hilarious satirical aliases (e.g. "Hydrate or Diedrate", "Touching Actual Grass")
 //       'redact' -> first letter of each word + redaction bars ("M▇▇▇▇ w▇▇")
 //       'hide'   -> generic labels ("☀️ Habit 1")
+//       'show'   -> full original habit names
 //   - 'summary':   no habit names at all — progress ring, stats and a 7-day chart
 
 const W = 1080;
@@ -45,6 +46,193 @@ const brandGradient = (ctx, x0, x1) => {
     g.addColorStop(1, '#ec4899');
     return g;
 };
+
+// ── Hilarious Habit Name Replacement Engine ───────────────────────────────────
+
+const FUNNY_KEYWORD_MAP = [
+    {
+        keywords: ['water', 'drink', 'hydrat'],
+        aliases: [
+            'Hydrate or Diedrate 💧',
+            'Watering My Meat Mech 🚰',
+            'Internal Irrigation Protocol 🌊',
+            'Cactus Rehab Therapy 🌵',
+        ],
+    },
+    {
+        keywords: ['gym', 'workout', 'exercise', 'pushup', 'pullup', 'lift', 'run', 'jog', 'train', 'cardio', 'walk', 'step'],
+        aliases: [
+            'Fighting the Couch Demon 🥊',
+            'Heavy Lifting (My Regrets) 🏋️',
+            'Cardio vs Cardiac Arrest 🏃',
+            'Upgrading the Meat Mech 🦾',
+            'Touching Actual Grass 🌿',
+            'Defeating Gravity (Temporarily) 💥',
+            'Outrunning Bad Decisions 👟',
+        ],
+    },
+    {
+        keywords: ['read', 'book', 'study', 'learn', 'course'],
+        aliases: [
+            'Pretending to Be Cultured 📖',
+            'Absorbing Papyrus Wisdom 📜',
+            'Brain Cell Summoning Ritual 🧠',
+            'Looking Smart with Paper 🤓',
+            'Downloading Human Lore 📚',
+        ],
+    },
+    {
+        keywords: ['meditat', 'breath', 'mindful', 'calm', 'zen', 'pray'],
+        aliases: [
+            'Existential Staring Contest 🧘',
+            'Rebooting My Biological OS 🌀',
+            'Pretending to Have Inner Peace 🕊️',
+            'Strategic Silence & Despair 🫁',
+            'Pondering the Void 🌌',
+        ],
+    },
+    {
+        keywords: ['sleep', 'bed', 'wake', 'morning', 'night', 'rest', 'nap'],
+        aliases: [
+            'Temporary Death Practice 🛌',
+            'Defeating Bed Gravity ⏰',
+            'Ceasing Consciousness 💤',
+            'Recharging Organic Batteries 🔋',
+            'Escaping Awake Reality 🌙',
+        ],
+    },
+    {
+        keywords: ['code', 'dev', 'program', 'work', 'project', 'build', 'job'],
+        aliases: [
+            'Speaking in Alien Hieroglyphs 💻',
+            'Faking It Till I Make It ⌨️',
+            'Turning Coffee into Panic ☕',
+            'Arguing with Silicon Rocks 🖥️',
+            'Hacking the Matrix (Sort Of) 👾',
+        ],
+    },
+    {
+        keywords: ['eat', 'diet', 'food', 'cook', 'meal', 'fast', 'breakfast', 'dinner'],
+        aliases: [
+            'Consuming Edible Sustenance 🥗',
+            'Not Eating Garbage Today 🥑',
+            'Fueling the Carbon Vessel 🍎',
+            'MasterChef (Survived Edition) 🍳',
+            'Nutrition Over Despair 🥕',
+        ],
+    },
+    {
+        keywords: ['clean', 'tidy', 'chore', 'wash', 'organiz', 'declutter', 'room'],
+        aliases: [
+            'Decluttering the Crime Scene 🧹',
+            'Cosplaying as a Functioning Adult 🧼',
+            'War on Domestic Chaos 🧽',
+            'Hiding Clothes in Plain Sight 🧺',
+            'Exorcising Dust Bunnies 🪄',
+        ],
+    },
+    {
+        keywords: ['journal', 'write', 'gratitude', 'diary', 'note', 'reflect'],
+        aliases: [
+            'Venting to Dead Trees ✍️',
+            'Documenting the Simulation 📝',
+            'Overthinking on Paper 📓',
+            'Dear Diary, Send Help 🖋️',
+            'Chronicling My Shenanigans 📜',
+        ],
+    },
+    {
+        keywords: ['money', 'spend', 'budget', 'save', 'financ', 'invest'],
+        aliases: [
+            'Not Going Bankrupt Today 💸',
+            'Resisting Amazon Prime Demons 💳',
+            'Budgeting for Survival 💰',
+            'Hoarding Digital Pennies 🪙',
+            'Financial Wizardry (Barely) 📈',
+        ],
+    },
+    {
+        keywords: ['brush', 'teeth', 'floss', 'shower', 'skincare', 'face', 'bath'],
+        aliases: [
+            'Enamel Warfare Protocol 🪥',
+            'Powerwashing the Human 🚿',
+            'Defeating Cavity Goblins 🦷',
+            'Anti-Gremlin Face Ritual ✨',
+            'Biological Decontamination 🫧',
+        ],
+    },
+];
+
+const GENERAL_FUNNY_ALIASES = [
+    'Not Dying Today 🎯',
+    'Cosplaying as a Functioning Adult 🎩',
+    'Side Quest: Survived ⚔️',
+    'Main Character Training 🎬',
+    'Maintaining the Simulation 🌐',
+    'Outsmarting My Procrastination 🦊',
+    'Conquering the Universe 🚀',
+    'Leveling Up IRL 🎮',
+    'Brain Cell Activation 💡',
+    'Dopamine Heist 🥷',
+    'Defeating the Sloth Within 🦥',
+    'Pretending I Have My Life Together 💅',
+    'Averting Total Chaos 🌪️',
+    'Secret Agent Mission 🕵️‍♂️',
+    'Generating Good Karma 🔮',
+    'Mastering the Art of Living 🏆',
+    'Defying Cosmic Entropy ⚡',
+    'Taming the Chaos Monkey 🐒',
+    'Escaping the Procrastination Trap 🪤',
+    'Winning at Life (Barely) 🥇',
+];
+
+export function getFunnyAliasesForHabits(habits, seed = 0) {
+    const used = new Set();
+    return habits.map((h, i) => {
+        const lower = (h.name || '').toLowerCase();
+        let matchedPool = null;
+
+        for (const entry of FUNNY_KEYWORD_MAP) {
+            if (entry.keywords.some(k => lower.includes(k))) {
+                matchedPool = entry.aliases;
+                break;
+            }
+        }
+
+        const pool = matchedPool || GENERAL_FUNNY_ALIASES;
+        // Deterministic pick based on habit name + index + seed
+        let pickIdx = (Math.abs(hashString(h.name || 'habit') + seed * 7 + i * 3)) % pool.length;
+
+        // Ensure uniqueness if possible
+        for (let tries = 0; tries < pool.length; tries++) {
+            const candidate = pool[(pickIdx + tries) % pool.length];
+            if (!used.has(candidate)) {
+                used.add(candidate);
+                return candidate;
+            }
+        }
+
+        // Fallback to general pool if keyword pool was exhausted
+        for (let tries = 0; tries < GENERAL_FUNNY_ALIASES.length; tries++) {
+            const candidate = GENERAL_FUNNY_ALIASES[(pickIdx + tries + seed) % GENERAL_FUNNY_ALIASES.length];
+            if (!used.has(candidate)) {
+                used.add(candidate);
+                return candidate;
+            }
+        }
+
+        return pool[pickIdx];
+    });
+}
+
+function hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+}
 
 // ── Shared pieces ────────────────────────────────────────────────────────────
 
@@ -139,7 +327,6 @@ const drawRedactedName = (ctx, text, x, baseline, maxWidth, textColor, barColor)
         const firstW = ctx.measureText(first).width;
         const restW = word.length > 1 ? Math.max(ctx.measureText(word.slice(1)).width, 18) : 0;
         if (cx + firstW + restW > x + maxWidth) {
-            // Out of room — draw a trailing short bar to imply more
             if (cx + 30 <= x + maxWidth) {
                 rr(ctx, cx, baseline - 24, 30, 26, 9);
                 ctx.fillStyle = barColor; ctx.fill();
@@ -161,7 +348,7 @@ const drawRedactedName = (ctx, text, x, baseline, maxWidth, textColor, barColor)
 
 // ── Checklist card ───────────────────────────────────────────────────────────
 
-const drawChecklist = (ctx, { habits, completedOnly, privacy }) => {
+const drawChecklist = (ctx, { habits, completedOnly, privacy, funnySeed = 0 }) => {
     const list = completedOnly ? habits.filter(h => h.status === 'completed') : habits;
     const listTop = 380;
     const footerTop = H - 200;
@@ -169,6 +356,9 @@ const drawChecklist = (ctx, { habits, completedOnly, privacy }) => {
     const maxRows = Math.floor((footerTop - listTop - 20) / (ROW_H + GAP));
     const overflow = list.length > maxRows ? list.length - (maxRows - 1) : 0;
     const visible = overflow ? list.slice(0, maxRows - 1) : list;
+
+    // Precalculate funny aliases for the visible items
+    const funnyAliases = privacy === 'funny' ? getFunnyAliasesForHabits(visible, funnySeed) : [];
 
     if (list.length === 0) {
         ctx.textAlign = 'center';
@@ -220,11 +410,16 @@ const drawChecklist = (ctx, { habits, completedOnly, privacy }) => {
         }
 
         // Name (respecting privacy mode)
-        ctx.font = `${done ? 700 : 600} 36px ${FONT}`;
+        ctx.font = `${done ? 700 : 600} 34px ${FONT}`;
         const textColor = done ? '#ffffff' : failed ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.7)';
         const nx = bx + 48;
         const maxW = rightEdge - nx;
-        if (privacy === 'redact') {
+
+        if (privacy === 'funny') {
+            const alias = funnyAliases[i] || 'Side Quest Completed ✨';
+            ctx.fillStyle = textColor;
+            ctx.fillText(truncate(ctx, alias, maxW), nx, by + 12);
+        } else if (privacy === 'redact') {
             const barColor = done ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.14)';
             drawRedactedName(ctx, h.name, nx, by + 12, maxW, textColor, barColor);
         } else if (privacy === 'hide') {
@@ -313,7 +508,8 @@ const drawSummary = (ctx, { pct, doneCount, totalCount, bestStreak, week }) => {
 /**
  * @param {Object} opts
  * @param {'checklist'|'summary'} opts.style
- * @param {'show'|'redact'|'hide'} opts.privacy       (checklist only)
+ * @param {'funny'|'redact'|'hide'|'show'} opts.privacy  (checklist only)
+ * @param {number} opts.funnySeed                     (for shuffling funny aliases)
  * @param {boolean} opts.completedOnly                (checklist only)
  * @param {string} opts.dateLabel                     e.g. "Thu, Oct 15"
  * @param {boolean} opts.isToday
@@ -323,7 +519,7 @@ const drawSummary = (ctx, { pct, doneCount, totalCount, bestStreak, week }) => {
  * @returns {Promise<Blob>}
  */
 export async function renderHabitShareCard({
-    style = 'checklist', privacy = 'redact', completedOnly = false,
+    style = 'checklist', privacy = 'funny', funnySeed = 0, completedOnly = false,
     dateLabel, isToday, habits, bestStreak, week = [],
 }) {
     try { await document.fonts?.ready; } catch { /* ignore */ }
@@ -347,9 +543,12 @@ export async function renderHabitShareCard({
         drawSummary(ctx, { pct, doneCount, totalCount, bestStreak, week });
         drawFooter(ctx, bestStreak, false);
     } else {
-        drawHeader(ctx, { dateLabel, isToday, title: completedOnly ? 'Habits crushed' : 'My Habits', subtitle });
+        const title = privacy === 'funny'
+            ? 'Daily Quests ⚔️'
+            : completedOnly ? 'Habits crushed' : 'My Habits';
+        drawHeader(ctx, { dateLabel, isToday, title, subtitle });
         drawRing(ctx, W - PAD - 110, 210, 105, 22, pct, doneCount, totalCount);
-        drawChecklist(ctx, { habits, completedOnly, privacy });
+        drawChecklist(ctx, { habits, completedOnly, privacy, funnySeed });
         drawFooter(ctx, bestStreak, true);
     }
 
@@ -381,8 +580,7 @@ export function canShareFiles(blob) {
 /**
  * Share the image via the native share sheet. Returns 'shared' | 'cancelled' | 'downloaded'.
  *
- * IMPORTANT: we share ONLY the file — no `text`/`title`. When text is included,
- * WhatsApp (especially on Android) often picks the text and drops the image.
+ * NOTE: shares ONLY the image file so WhatsApp doesn't discard image in favor of text.
  */
 export async function shareImage(blob, filename = 'my-habits.png') {
     const file = new File([blob], filename, { type: 'image/png' });
