@@ -145,7 +145,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {allHabitsPaused
-                ? '🌴 Vacation Mode · Streaks frozen & protected'
+                ? 'All habits paused'
                 : todayPct === 100
                 ? '🎉 All habits completed today!'
                 : remainingToday > 0

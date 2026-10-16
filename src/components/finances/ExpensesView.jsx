@@ -85,19 +85,30 @@ const ExpensesView = () => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const daysRemaining = Math.max(1, daysInMonth - dayOfMonth);
 
+    const isRecurringTransaction = (t) => {
+        if (t.is_recurring) return true;
+        if (t.category && typeof t.category === 'string' && t.category.toLowerCase() === 'recurring') return true;
+        if (t.description && typeof t.description === 'string' && t.description.toLowerCase().includes('(recurring)')) return true;
+        return false;
+    };
+
     const thisMonthExpenses = useMemo(() => {
         return transactions.filter(t => {
             if (t.type !== 'expense') return false;
+            if (isRecurringTransaction(t)) return false;
             const d = parseISO(t.date);
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
     }, [transactions, currentMonth, currentYear]);
 
-    const totalMonthlySpend = useMemo(() => {
+    const discretionarySpend = useMemo(() => {
         return thisMonthExpenses.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
     }, [thisMonthExpenses]);
 
-    // Outlier-adjusted baseline spend
+    const recurringMonthlyAmount = getRecurringMonthlyTotal();
+    const totalMonthlySpend = discretionarySpend + recurringMonthlyAmount;
+
+    // Outlier-adjusted baseline spend (based on daily/discretionary expenses)
     const { baselineSpend, outlierPurchasesTotal } = useMemo(() => {
         let baseline = 0;
         let outliers = 0;
@@ -121,7 +132,7 @@ const ExpensesView = () => {
         return budgets.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
     }, [budgets]);
 
-    const remainingBudget = totalBudgetCap > 0 ? (totalBudgetCap - totalMonthlySpend) : null;
+    const remainingBudget = totalBudgetCap > 0 ? (totalBudgetCap - discretionarySpend) : null;
 
     const safeToSpendToday = useMemo(() => {
         if (remainingBudget !== null) {
@@ -165,8 +176,6 @@ const ExpensesView = () => {
     }, [totalBudgetCap, remainingBudget, dailyBurnRate, daysRemaining, today, dayOfMonth]);
 
     // Fixed vs Discretionary Breakdown
-    const recurringMonthlyAmount = getRecurringMonthlyTotal();
-    const discretionarySpend = Math.max(0, totalMonthlySpend - recurringMonthlyAmount);
     const fixedPct = totalMonthlySpend > 0 ? Math.round((recurringMonthlyAmount / totalMonthlySpend) * 100) : 0;
     const discretionaryPct = totalMonthlySpend > 0 ? Math.min(100, 100 - fixedPct) : 100;
 

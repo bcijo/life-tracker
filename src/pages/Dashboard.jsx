@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import useTodos from '../hooks/useTodos';
 import useHabits from '../hooks/useHabits';
 import useShopping from '../hooks/useShopping';
@@ -16,9 +16,12 @@ import {
     Calendar,
     Plus,
     BookOpen,
-    Scissors
+    Scissors,
+    Sparkles,
+    Share2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { DailyReportModal } from '../components/dashboard/DailyReportModal';
 
 const getUserDisplayName = (profile) => {
     if (!profile) return '';
@@ -30,7 +33,7 @@ const getUserDisplayName = (profile) => {
 
 const Dashboard = () => {
     const { todos } = useTodos();
-    const { habits } = useHabits();
+    const { habits, getStatusForDate } = useHabits();
     const { items: shoppingItems } = useShopping();
     const { transactions } = useTransactions();
     const { profile, updateProfile } = useProfile();
@@ -38,6 +41,9 @@ const Dashboard = () => {
 
     const [nameInput, setNameInput] = useState('');
     const [savingName, setSavingName] = useState(false);
+    const [showDailyReport, setShowDailyReport] = useState(false);
+
+    const isEveningWrapUp = new Date().getHours() >= 20;
 
     // Stats calculations
     const activeTodos = todos.filter(t => !t.completed).length;
@@ -108,7 +114,7 @@ const Dashboard = () => {
 
             {/* Main Content (Z-indexed above orbs) */}
             <div style={{ position: 'relative', zIndex: 1 }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Calendar size={14} />
@@ -281,8 +287,37 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </Link>
+
+                    <div
+                        onClick={() => setShowDailyReport(true)}
+                        className="glass-card hover-lift"
+                        style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}
+                    >
+                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(168,85,247,0.15)', color: '#c084fc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Share2 size={21} />
+                        </div>
+                        <div>
+                            <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Daily Report</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                                {isEveningWrapUp ? "Wrap up & share today's card" : "Share visual wrap-up for any date"}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <AnimatePresence>
+                {showDailyReport && (
+                    <DailyReportModal
+                        habits={habits}
+                        todos={todos}
+                        transactions={transactions}
+                        budgets={budgets}
+                        getStatusForDate={getStatusForDate}
+                        onClose={() => setShowDailyReport(false)}
+                    />
+                )}
+            </AnimatePresence>
             
             <style>{`
                 .spin { animation: spin 2s linear infinite; }

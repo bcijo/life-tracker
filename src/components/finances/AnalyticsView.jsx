@@ -17,6 +17,7 @@ import { getIconByName } from '../ExpenseCard';
 
 import useTransactions from '../../hooks/useTransactions';
 import useExpenseCards from '../../hooks/useExpenseCards';
+import useRecurringExpenses from '../../hooks/useRecurringExpenses';
 
 const PRESET_COLORS = [
     '#8338ec', '#4ecdc4', '#ff6b6b', '#ffd166', '#06d6a0', 
@@ -33,6 +34,7 @@ const isRecurringTransaction = (t) => {
 const AnalyticsView = ({ transactions: propTransactions, categories: propCategories }) => {
     const { transactions: hookTransactions = [] } = useTransactions();
     const { cards: hookCards = [] } = useExpenseCards();
+    const { recurringExpenses = [] } = useRecurringExpenses();
 
     const transactions = propTransactions || hookTransactions;
     const categories = propCategories || hookCards;
@@ -58,7 +60,7 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
 
     // Filter transactions for active interval & recurring toggle
     const periodTransactions = useMemo(() => {
-        return transactions.filter(t => {
+        const baseTx = transactions.filter(t => {
             if (t.type !== 'expense') return false;
             if (!includeRecurring && isRecurringTransaction(t)) return false;
             const d = parseISO(t.date);
@@ -68,7 +70,54 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                 return d >= weekStart && d <= weekEnd;
             }
         });
-    }, [transactions, timeframe, monthOffset, weekOffset, includeRecurring]);
+
+        if (!includeRecurring) return baseTx;
+
+        // Synthesize active recurring expenses for the relevant month(s) if not already in baseTx
+        const activeRecurring = recurringExpenses.filter(r => r.is_active !== false);
+        const monthsToCheck = timeframe === 'monthly'
+            ? [targetMonth]
+            : (weekStart.getMonth() === weekEnd.getMonth() ? [weekStart] : [weekStart, weekEnd]);
+
+        const virtualRecurringTx = [];
+        monthsToCheck.forEach(mDate => {
+            const yr = mDate.getFullYear();
+            const mo = mDate.getMonth();
+            const maxDay = endOfMonth(mDate).getDate();
+
+            activeRecurring.forEach(r => {
+                const alreadyLogged = baseTx.some(t =>
+                    isRecurringTransaction(t) &&
+                    t.description?.toLowerCase().includes((r.name || '').toLowerCase()) &&
+                    parseISO(t.date).getMonth() === mo &&
+                    parseISO(t.date).getFullYear() === yr
+                );
+                if (alreadyLogged) return;
+
+                const day = Math.min(Math.max(1, parseInt(r.day_of_month) || 1), maxDay);
+                const txDate = new Date(yr, mo, day, 12, 0, 0);
+
+                const inInterval = timeframe === 'monthly'
+                    ? (txDate >= monthStart && txDate <= monthEnd)
+                    : (txDate >= weekStart && txDate <= weekEnd);
+
+                if (inInterval) {
+                    virtualRecurringTx.push({
+                        id: `rec-${r.id}-${yr}-${mo}`,
+                        amount: parseFloat(r.amount) || 0,
+                        description: `${r.name} (Recurring)`,
+                        type: 'expense',
+                        category: r.category || 'recurring',
+                        card_id: r.category || null,
+                        is_recurring: true,
+                        date: format(txDate, 'yyyy-MM-dd'),
+                    });
+                }
+            });
+        });
+
+        return [...baseTx, ...virtualRecurringTx];
+    }, [transactions, recurringExpenses, timeframe, monthOffset, weekOffset, includeRecurring]);
 
     const totalSpent = useMemo(() => {
         return periodTransactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
@@ -427,32 +476,9 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                 
                 {/* Category Donut & List */}
                 <div className="glass-card" style={{ padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
-                            Category Distribution
-                        </h3>
-                        <button
-                            onClick={() => setIncludeRecurring(!includeRecurring)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '3px 8px',
-                                borderRadius: '8px',
-                                border: includeRecurring ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--border-subtle)',
-                                background: includeRecurring ? 'rgba(139, 92, 246, 0.12)' : 'var(--surface-input)',
-                                color: includeRecurring ? '#A78BFA' : 'var(--text-muted)',
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                            }}
-                            title="Toggle recurring expenses in distribution"
-                        >
-                            <RefreshCw size={11} />
-                            <span>{includeRecurring ? 'Hide Recurring' : 'Show Recurring'}</span>
-                        </button>
-                    </div>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 14px 0' }}>
+                        Category Distribution
+                    </h3>
                     
                     {categoryBreakdown.length > 0 ? (
                         <div>

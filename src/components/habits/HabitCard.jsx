@@ -156,12 +156,11 @@ export function HabitCard({
 
                 {habit.is_paused && (
                   <span style={{
-                    fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 9999,
-                    background: 'rgba(234,179,8,0.18)', color: '#eab308',
-                    border: '1px solid rgba(234,179,8,0.3)',
+                    fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999,
+                    background: 'rgba(234,179,8,0.12)', color: '#eab308',
                     display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0,
                   }}>
-                    <PauseCircle size={10} /> {streak > 0 ? `${streak}d frozen` : 'Paused'}
+                    <PauseCircle size={10} /> Paused
                   </span>
                 )}
               </div>
@@ -173,10 +172,7 @@ export function HabitCard({
                   display: 'flex', alignItems: 'center', gap: 3,
                 }}>
                   <span>{timeOfDay === 'morning' ? '☀️' : '🌙'}</span>
-                  {habit.is_paused
-                    ? (streak > 0 ? `Streak frozen (${streak}d)` : `Paused`)
-                    : successRate !== null ? `${successRate}%` : `${streak}d streak`
-                  }
+                  {successRate !== null ? `${successRate}%` : `${streak}d streak`}
                 </span>
 
                 <span style={{ color: 'var(--border-subtle, rgba(255,255,255,0.15))', fontSize: 10 }}>·</span>
@@ -364,21 +360,15 @@ export function HabitCard({
               )}
 
               {habit.is_paused ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onTogglePause) onTogglePause(habit.id);
-                  }}
-                  style={{
-                    padding: '5px 10px', borderRadius: 9999,
-                    background: 'rgba(234,179,8,0.15)',
-                    border: '1px solid rgba(234,179,8,0.3)',
-                    color: '#eab308', fontSize: 11, fontWeight: 700,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                  }}
-                >
-                  <Play size={11} fill="#eab308" /> Resume
-                </button>
+                <div style={{
+                  padding: '4px 9px', borderRadius: 9999,
+                  background: 'var(--surface-input, rgba(255,255,255,0.03))',
+                  border: '1px dashed var(--border-subtle, rgba(255,255,255,0.1))',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9, color: 'var(--text-muted)',
+                }}>
+                  paused
+                </div>
               ) : isActiveToday ? (
                 <div onClick={(e) => e.stopPropagation()}>
                   <AuraSpringToggle status={todayStatus} onToggle={(newStatus) => onToggle(habit.id, newStatus)} />

@@ -19,6 +19,13 @@ export function getHumanReadableQueryDescription(queryText) {
     
     const q = String(queryText).toLowerCase();
 
+    if (q.includes('analyze_spending')) return "Calculating spending breakdown & category totals...";
+    if (q.includes('get_budget_and_runway')) return "Checking budgets, burn rate & runway forecast...";
+    if (q.includes('analyze_habits')) return "Analyzing habit streaks & 7-day consistency...";
+    if (q.includes('get_tasks_and_shopping')) return "Scanning tasks, deadlines & shopping list...";
+    if (q.includes('get_journal_and_mood')) return "Reviewing mood scores & journal reflections...";
+    if (q.includes('lookup_app_guide')) return "Looking up LifeTracker feature guide...";
+
     if (q.includes('recurring_expenses')) {
         return "Checking your active recurring & fixed expenses...";
     }
@@ -67,43 +74,479 @@ export function getHumanReadableQueryDescription(queryText) {
     return "Fetching your personal data...";
 }
 
-// Compact tool definition to conserve tokens
-const SQL_TOOL = {
-    type: "function",
-    function: {
-        name: "execute_read_only_query",
-        description: "PostgreSQL SELECT query tool. Tables: transactions (id, amount, description, type, category, date), recurring_expenses (id, name, amount, category, day_of_month, is_active), habits (id, name, history, active_days), todos (id, text, completed, deadline), journal_entries (id, date, mood_score, how_was_today), bank_accounts (id, name, current_balance), expense_cards (id, name, budget_amount). Keep queries focused with aggregations (SUM, COUNT, GROUP BY) or LIMIT 10.",
-        parameters: {
-            type: "object",
-            properties: {
-                query_text: {
-                    type: "string",
-                    description: "PostgreSQL SELECT query string"
+// Specialized domain tools + fallback SQL tool
+const ASSISTANT_TOOLS = [
+    {
+        type: "function",
+        function: {
+            name: "analyze_spending",
+            description: "Use for ANY question about spending, expenses, income, category totals, daily breakdown, biggest transactions, average daily spend, or comparing this month vs last month.",
+            parameters: {
+                type: "object",
+                properties: {
+                    period: {
+                        type: "string",
+                        enum: ["today", "this_week", "last_7_days", "this_month", "last_month", "compare_months", "all_time"],
+                        description: "Time window to analyze"
+                    },
+                    category_filter: {
+                        type: "string",
+                        description: "Optional category name or keyword to filter by (e.g. 'food', 'transport', 'shopping')"
+                    }
+                },
+                required: ["period"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_budget_and_runway",
+            description: "Use for ANY question about budgets, remaining budget, over-budget categories, burn rate, safe-to-spend today, end-of-month forecast, or fixed/recurring subscriptions.",
+            parameters: {
+                type: "object",
+                properties: {
+                    category_filter: {
+                        type: "string",
+                        description: "Optional specific category budget to inspect (e.g. 'food')"
+                    }
                 }
-            },
-            required: ["query_text"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "analyze_habits",
+            description: "Use for ANY question about habits, streaks, completion rates, missed habits this week, morning vs evening routines, or worst/best habits.",
+            parameters: {
+                type: "object",
+                properties: {
+                    focus: {
+                        type: "string",
+                        enum: ["all", "streaks_and_ranking", "missed_recently", "today_status", "morning_vs_evening"],
+                        description: "Aspect of habits to analyze"
+                    }
+                },
+                required: ["focus"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_tasks_and_shopping",
+            description: "Use for ANY question about to-do tasks, overdue tasks, tasks due this week, tasks without a deadline, completed tasks, or shopping list items.",
+            parameters: {
+                type: "object",
+                properties: {
+                    filter: {
+                        type: "string",
+                        enum: ["all_pending", "overdue", "due_this_week", "no_deadline", "oldest_pending", "completed_recently", "shopping_list"],
+                        description: "Filter for tasks or shopping items"
+                    }
+                },
+                required: ["filter"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_journal_and_mood",
+            description: "Use for ANY question about mood scores, emotional trends, or journal reflections.",
+            parameters: {
+                type: "object",
+                properties: {
+                    limit: {
+                        type: "number",
+                        description: "Number of recent journal entries to retrieve (default 7)"
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "lookup_app_guide",
+            description: "Use ONLY when the user asks how a LifeTracker feature works, how to do something in the app, how XP/levels or Runway are calculated, or how to install the PWA.",
+            parameters: {
+                type: "object",
+                properties: {
+                    topic: {
+                        type: "string",
+                        description: "Feature or topic being asked about (e.g. 'runway', 'xp', 'pwa', 'split bill', 'habits', 'overview')"
+                    }
+                },
+                required: ["topic"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "execute_read_only_query",
+            description: "Fallback PostgreSQL SELECT query tool ONLY if a custom query is needed that the specialized tools above cannot answer. Tables: transactions (id, amount, description, type, category, date), recurring_expenses (id, name, amount, category, day_of_month, is_active), habits (id, name, history, active_days), todos (id, text, completed, deadline), journal_entries (id, date, mood_score, how_was_today), bank_accounts (id, name, current_balance), expense_cards (id, name, budget_amount).",
+            parameters: {
+                type: "object",
+                properties: {
+                    query_text: {
+                        type: "string",
+                        description: "PostgreSQL SELECT query string"
+                    }
+                },
+                required: ["query_text"]
+            }
         }
     }
-};
+];
 
 /**
- * Compacts database result to stay well within TPM limits
+ * Compacts tool output to stay within token limits while keeping full accuracy
  */
 function compactToolResult(data) {
     if (!data) return "[]";
-    if (typeof data === 'string') return data.slice(0, 1200);
+    if (typeof data === 'string') return data.slice(0, 2500);
     if (Array.isArray(data)) {
-        const simplified = data.slice(0, 12).map(item => {
+        const simplified = data.slice(0, 25).map(item => {
             if (item && item.history && Array.isArray(item.history)) {
-                return { ...item, history: `[${item.history.length} habit logs]` };
+                return { ...item, history: item.history.slice(0, 14) };
             }
             return item;
         });
         const str = JSON.stringify(simplified);
-        return str.length > 1500 ? str.slice(0, 1500) + '...]' : str;
+        return str.length > 3000 ? str.slice(0, 3000) + '...]' : str;
     }
     const str = JSON.stringify(data);
-    return str.length > 1500 ? str.slice(0, 1500) + '...' : str;
+    return str.length > 3500 ? str.slice(0, 3500) + '...' : str;
+}
+
+/**
+ * Executes specialized client-side analytical tools with 100% accuracy using live contextData._raw
+ */
+function executeSpecializedTool(toolName, args, contextData) {
+    const raw = contextData?._raw || {};
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    const isRecurringTx = (t) => {
+        if (t?.is_recurring) return true;
+        if (typeof t?.category === 'string' && t.category.toLowerCase() === 'recurring') return true;
+        if (typeof t?.description === 'string' && t.description.toLowerCase().includes('(recurring)')) return true;
+        return false;
+    };
+
+    if (toolName === 'analyze_spending') {
+        const period = args?.period || 'this_month';
+        const catFilter = (args?.category_filter || '').trim().toLowerCase();
+        const allTx = raw.transactions || [];
+        const resolveCat = raw.resolveCategoryName || ((t) => t.category || 'Uncategorized');
+
+        const startOfThisMonth = new Date(currentYear, currentMonth, 1);
+        const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
+        const endOfLastMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59);
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        const startOfThisWeek = new Date(today);
+        const dow = today.getDay();
+        startOfThisWeek.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+        startOfThisWeek.setHours(0, 0, 0, 0);
+
+        const inPeriod = (t, targetPeriod) => {
+            if (!t.date) return false;
+            const dStr = t.date.split('T')[0];
+            const d = new Date(t.date);
+            if (targetPeriod === 'today') return dStr === todayStr;
+            if (targetPeriod === 'this_week') return d >= startOfThisWeek && d <= today;
+            if (targetPeriod === 'last_7_days') return d >= sevenDaysAgo && d <= today;
+            if (targetPeriod === 'this_month') return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            if (targetPeriod === 'last_month') return d >= startOfLastMonth && d <= endOfLastMonth;
+            return true;
+        };
+
+        const summarizePeriod = (targetPeriod) => {
+            const periodTx = allTx.filter(t => inPeriod(t, targetPeriod));
+            const incomeTotal = Math.round(
+                periodTx.filter(t => t.type === 'income').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0)
+            );
+            let expenses = periodTx.filter(t => t.type === 'expense' && !isRecurringTx(t));
+
+            if (catFilter) {
+                expenses = expenses.filter(t => {
+                    const cName = resolveCat(t).toLowerCase();
+                    const desc = (t.description || '').toLowerCase();
+                    return cName.includes(catFilter) || desc.includes(catFilter);
+                });
+            }
+
+            const dailySpend = Math.round(expenses.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0));
+            const fixedSpend = (!catFilter && (targetPeriod === 'this_month' || targetPeriod === 'last_month'))
+                ? Math.round(raw.fixedExpensesTotal || 0)
+                : 0;
+
+            const byCategory = {};
+            const byDay = {};
+            expenses.forEach(t => {
+                const amt = parseFloat(t.amount) || 0;
+                const cName = resolveCat(t);
+                byCategory[cName] = (byCategory[cName] || 0) + amt;
+                const dayKey = t.date.split('T')[0];
+                byDay[dayKey] = (byDay[dayKey] || 0) + amt;
+            });
+
+            const categoryBreakdown = Object.entries(byCategory)
+                .map(([category, amount]) => ({
+                    category,
+                    amount: Math.round(amount),
+                    sharePct: dailySpend > 0 ? Math.round((amount / dailySpend) * 100) : 0
+                }))
+                .sort((a, b) => b.amount - a.amount);
+
+            const dailyBreakdown = Object.entries(byDay)
+                .map(([date, amount]) => ({ date, amount: Math.round(amount) }))
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            const highestSpendDay = [...dailyBreakdown].sort((a, b) => b.amount - a.amount)[0] || null;
+
+            const topTransactions = [...expenses]
+                .sort((a, b) => (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0))
+                .slice(0, 6)
+                .map(t => ({
+                    description: t.description,
+                    amount: Math.round(parseFloat(t.amount) || 0),
+                    category: resolveCat(t),
+                    date: t.date.split('T')[0]
+                }));
+
+            const daysElapsed = targetPeriod === 'this_month' ? Math.max(1, today.getDate()) : Math.max(1, dailyBreakdown.length);
+
+            return {
+                period: targetPeriod,
+                categoryFilter: catFilter || null,
+                totalSpend: dailySpend + fixedSpend,
+                dailyDiscretionarySpend: dailySpend,
+                fixedRecurringSpend: fixedSpend,
+                incomeTotal,
+                averageDailySpend: Math.round(dailySpend / daysElapsed),
+                transactionCount: expenses.length,
+                highestSpendDay,
+                topCategories: categoryBreakdown.slice(0, 6),
+                topTransactions,
+                dailyBreakdown: dailyBreakdown.slice(0, 15)
+            };
+        };
+
+        if (period === 'compare_months') {
+            const thisMo = summarizePeriod('this_month');
+            const lastMo = summarizePeriod('last_month');
+            const diff = thisMo.dailyDiscretionarySpend - lastMo.dailyDiscretionarySpend;
+            const pctChange = lastMo.dailyDiscretionarySpend > 0
+                ? Math.round((diff / lastMo.dailyDiscretionarySpend) * 100)
+                : null;
+            return {
+                thisMonth: thisMo,
+                lastMonth: lastMo,
+                dailySpendDifference: diff,
+                percentChange: pctChange
+            };
+        }
+
+        return summarizePeriod(period);
+    }
+
+    if (toolName === 'get_budget_and_runway') {
+        const catFilter = (args?.category_filter || '').trim().toLowerCase();
+        const allTx = (raw.transactions || []).filter(t => {
+            if (t.type !== 'expense' || isRecurringTx(t) || !t.date) return false;
+            const d = new Date(t.date);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        });
+        const resolveCat = raw.resolveCategoryName || ((t) => t.category || 'Uncategorized');
+        const categoryMap = raw.categoryMap || {};
+
+        const dayOfMonth = Math.max(1, today.getDate());
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const daysRemaining = Math.max(1, daysInMonth - dayOfMonth);
+
+        const dailySpend = Math.round(allTx.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0));
+        const fixedSpend = Math.round(raw.fixedExpensesTotal || 0);
+        const totalMonthlySpend = dailySpend + fixedSpend;
+
+        const baselineSpend = allTx
+            .filter(t => (parseFloat(t.amount) || 0) < 5000)
+            .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+        const dailyBurnRate = Math.round(baselineSpend / dayOfMonth);
+
+        const budgets = raw.budgets || [];
+        const totalBudgetCap = Math.round(budgets.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0));
+        const remainingBudget = totalBudgetCap > 0 ? totalBudgetCap - dailySpend : null;
+        const safeToSpendToday = remainingBudget !== null ? Math.max(0, Math.round(remainingBudget / daysRemaining)) : null;
+        const projectedEndOfMonthDailySpend = Math.round(dailySpend + dailyBurnRate * daysRemaining);
+
+        const categoryBudgets = budgets.map(b => {
+            const limit = Math.round(parseFloat(b.amount) || 0);
+            const catIds = Array.isArray(b.category_ids) ? b.category_ids : [];
+            const matchingTx = allTx.filter(t =>
+                catIds.includes(t.card_id) ||
+                catIds.includes(t.category) ||
+                resolveCat(t).toLowerCase() === (b.name || '').toLowerCase()
+            );
+            const spent = Math.round(matchingTx.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0));
+            const remaining = limit - spent;
+            const percentUsed = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+            return {
+                budgetName: b.name || catIds.map(id => categoryMap[id] || id).join(', '),
+                limit,
+                spent,
+                remaining,
+                percentUsed,
+                status: spent > limit ? 'EXCEEDED' : percentUsed >= 80 ? 'NEAR_LIMIT' : 'ON_TRACK'
+            };
+        }).sort((a, b) => b.percentUsed - a.percentUsed);
+
+        const filteredBudgets = catFilter
+            ? categoryBudgets.filter(b => (b.budgetName || '').toLowerCase().includes(catFilter))
+            : categoryBudgets;
+
+        return {
+            totalMonthlySpend,
+            dailyDiscretionarySpend: dailySpend,
+            fixedCommitmentsSpend: fixedSpend,
+            totalBudgetCap,
+            remainingBudget,
+            status: remainingBudget !== null && remainingBudget < 0 ? 'BUDGET_EXCEEDED' : 'WITHIN_BUDGET',
+            dailyBurnRate,
+            safeToSpendToday,
+            daysRemainingInMonth: daysRemaining,
+            projectedEndOfMonthSpend: projectedEndOfMonthDailySpend + fixedSpend,
+            categoryBudgets: filteredBudgets,
+            activeSubscriptions: raw.recurringExpenses || []
+        };
+    }
+
+    if (toolName === 'analyze_habits') {
+        const habits = raw.habits || [];
+        const last7Dates = Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            return {
+                dateStr: d.toISOString().split('T')[0],
+                dow: d.getDay()
+            };
+        });
+
+        const detailed = habits.map(h => {
+            const statusMap = {};
+            (h.history || []).forEach(entry => {
+                if (typeof entry === 'string') statusMap[entry.split('T')[0]] = 'completed';
+                else if (entry?.date) statusMap[entry.date] = entry.status || 'completed';
+            });
+
+            let scheduled7d = 0;
+            let completed7d = 0;
+            const missedDates7d = [];
+
+            last7Dates.forEach(({ dateStr, dow }, idx) => {
+                if ((h.activeDays || [0, 1, 2, 3, 4, 5, 6]).includes(dow)) {
+                    scheduled7d++;
+                    const st = statusMap[dateStr] || null;
+                    if (st === 'completed') {
+                        completed7d++;
+                    } else if (idx > 0 && st !== 'paused' && !h.isPaused) {
+                        missedDates7d.push(dateStr);
+                    }
+                }
+            });
+
+            return {
+                name: h.name,
+                timeOfDay: h.timeOfDay,
+                isPaused: h.isPaused,
+                todayStatus: h.isPaused ? 'paused' : (h.isScheduledToday ? h.todayStatus : 'rest_day'),
+                currentStreak: h.streak || 0,
+                lifetimeSuccessRatePct: h.successRate,
+                weeklyCompletionRatePct: scheduled7d > 0 ? Math.round((completed7d / scheduled7d) * 100) : 100,
+                completedLast7Days: `${completed7d}/${scheduled7d}`,
+                missedDatesLast7Days: missedDates7d
+            };
+        });
+
+        const activeOnly = detailed.filter(h => !h.isPaused);
+        const byStreak = [...activeOnly].sort((a, b) => b.currentStreak - a.currentStreak);
+        const byWorstRate = [...activeOnly].sort((a, b) => (a.weeklyCompletionRatePct ?? 100) - (b.weeklyCompletionRatePct ?? 100));
+
+        return {
+            summary: contextData?.summary?.habitsToday || {},
+            longestStreakHabit: byStreak[0] || null,
+            weakestHabits: byWorstRate.slice(0, 3),
+            missedThisWeek: activeOnly.filter(h => h.missedDatesLast7Days.length > 0),
+            completedToday: activeOnly.filter(h => h.todayStatus === 'completed').map(h => h.name),
+            pendingToday: activeOnly.filter(h => h.todayStatus === 'pending').map(h => h.name),
+            allHabits: detailed
+        };
+    }
+
+    if (toolName === 'get_tasks_and_shopping') {
+        const filter = args?.filter || 'all_pending';
+        const todos = raw.todos || [];
+        const shopping = raw.shoppingItems || [];
+
+        if (filter === 'shopping_list') {
+            return {
+                toBuy: shopping.filter(i => !i.is_bought && !i.isBought).map(i => ({ name: i.name, category: i.category })),
+                boughtNotLogged: shopping.filter(i => (i.is_bought || i.isBought) && !i.added_to_expenses).map(i => i.name)
+            };
+        }
+
+        const startOfThisWeek = new Date(today);
+        const endOfThisWeek = new Date(today);
+        endOfThisWeek.setDate(today.getDate() + 7);
+        const endOfWeekStr = endOfThisWeek.toISOString().split('T')[0];
+
+        const pending = todos.filter(t => !t.completed);
+        const completed = todos.filter(t => t.completed);
+
+        return {
+            pendingCount: pending.length,
+            completedCount: completed.length,
+            overdueTasks: pending.filter(t => t.deadline && t.deadline < todayStr).map(t => ({ text: t.text, deadline: t.deadline })),
+            dueThisWeek: pending.filter(t => t.deadline && t.deadline >= todayStr && t.deadline <= endOfWeekStr).map(t => ({ text: t.text, deadline: t.deadline })),
+            withoutDeadline: pending.filter(t => !t.deadline).map(t => ({ text: t.text, createdAt: t.created_at?.split('T')[0] })),
+            oldestPending: [...pending].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)).slice(0, 5).map(t => ({
+                text: t.text,
+                deadline: t.deadline || 'No deadline',
+                createdAt: t.created_at?.split('T')[0]
+            })),
+            recentlyCompleted: completed.slice(0, 10).map(t => ({ text: t.text, deadline: t.deadline }))
+        };
+    }
+
+    if (toolName === 'get_journal_and_mood') {
+        const entries = (raw.journalEntries || []).slice(0, args?.limit || 7);
+        const scores = entries.map(e => Number(e.mood_score)).filter(n => !isNaN(n) && n > 0);
+        const avgMood = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : null;
+        return {
+            averageMoodScore: avgMood,
+            entryCount: entries.length,
+            entries: entries.map(e => ({
+                date: e.date,
+                moodScore: e.mood_score,
+                thoughts: e.on_your_mind,
+                reflection: e.how_was_today,
+                changeForTomorrow: e.change_for_tomorrow
+            }))
+        };
+    }
+
+    if (toolName === 'lookup_app_guide') {
+        return { guide: APP_KNOWLEDGE_BASE };
+    }
+
+    return { error: "Unknown tool" };
 }
 
 async function fetchGroqWithRetry(payload, apiKey, maxRetries = 2) {
@@ -155,7 +598,6 @@ async function runSQLTool(queryText) {
             console.warn('[Groq SQL Agent] RPC note:', error.message, 'Trying direct fallback...');
         }
 
-        // Fallback: Query target table directly if RPC is not installed or has regex block
         const q = String(queryText).toLowerCase();
         let targetTable = null;
         if (q.includes('from transactions')) targetTable = 'transactions';
@@ -197,8 +639,8 @@ async function callGroq(messages, systemPrompt, jsonMode = false) {
             { role: 'system', content: systemPrompt },
             ...messages
         ],
-        temperature: 0.4,
-        max_tokens: 3000,
+        temperature: 0.25,
+        max_tokens: 2500,
         reasoning_effort: "low",
     };
 
@@ -210,7 +652,7 @@ async function callGroq(messages, systemPrompt, jsonMode = false) {
     return data.choices[0]?.message?.content;
 }
 
-// 1. Agentic Chat with SQL execution capability
+// 1. Agentic Chat with Specialized Tool Routing
 export async function askAI(userQuery, contextData, onQueryLogged = null, history = []) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) {
@@ -218,32 +660,40 @@ export async function askAI(userQuery, contextData, onQueryLogged = null, histor
     }
 
     const todayDate = new Date().toISOString().split('T')[0];
+    const snapshot = contextData?.summary || contextData || {};
 
-    const systemPrompt = `You are LifeTracker's intelligent, concise personal assistant and app guide expert. Today is ${todayDate}.
+    const systemPrompt = `You are LifeTracker's sharp, direct, no-fluff personal AI assistant. Today is ${todayDate}.
 
-=== APP KNOWLEDGE BASE & USER GUIDE ===
-${APP_KNOWLEDGE_BASE}
+=== LIVE SNAPSHOT ===
+${JSON.stringify(snapshot)}
 
-=== CORE CAPABILITIES & INSTRUCTIONS ===
-1. APP HOW-TOS & USER GUIDE:
-   - When the user asks about ANY feature in LifeTracker (e.g. how Runway & Burn rate works, what "Ignore Outliers" does, how Habit XP and Levels work, how to install as iPhone PWA, how to split a bill, how to use expense cards, reorder habits, or convert shopping items into logged expenses), refer to the App Knowledge Base above and provide clear, concise, step-by-step guidance.
-2. PERSONAL DATA & SQL QUERIES:
-   - Use the PostgreSQL SELECT tool execute_read_only_query when the user asks for specific personal metrics, history, or breakdowns (max 1-2 queries per turn).
-   - Table rules:
-     * transactions (id, amount, description, type, category, date) -> past logged transactions (column is 'date', not 'transaction_date').
-     * recurring_expenses (id, name, amount, category, day_of_month, is_active) -> active fixed/recurring expenses configuration (ALWAYS check this table when asked about fixed spending, recurring bills, or subscriptions).
-     * todos (id, text, completed, deadline) -> table is 'todos'.
-     * habits (id, name, history, active_days) -> table is 'habits'.
-     * journal_entries, bank_accounts, expense_cards, shopping_items.
-3. PERSONAL DATA CONTEXT:
-   - Summary: ${JSON.stringify(contextData)}
-4. FORMATTING:
-   - Format answers cleanly with Markdown (bold key terms, bullet points, clean tables when appropriate). Keep answers concise and direct.`;
+=== STRICT RESPONSE RULES (CRITICAL) ===
+1. **ANSWER FIRST**: Your very first sentence MUST directly answer the question with the exact number, name, or yes/no verdict (e.g., "**₹39,819** spent this month (**₹27,519** daily + **₹12,300** fixed).").
+2. **NO FILLER**: Never start with "Based on your data...", "Sure!", "Let's look at...", or restate the question.
+3. **STAY ON TOPIC**: Only answer what was asked. If asked about habits, do NOT mention finances or tasks. If asked about food spending, do NOT dump unrelated categories.
+4. **SHORT & SCANNABLE**: Keep answers under 100 words unless asked for a full breakdown. Use 3–5 tight bullet points or a compact Markdown table.
+5. **CURRENCY & PRECISION**: Format all money in Indian Rupees (\`₹12,300\`). When reporting monthly spend, always clarify **Total Spend = Daily Discretionary Spend + Fixed Subscriptions**.
 
-    // Filter valid conversational history (last 4 turns, skip failed errors)
+=== PROMPT-TO-TOOL ROUTING GUIDE (WHICH TOOL TO CALL) ===
+Always call the matching specialized tool before answering detailed questions:
+- **Spending / Expenses / Categories / Daily Breakdown / Compare Months / Biggest Purchases**
+  -> Call \`analyze_spending\` with \`period\` ("today" | "this_week" | "last_7_days" | "this_month" | "last_month" | "compare_months" | "all_time") and optional \`category_filter\` (e.g., "food").
+- **Budgets / Remaining Limit / Over-Budget / Burn Rate / Safe-to-Spend / Subscriptions / Forecast**
+  -> Call \`get_budget_and_runway\` (pass \`category_filter\` if asking about a specific category budget).
+- **Habits / Streaks / Missed Habits / Completion Rate / Morning vs Evening / Best or Worst Habit**
+  -> Call \`analyze_habits\` with \`focus\` ("streaks_and_ranking" | "missed_recently" | "today_status" | "morning_vs_evening" | "all").
+- **Tasks / Todos / Overdue / Due This Week / No Deadline / Shopping List**
+  -> Call \`get_tasks_and_shopping\` with \`filter\` ("overdue" | "due_this_week" | "no_deadline" | "oldest_pending" | "completed_recently" | "shopping_list" | "all_pending").
+- **Mood / Journal Reflections**
+  -> Call \`get_journal_and_mood\`.
+- **How LifeTracker Works / App Features / PWA Install / XP & Level Formula / Bill Splitter**
+  -> Call \`lookup_app_guide\`.
+- **Custom Database Query not covered above**
+  -> Call \`execute_read_only_query\`.`;
+
     const validHistory = Array.isArray(history)
         ? history
-            .filter(m => m && m.content && !m.content.includes("I ran into an issue") && !m.isError)
+            .filter(m => m && m.content && !m.content.includes("I ran into") && !m.isError)
             .slice(-4)
             .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))
         : [];
@@ -265,10 +715,10 @@ ${APP_KNOWLEDGE_BASE}
                     { role: 'system', content: systemPrompt },
                     ...messages
                 ],
-                temperature: 0.3,
-                max_tokens: 6000,
+                temperature: 0.2,
+                max_tokens: 4000,
                 reasoning_effort: "low",
-                tools: [SQL_TOOL],
+                tools: ASSISTANT_TOOLS,
                 tool_choice: "auto"
             }, apiKey, 1);
         } catch (primaryErr) {
@@ -279,10 +729,10 @@ ${APP_KNOWLEDGE_BASE}
                     { role: 'system', content: systemPrompt },
                     ...messages
                 ],
-                temperature: 0.3,
-                max_tokens: 6000,
+                temperature: 0.2,
+                max_tokens: 4000,
                 reasoning_effort: "low",
-                tools: [SQL_TOOL],
+                tools: ASSISTANT_TOOLS,
                 tool_choice: "auto"
             }, apiKey, 2);
         }
@@ -296,49 +746,56 @@ ${APP_KNOWLEDGE_BASE}
 
         const toolCalls = responseMessage.tool_calls;
         if (!toolCalls || toolCalls.length === 0) {
-            // Final response reached
             return {
-                content: responseMessage.content || "I have analyzed your data and prepared the summary above.",
+                content: responseMessage.content || "No matching records found.",
                 queries: executedQueries
             };
         }
 
         // Execute tool calls
         for (const toolCall of toolCalls) {
-            if (toolCall.function.name === 'execute_read_only_query') {
-                let args = {};
-                try {
-                    args = typeof toolCall.function.arguments === 'string' 
-                        ? JSON.parse(toolCall.function.arguments) 
-                        : toolCall.function.arguments;
-                } catch {
-                    args = { query_text: toolCall.function.arguments };
-                }
-                const queryText = args.query_text || "";
-                const stepLabel = getHumanReadableQueryDescription(queryText);
+            const fnName = toolCall.function.name;
+            let args = {};
+            try {
+                args = typeof toolCall.function.arguments === 'string' 
+                    ? JSON.parse(toolCall.function.arguments) 
+                    : (toolCall.function.arguments || {});
+            } catch {
+                args = { query_text: toolCall.function.arguments };
+            }
 
-                executedQueries.push({
-                    query: queryText,
+            const stepDescriptor = fnName === 'execute_read_only_query'
+                ? (args.query_text || fnName)
+                : `${fnName}(${JSON.stringify(args)})`;
+            const stepLabel = getHumanReadableQueryDescription(stepDescriptor);
+
+            executedQueries.push({
+                query: stepDescriptor,
+                label: stepLabel
+            });
+
+            if (onQueryLogged) {
+                onQueryLogged({
+                    query: stepDescriptor,
                     label: stepLabel
                 });
-
-                if (onQueryLogged) {
-                    onQueryLogged({
-                        query: queryText,
-                        label: stepLabel
-                    });
-                }
-
-                const queryResult = await runSQLTool(queryText);
-                const compacted = compactToolResult(queryResult);
-
-                messages.push({
-                    role: 'tool',
-                    tool_call_id: toolCall.id,
-                    name: 'execute_read_only_query',
-                    content: compacted
-                });
             }
+
+            let toolResult;
+            if (fnName === 'execute_read_only_query') {
+                toolResult = await runSQLTool(args.query_text || "");
+            } else {
+                toolResult = executeSpecializedTool(fnName, args, contextData);
+            }
+
+            const compacted = compactToolResult(toolResult);
+
+            messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                name: fnName,
+                content: compacted
+            });
         }
     }
 
@@ -612,4 +1069,63 @@ Status must be: "both_tracking" | "you_need_to_add" | "friend_needs_to_add". Kee
     }
 }
 
+/**
+ * Generates 3 concise, privacy-masked AI Coach suggestions for the visual Daily Report card.
+ * Strictly avoids mentioning specific currency amounts, merchant names, habit titles, or task titles.
+ */
+export async function generateDailyReportSuggestions(report) {
+    if (!report) return null;
 
+    const systemPrompt = `You are the LifeTracker Daily Report Coach.
+Generate 2 short, minimal, actionable takeaways based on the user's daily metrics.
+STRICT PRIVACY & FORMAT RULES:
+1. NEVER mention any specific currency amounts (no ₹, $, or exact money values), merchant names, habit names, or task titles.
+2. Keep each takeaway ultra-concise (6 to 10 words max) with no emojis at the start.
+3. Return ONLY a JSON object with this exact shape:
+{
+  "suggestions": [
+    "Start evening routines 30 mins earlier tomorrow.",
+    "Spending stayed 28% under pace — keep the buffer."
+  ]
+}`;
+
+    const summaryPayload = {
+        date: report.dateLabel,
+        overallScore: report.overallScore,
+        grade: report.grade,
+        habits: {
+            done: report.habits.done,
+            total: report.habits.total,
+            pct: report.habits.pct,
+            bestStreak: report.habits.bestStreak,
+            morning: `${report.habits.morningDone}/${report.habits.morningTotal}`,
+            evening: `${report.habits.eveningDone}/${report.habits.eveningTotal}`,
+        },
+        tasks: {
+            completed: report.tasks.done,
+            pendingCarriedOver: report.tasks.pendingDue,
+            xpEarned: report.tasks.xpEarned,
+        },
+        spending: {
+            pacePctOfDailyTarget: report.spending.rawPacePct,
+            status: report.spending.statusLabel,
+        },
+    };
+
+    try {
+        const response = await callGroq(
+            [{ role: 'user', content: JSON.stringify(summaryPayload) }],
+            systemPrompt,
+            true
+        );
+        if (!response) return null;
+        const parsed = JSON.parse(response);
+        if (Array.isArray(parsed?.suggestions) && parsed.suggestions.length > 0) {
+            return parsed.suggestions.slice(0, 2);
+        }
+        return null;
+    } catch (e) {
+        console.error('Error generating daily report AI suggestions:', e);
+        return null;
+    }
+}
