@@ -2,10 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useTodos from '../hooks/useTodos';
-import useHabits from '../hooks/useHabits';
+import useHabits, { getLocalDateStr } from '../hooks/useHabits';
 import useShopping from '../hooks/useShopping';
 import useTransactions from '../hooks/useTransactions';
 import useBudgets from '../hooks/useBudgets';
+import useJournal from '../hooks/useJournal';
+import useExpenseCards from '../hooks/useExpenseCards';
 import { useProfile } from '../hooks/useProfile';
 import { isToday, parseISO, format, subDays } from 'date-fns';
 import { 
@@ -22,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DailyReportModal } from '../components/dashboard/DailyReportModal';
+import { DailyWhisper } from '../components/dashboard/DailyWhisper';
 
 const getUserDisplayName = (profile) => {
     if (!profile) return '';
@@ -33,15 +36,18 @@ const getUserDisplayName = (profile) => {
 
 const Dashboard = () => {
     const { todos } = useTodos();
-    const { habits, getStatusForDate } = useHabits();
+    const { habits, loading: habitsLoading, getStatusForDate } = useHabits();
     const { items: shoppingItems } = useShopping();
-    const { transactions } = useTransactions();
+    const { transactions, loading: txLoading } = useTransactions();
     const { profile, updateProfile } = useProfile();
     const { budgets } = useBudgets();
+    const { weekEntries: journalEntries, loading: journalLoading } = useJournal();
+    const { cards: expenseCards } = useExpenseCards();
 
     const [nameInput, setNameInput] = useState('');
     const [savingName, setSavingName] = useState(false);
     const [showDailyReport, setShowDailyReport] = useState(false);
+    const [showWhisper, setShowWhisper] = useState(false);
 
     const isEveningWrapUp = new Date().getHours() >= 20;
 
@@ -120,7 +126,25 @@ const Dashboard = () => {
                             <Calendar size={14} />
                             {dateFormatted}
                         </p>
-                        <h1 style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                        <h1
+                            onClick={() => setShowWhisper(prev => !prev)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setShowWhisper(prev => !prev);
+                                }
+                            }}
+                            title="Tap for today's whisper"
+                            style={{
+                                fontSize: '26px',
+                                fontWeight: '800',
+                                letterSpacing: '-0.5px',
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                            }}
+                        >
                             {getUserDisplayName(profile) ? (
                                 <>Hello, <span className="accent-gradient-text">{getUserDisplayName(profile)}</span></>
                             ) : (
@@ -181,6 +205,19 @@ const Dashboard = () => {
                         </motion.div>
                     </Link>
                 </header>
+
+                <DailyWhisper
+                    open={showWhisper}
+                    onClose={() => setShowWhisper(false)}
+                    habits={habits}
+                    habitsLoading={habitsLoading}
+                    getStatusForDate={getStatusForDate}
+                    transactions={transactions}
+                    txLoading={txLoading}
+                    expenseCards={expenseCards}
+                    journalEntries={journalEntries}
+                    journalLoading={journalLoading}
+                />
 
                 {/* Grid Layout: Hero Stats & Features */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '24px' }}>

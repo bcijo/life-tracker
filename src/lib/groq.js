@@ -1129,3 +1129,120 @@ STRICT PRIVACY & FORMAT RULES:
         return null;
     }
 }
+
+/**
+ * Deterministic fallback for next-day advice when offline or API is unavailable.
+ * Returns 3 concrete bullets across yesterday's habits, spending, and journal.
+ */
+export function buildFallbackNextDayAdvice(digest) {
+    const habits = digest?.habits || {};
+    const spending = digest?.spending || {};
+    const journal = digest?.journal || {};
+
+    const doneList = habits.completedYesterday || [];
+    const missedList = habits.missedYesterday || [];
+    const doneCount = doneList.length;
+    const scheduledCount = habits.scheduledYesterday || 0;
+    const spentYesterday = Math.round(spending.yesterdayTotal || 0);
+    const avgDaily = Math.round(spending.sevenDayDailyAvg || 0);
+    const topCat = spending.topCategoryYesterday;
+
+    // 1. Habits bullet
+    let habitBullet = 'Start with your earliest scheduled habit today to build momentum.';
+    if (scheduledCount > 0) {
+        if (doneCount === scheduledCount) {
+            const lead = doneList[0]?.name ? ` (led by ${doneList[0].name})` : '';
+            habitBullet = `Hit ${doneCount}/${scheduledCount} habits yesterday${lead}. Keep the full streak alive today.`;
+        } else if (missedList.length > 0) {
+            const missedNames = missedList.slice(0, 2).map(h => h.name).join(' & ');
+            habitBullet = `Hit ${doneCount}/${scheduledCount} habits yesterday (missed ${missedNames}). Knock out ${missedList[0].name} early today.`;
+        }
+    }
+
+    // 2. Spending bullet
+    let spendingBullet = 'Keep discretionary spending intentional today.';
+    if (spentYesterday === 0) {
+        const avgText = avgDaily > 0 ? ` vs ₹${avgDaily.toLocaleString('en-IN')} avg` : '';
+        spendingBullet = `Spent ₹0 yesterday${avgText}. Maintain that buffer and keep today's spend light.`;
+    } else if (avgDaily > 0 && spentYesterday > avgDaily) {
+        const catSuffix = topCat ? ` (${topCat})` : '';
+        spendingBullet = `Spent ₹${spentYesterday.toLocaleString('en-IN')} yesterday${catSuffix} vs ₹${avgDaily.toLocaleString('en-IN')} avg. Aim for a low-spend day today.`;
+    } else {
+        const catSuffix = topCat ? ` on ${topCat}` : '';
+        spendingBullet = `Spent ₹${spentYesterday.toLocaleString('en-IN')} yesterday${catSuffix}. Well within pace, stay steady today.`;
+    }
+
+    // 3. Journal bullet
+    const rawIntention = String(journal.intentionForToday || '').trim().replace(/\.$/, '');
+    const rawThought = String(journal.highlights || journal.thoughts || '').trim().replace(/\.$/, '');
+    let journalBullet = 'No journal entry yesterday. Jot down a 1-minute reflection tonight.';
+    if (rawIntention) {
+        journalBullet = `Yesterday's note for today: "${rawIntention.slice(0, 55)}${rawIntention.length > 55 ? '…' : ''}". Make that your anchor today.`;
+    } else if (journal.moodLabel && rawThought) {
+        journalBullet = `Logged a "${journal.moodLabel}" mood yesterday ("${rawThought.slice(0, 45)}${rawThought.length > 45 ? '…' : ''}"). Pace your energy today.`;
+    } else if (journal.moodLabel) {
+        journalBullet = `Logged a "${journal.moodLabel}" mood yesterday. Carry a calm, steady focus into today.`;
+    }
+
+    return {
+        bullets: [habitBullet, spendingBullet, journalBullet],
+    };
+}
+
+function sanitizeBullet(text) {
+    if (!text || typeof text !== 'string') return '';
+    let cleaned = text.replace(/^[•\-*]\s*/, '').trim();
+    // Replace em-dashes, en-dashes, and spaced hyphens with periods
+    cleaned = cleaned.replace(/\s*[—–]\s*/g, '. ').replace(/\s+-\s+/g, '. ');
+    // Clean up duplicate periods
+    cleaned = cleaned.replace(/\.{2,}/g, '.');
+    // Ensure first character after a period + space is capitalized
+    cleaned = cleaned.replace(/\.\s+([a-z])/g, (_, letter) => `. ${letter.toUpperCase()}`);
+    return cleaned;
+}
+
+/**
+ * Analyzes yesterday's habits, spending, and journal entry to generate 3 crisp,
+ * data-grounded bullet points of advice for today without unwanted hyphens or em-dashes.
+ */
+export async function generateNextDayAdvice(yesterdayDigest) {
+    if (!yesterdayDigest) return null;
+
+    const systemPrompt = `You are a sharp, perceptive personal coach in LifeTracker.
+Analyze the user's YESTERDAY data (habits completed/missed, ₹ spending & categories/items, and journal mood/reflections/intention) and return 3 concise, scannable bullet points of advice for TODAY.
+
+=== STRICT RULES ===
+1. EXACTLY 3 BULLETS (one per pillar, 10 to 18 words each):
+   - Bullet 1 (Habits): Cite exact X/Y habits completed yesterday + name a specific missed or completed habit. Give today's habit focus.
+   - Bullet 2 (Spending): Cite exact ₹ spent yesterday (and category, or ₹0) vs 7-day average. Give today's spending target.
+   - Bullet 3 (Journal): Cite yesterday's mood or quote their "intentionForToday"/"highlights"/"thoughts" (or note no entry was logged). Give today's mindset/journal nudge.
+2. NO HYPHENS OR EM-DASHES: Do NOT use em-dashes (—) or hyphens (-) to connect or separate clauses. Use standard punctuation like periods or commas.
+3. NO GENERIC FLUFF: Never write vague advice without yesterday's actual numbers/names. Zero emojis, currency in ₹.
+4. OUTPUT FORMAT: Return ONLY valid JSON:
+{
+  "bullets": [
+    "Hit 9/17 habits yesterday (missed Wake up). Prioritize waking up on time today.",
+    "Spent ₹0 vs ₹1,151 daily average. Keep today's discretionary spend under ₹300.",
+    "No journal entry yesterday. Take 1 minute tonight to log your mood and wins."
+  ]
+}`;
+
+    try {
+        const response = await callGroq(
+            [{ role: 'user', content: JSON.stringify(yesterdayDigest) }],
+            systemPrompt,
+            true
+        );
+        if (!response) return buildFallbackNextDayAdvice(yesterdayDigest);
+        const parsed = JSON.parse(response);
+        if (Array.isArray(parsed?.bullets) && parsed.bullets.length > 0) {
+            return {
+                bullets: parsed.bullets.slice(0, 3).map(sanitizeBullet),
+            };
+        }
+        return buildFallbackNextDayAdvice(yesterdayDigest);
+    } catch (e) {
+        console.warn('[DailyWhisper] Falling back to local synthesis:', e.message);
+        return buildFallbackNextDayAdvice(yesterdayDigest);
+    }
+}
