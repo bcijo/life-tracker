@@ -26,6 +26,7 @@ import {
 import { format, isToday, isPast, isFuture, parseISO, addDays, differenceInMinutes } from 'date-fns';
 import useTodos from '../hooks/useTodos';
 import AppLoader from '../components/common/AppLoader';
+import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import { transcribeAudio } from '../lib/groq';
 
 const TABS = [
@@ -67,6 +68,26 @@ const DIFFICULTY_CONFIG = {
         est: '~3h+'
     }
 };
+
+const DUE_PRESET_OPTIONS = [
+    { id: 'today', label: 'Today', emoji: '☀️' },
+    { id: 'tomorrow', label: 'Tomorrow', emoji: '🌙' }
+];
+
+const DIFFICULTY_TIER_OPTIONS = Object.values(DIFFICULTY_CONFIG).map(cfg => ({
+    id: cfg.id,
+    label: cfg.label,
+    emoji: cfg.icon,
+    badge: `+${cfg.xp}`,
+    accentColor: cfg.color
+}));
+
+const DIFFICULTY_FILTER_OPTIONS = [
+    { id: 'all', label: 'All' },
+    { id: 'easy', label: 'Easy', emoji: '🟢', accentColor: '#10b981' },
+    { id: 'medium', label: 'Medium', emoji: '🟡', accentColor: '#f59e0b' },
+    { id: 'hard', label: 'Hard', emoji: '🔴', accentColor: '#ef4444' }
+];
 
 const LEVEL_THRESHOLDS = [
     { lvl: 1, minXp: 0, maxXp: 100, title: 'Apprentice Focus', icon: '🥉', color: '#94a3b8' },
@@ -454,12 +475,18 @@ const Todos = () => {
         return list;
     }, [activeTab, todayTodos, upcomingTodos, activeTodos, completedTodos, difficultyFilter]);
 
-    const tabCounts = {
-        today: todayTodos.length,
-        upcoming: upcomingTodos.length,
-        all: activeTodos.length,
-        completed: completedTodos.length
-    };
+    // Dynamic options with live counts for the 4-tab view switcher
+    const tabOptions = useMemo(() => TABS.map(tab => ({
+        id: tab.id,
+        label: tab.shortLabel,
+        icon: tab.icon,
+        count: (
+            tab.id === 'today' ? todayTodos.length :
+            tab.id === 'upcoming' ? upcomingTodos.length :
+            tab.id === 'completed' ? completedTodos.length :
+            activeTodos.length
+        )
+    })), [todayTodos.length, upcomingTodos.length, completedTodos.length, activeTodos.length]);
 
     const getDeadlineBadge = (deadlineStr, completed) => {
         if (!deadlineStr) return null;
@@ -908,36 +935,19 @@ const Todos = () => {
                                     }}
                                 >
                                     {/* Due Date Selectors */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', width: '32px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', width: '36px', flexShrink: 0 }}>
                                             DUE:
                                         </span>
-                                        {[
-                                            { id: 'today', label: '☀️ Today' },
-                                            { id: 'tomorrow', label: '🌙 Tomorrow' }
-                                        ].map(preset => {
-                                            const isSelected = selectedDatePreset === preset.id;
-                                            return (
-                                                <button
-                                                    key={preset.id}
-                                                    type="button"
-                                                    onClick={() => setSelectedDatePreset(preset.id)}
-                                                    style={{
-                                                        padding: '4px 9px',
-                                                        borderRadius: '8px',
-                                                        border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                                                        background: isSelected ? 'rgba(168,85,247,0.14)' : 'transparent',
-                                                        color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                                        fontSize: '11px',
-                                                        fontWeight: isSelected ? '700' : '500',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.15s ease'
-                                                    }}
-                                                >
-                                                    {preset.label}
-                                                </button>
-                                            );
-                                        })}
+                                        <LiquidGlassSegmented
+                                            options={DUE_PRESET_OPTIONS}
+                                            value={selectedDatePreset === 'custom' ? 'today' : selectedDatePreset}
+                                            onChange={setSelectedDatePreset}
+                                            size="sm"
+                                            fullWidth={false}
+                                            equalColumns={true}
+                                            ariaLabel="Due date preset"
+                                        />
                                         <input
                                             type="date"
                                             value={customDate}
@@ -946,11 +956,12 @@ const Todos = () => {
                                                 if (e.target.value) setSelectedDatePreset('custom');
                                             }}
                                             style={{
+                                                height: '38px',
                                                 border: selectedDatePreset === 'custom' ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
                                                 background: 'var(--surface-input)',
-                                                padding: '3px 8px',
-                                                borderRadius: '8px',
-                                                fontSize: '11px',
+                                                padding: '0 12px',
+                                                borderRadius: '9999px',
+                                                fontSize: '11.5px',
                                                 color: 'var(--text-primary)',
                                                 cursor: 'pointer',
                                                 outline: 'none'
@@ -959,92 +970,51 @@ const Todos = () => {
                                     </div>
 
                                     {/* Difficulty Tier Selectors */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', width: '32px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', width: '36px', flexShrink: 0 }}>
                                             TIER:
                                         </span>
-                                        {Object.values(DIFFICULTY_CONFIG).map(cfg => {
-                                            const isSelected = selectedDifficulty === cfg.id;
-                                            return (
-                                                <button
-                                                    key={cfg.id}
-                                                    type="button"
-                                                    onClick={() => setSelectedDifficulty(cfg.id)}
-                                                    style={{
-                                                        padding: '4px 9px',
-                                                        borderRadius: '8px',
-                                                        border: isSelected ? `1.5px solid ${cfg.color}` : '1px solid var(--border-subtle)',
-                                                        background: isSelected ? cfg.bg : 'transparent',
-                                                        color: isSelected ? cfg.color : 'var(--text-secondary)',
-                                                        fontSize: '11px',
-                                                        fontWeight: isSelected ? '800' : '600',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.15s ease'
-                                                    }}
-                                                >
-                                                    <span>{cfg.icon}</span>
-                                                    <span>{cfg.label}</span>
-                                                    <span style={{ opacity: 0.85, fontSize: '10px' }}>+{cfg.xp} XP</span>
-                                                </button>
-                                            );
-                                        })}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <LiquidGlassSegmented
+                                                options={DIFFICULTY_TIER_OPTIONS}
+                                                value={selectedDifficulty}
+                                                onChange={setSelectedDifficulty}
+                                                size="sm"
+                                                fullWidth={true}
+                                                equalColumns={true}
+                                                ariaLabel="Task difficulty tier"
+                                            />
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
 
-                    {/* Consolidated Single Filter Bar (Tabs & Tier Dropdown) */}
+                    {/* Apple Liquid Glass Filter Bar (4-Tab View Switcher + Difficulty Tier Switcher) */}
                     <div className="todos-filter-bar">
-                        {/* Tab Pills */}
-                        <div className="todos-tabs-container">
-                            {TABS.map(tab => {
-                                const isActive = activeTab === tab.id;
-                                const Icon = tab.icon;
-                                const count = tabCounts[tab.id] || 0;
-
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`todos-tab-btn ${isActive ? 'active' : ''}`}
-                                    >
-                                        <Icon size={12} />
-                                        <span>{tab.shortLabel}</span>
-                                        <span className="todos-tab-count">
-                                            {count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                        <div style={{ flex: '2 1 340px', minWidth: 0 }}>
+                            <LiquidGlassSegmented
+                                options={tabOptions}
+                                value={activeTab}
+                                onChange={setActiveTab}
+                                size="md"
+                                fullWidth={true}
+                                equalColumns={true}
+                                ariaLabel="Task views"
+                            />
                         </div>
 
-                        {/* Tier Filter Selector */}
-                        <div className="todos-tier-filter-dropdown">
-                            <select
+                        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                            <LiquidGlassSegmented
+                                options={DIFFICULTY_FILTER_OPTIONS}
                                 value={difficultyFilter}
-                                onChange={(e) => setDifficultyFilter(e.target.value)}
-                                style={{
-                                    background: 'var(--surface-input)',
-                                    border: '1px solid var(--border-subtle)',
-                                    borderRadius: '10px',
-                                    color: 'var(--text-secondary)',
-                                    fontSize: '11px',
-                                    fontWeight: '600',
-                                    padding: '5px 8px',
-                                    cursor: 'pointer',
-                                    outline: 'none'
-                                }}
-                            >
-                                <option value="all">All Tiers</option>
-                                <option value="easy">🟢 Easy (+10 XP)</option>
-                                <option value="medium">🟡 Medium (+25 XP)</option>
-                                <option value="hard">🔴 Hard (+50 XP)</option>
-                            </select>
+                                onChange={setDifficultyFilter}
+                                size="sm"
+                                fullWidth={true}
+                                equalColumns={true}
+                                ariaLabel="Filter by difficulty"
+                            />
                         </div>
                     </div>
 
@@ -1376,29 +1346,14 @@ const Todos = () => {
                                 {/* Edit Difficulty Selector */}
                                 <div>
                                     <label style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>DIFFICULTY TIER</label>
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                        {Object.values(DIFFICULTY_CONFIG).map(cfg => (
-                                            <button
-                                                key={cfg.id}
-                                                type="button"
-                                                onClick={() => setEditDifficulty(cfg.id)}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '7px 4px',
-                                                    borderRadius: '8px',
-                                                    border: editDifficulty === cfg.id ? `1.5px solid ${cfg.color}` : '1px solid var(--border-subtle)',
-                                                    background: editDifficulty === cfg.id ? cfg.bg : 'transparent',
-                                                    color: editDifficulty === cfg.id ? cfg.color : 'var(--text-secondary)',
-                                                    fontSize: '11px',
-                                                    fontWeight: '700',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.15s ease'
-                                                }}
-                                            >
-                                                {cfg.icon} {cfg.label} (+{cfg.xp} XP)
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <LiquidGlassSegmented
+                                        options={DIFFICULTY_TIER_OPTIONS}
+                                        value={editDifficulty}
+                                        onChange={setEditDifficulty}
+                                        size="sm"
+                                        fullWidth
+                                        ariaLabel="Edit task difficulty tier"
+                                    />
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -1453,7 +1408,7 @@ const Todos = () => {
                 .todos-header {
                     display: flex;
                     align-items: center;
-                    justifyContent: space-between;
+                    justify-content: space-between;
                     gap: 8px;
                 }
 
@@ -1467,59 +1422,9 @@ const Todos = () => {
                 .todos-filter-bar {
                     display: flex;
                     align-items: center;
-                    justifyContent: space-between;
-                    gap: 8px;
+                    justify-content: space-between;
+                    gap: 10px;
                     flex-wrap: wrap;
-                }
-
-                .todos-tabs-container {
-                    display: flex;
-                    align-items: center;
-                    background: var(--surface-input);
-                    padding: 3px;
-                    border-radius: 12px;
-                    gap: 2px;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                    scrollbar-width: none;
-                    flex: 1;
-                    min-width: 0;
-                }
-                .todos-tabs-container::-webkit-scrollbar {
-                    display: none;
-                }
-
-                .todos-tab-btn {
-                    flex: 1 0 auto;
-                    padding: 6px 10px;
-                    border-radius: 9px;
-                    border: none;
-                    background: transparent;
-                    color: var(--text-secondary);
-                    font-size: 11.5px;
-                    font-weight: 500;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 4px;
-                    cursor: pointer;
-                    transition: all 0.15s ease;
-                }
-                .todos-tab-btn.active {
-                    background: var(--surface-elevated);
-                    color: var(--text-primary);
-                    font-weight: 700;
-                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-                }
-
-                .todos-tab-count {
-                    font-size: 9.5px;
-                    font-weight: 700;
-                    opacity: 0.65;
-                }
-                .todos-tab-btn.active .todos-tab-count {
-                    opacity: 1;
-                    color: var(--accent-primary);
                 }
 
                 .todo-item-card {

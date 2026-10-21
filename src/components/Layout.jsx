@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Sparkles, Activity, Wallet, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
 import VaultUnlockModal from './common/VaultUnlockModal';
@@ -13,6 +13,7 @@ const Layout = () => {
   const { user } = useAuth();
   const dockRef = useRef(null);
   const trackRef = useRef(null);
+  const rectRef = useRef(null);
 
   const desktopNavItems = [
     { to: '/', label: 'Home', icon: Home },
@@ -30,8 +31,8 @@ const Layout = () => {
     { to: '/friends', label: 'Friends', icon: Users },
   ];
 
-  const activeIndex = mobileNavItems.findIndex(item => 
-    item.matchPrefix 
+  const activeIndex = mobileNavItems.findIndex(item =>
+    item.matchPrefix
       ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
       : location.pathname === item.to
   );
@@ -40,55 +41,166 @@ const Layout = () => {
   const [hoveredIndex, setHoveredIndex] = useState(currentActive);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Sync hoveredIndex with currentActive when not dragging
-  useEffect(() => {
-    if (!isDragging) {
-      setHoveredIndex(currentActive);
-    }
-  }, [currentActive, isDragging]);
+  // Motion value in slot units (0 .. mobileNavItems.length - 1) for 120fps zero-rerender dragging
+  const slotProgress = useMotionValue(currentActive);
+  const bubbleX = useTransform(slotProgress, (v) => `${v * 100}%`);
 
-  const handleDragStart = () => {
-    setIsDragging(true);
-    setHoveredIndex(currentActive);
+  const pointerStateRef = useRef({
+    isPressed: false,
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    startSlot: currentActive,
+    startProgress: currentActive,
+    grabbedBubble: false,
+    hoveredSlot: currentActive,
+  });
+
+  // Smooth spring animation when currentActive changes externally or via tap
+  useEffect(() => {
+    if (!pointerStateRef.current.isDragging) {
+      setHoveredIndex(currentActive);
+      pointerStateRef.current.hoveredSlot = currentActive;
+      const controls = animate(slotProgress, currentActive, {
+        type: 'spring',
+        stiffness: 450,
+        damping: 32,
+      });
+      return () => controls.stop();
+    }
+  }, [currentActive, slotProgress]);
+
+  const computeSlotFromX = (clientX) => {
+    const rect = rectRef.current || trackRef.current?.getBoundingClientRect();
+    if (!rect || !rect.width) return { slot: currentActive, raw: currentActive };
+    const numItems = mobileNavItems.length;
+    const slotWidth = rect.width / numItems;
+    const relX = clientX - rect.left;
+    const rawFloat = (relX - slotWidth / 2) / slotWidth;
+
+    let clampedFloat = rawFloat;
+    if (rawFloat < 0) {
+      clampedFloat = rawFloat * 0.12;
+    } else if (rawFloat > numItems - 1) {
+      clampedFloat = (numItems - 1) + (rawFloat - (numItems - 1)) * 0.12;
+    }
+
+    const nearestSlot = Math.max(
+      0,
+      Math.min(numItems - 1, Math.floor(relX / slotWidth))
+    );
+    return { slot: nearestSlot, raw: clampedFloat, slotWidth };
   };
 
-  const handleDrag = (e, info) => {
-    const trackEl = trackRef.current || dockRef.current;
-    if (!trackEl) return;
-    const trackRect = trackEl.getBoundingClientRect();
-    const numItems = mobileNavItems.length;
-    const slotWidth = trackRect.width / numItems;
-    
-    // Calculate current center position of the dragged bubble in px
-    const currentCenterX = (currentActive * slotWidth) + (slotWidth / 2) + info.offset.x;
-    let targetIdx = Math.floor(currentCenterX / slotWidth);
-    targetIdx = Math.max(0, Math.min(numItems - 1, targetIdx));
-    
-    if (targetIdx !== hoveredIndex) {
-      setHoveredIndex(targetIdx);
-      if (navigator.vibrate) {
-        try { navigator.vibrate(10); } catch (err) {}
+  const handlePointerDown = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (!trackRef.current) return;
+
+    rectRef.current = trackRef.current.getBoundingClientRect();
+    const { slot } = computeSlotFromX(e.clientX);
+    const currentPos = slotProgress.get();
+
+    pointerStateRef.current = {
+      isPressed: true,
+      isDragging: false,
+      startX: e.clientX,
+      startY: e.clientY,
+      startSlot: slot,
+      startProgress: currentPos,
+      grabbedBubble: slot === currentActive,
+      hoveredSlot: currentActive,
+    };
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handlePointerMove = (e) => {
+    const state = pointerStateRef.current;
+    if (!state.isPressed) return;
+
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+
+    if (!state.isDragging && Math.abs(dx) > 4 && Math.abs(dx) > Math.abs(dy)) {
+      state.isDragging = true;
+      setIsDragging(true);
+      if (!state.grabbedBubble) {
+        const { raw, slot } = computeSlotFromX(e.clientX);
+        animate(slotProgress, raw, {
+          type: 'spring',
+          stiffness: 600,
+          damping: 35,
+        });
+        if (slot !== state.hoveredSlot) {
+          state.hoveredSlot = slot;
+          setHoveredIndex(slot);
+        }
+        return;
+      }
+    }
+
+    if (state.isDragging) {
+      const rect = rectRef.current;
+      if (!rect || !rect.width) return;
+      const numItems = mobileNavItems.length;
+      const slotWidth = rect.width / numItems;
+
+      let raw;
+      if (state.grabbedBubble) {
+        raw = state.startProgress + dx / slotWidth;
+        if (raw < 0) raw = raw * 0.12;
+        else if (raw > numItems - 1) raw = (numItems - 1) + (raw - (numItems - 1)) * 0.12;
+      } else {
+        raw = computeSlotFromX(e.clientX).raw;
+      }
+
+      // Direct 120fps motion-value update without React re-render
+      slotProgress.set(raw);
+
+      const targetIdx = Math.max(0, Math.min(numItems - 1, Math.round(raw)));
+      if (targetIdx !== state.hoveredSlot) {
+        state.hoveredSlot = targetIdx;
+        setHoveredIndex(targetIdx);
+        if (navigator.vibrate) {
+          try {
+            navigator.vibrate(10);
+          } catch (err) {}
+        }
       }
     }
   };
 
-  const handleDragEnd = (e, info) => {
+  const handlePointerUpOrCancel = (e) => {
+    const state = pointerStateRef.current;
+    if (!state.isPressed) return;
+
+    const wasDragging = state.isDragging;
+    state.isPressed = false;
+    state.isDragging = false;
     setIsDragging(false);
-    const trackEl = trackRef.current || dockRef.current;
-    if (!trackEl) return;
-    const trackRect = trackEl.getBoundingClientRect();
-    const numItems = mobileNavItems.length;
-    const slotWidth = trackRect.width / numItems;
-    
-    const currentCenterX = (currentActive * slotWidth) + (slotWidth / 2) + info.offset.x;
-    let targetIdx = Math.floor(currentCenterX / slotWidth);
-    targetIdx = Math.max(0, Math.min(numItems - 1, targetIdx));
-    
-    setHoveredIndex(targetIdx);
-    if (targetIdx !== currentActive) {
-      navigate(mobileNavItems[targetIdx].to);
+
+    const targetSlot = wasDragging ? state.hoveredSlot : state.startSlot;
+    setHoveredIndex(targetSlot);
+
+    animate(slotProgress, targetSlot, {
+      type: 'spring',
+      stiffness: 450,
+      damping: 32,
+    });
+
+    if (targetSlot >= 0 && targetSlot < mobileNavItems.length && targetSlot !== currentActive) {
+      if (!wasDragging && navigator.vibrate) {
+        try {
+          navigator.vibrate(6);
+        } catch (err) {}
+      }
+      navigate(mobileNavItems[targetSlot].to);
     }
   };
+
+  const activeVisualSlot = isDragging ? hoveredIndex : currentActive;
 
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'row', minHeight: '100vh' }}>
@@ -103,7 +215,7 @@ const Layout = () => {
         <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {desktopNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.matchPrefix 
+            const isActive = item.matchPrefix
               ? location.pathname === item.to || location.pathname.startsWith(item.matchPrefix)
               : location.pathname === item.to;
 
@@ -143,64 +255,68 @@ const Layout = () => {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation (Apple Liquid Glass Dock with Draggable Bubble) */}
-      <nav 
+      {/* Mobile Bottom Navigation (Apple iOS 26 / visionOS Liquid Glass Bar) */}
+      <nav
         ref={dockRef}
-        className="bottom-nav liquid-glass-dock" 
+        className="bottom-nav liquid-glass-dock"
         aria-label="Mobile navigation"
       >
-        <div className="dock-track" ref={trackRef}>
-          {/* Unified Draggable Liquid Glass Bubble */}
+        <div
+          className="dock-track"
+          ref={trackRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUpOrCancel}
+          onPointerCancel={handlePointerUpOrCancel}
+        >
+          {/* Hardware-Accelerated Liquid Glass Capsule */}
           <motion.div
-            drag="x"
-            dragConstraints={trackRef}
-            dragElastic={0.08}
-            dragMomentum={false}
-            onDragStart={handleDragStart}
-            onDrag={handleDrag}
-            onDragEnd={handleDragEnd}
-            animate={isDragging ? {} : { 
-              x: `${currentActive * 100}%`,
-            }}
-            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
             className={`liquid-bubble ${isDragging ? 'dragging' : ''}`}
             style={{
               width: `${100 / mobileNavItems.length}%`,
+              x: bubbleX,
             }}
           >
-            <div className="liquid-bubble-glass" />
+            <div className="liquid-bubble-glass">
+              <div className="liquid-bubble-rim" />
+            </div>
           </motion.div>
 
           {/* Tab Items */}
           {mobileNavItems.map((item, idx) => {
             const Icon = item.icon;
-            const isActive = idx === currentActive;
-            const isTargeted = isDragging && idx === hoveredIndex;
+            const isSelected = idx === activeVisualSlot;
 
             return (
               <button
                 key={item.to}
                 type="button"
-                onClick={() => {
-                  if (!isDragging) {
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
                     navigate(item.to);
                   }
                 }}
-                className={`nav-item ${isActive ? 'active' : ''} ${isTargeted ? 'targeted' : ''}`}
+                className={`nav-item ${isSelected ? 'active' : ''}`}
                 aria-label={item.label}
+                aria-current={idx === currentActive ? 'page' : undefined}
               >
                 <motion.div
                   className="nav-item-content"
                   animate={{
-                    scale: (isActive && !isDragging) || isTargeted ? 1.05 : 0.95,
-                    y: (isActive && !isDragging) || isTargeted ? -1 : 0
+                    scale: isSelected ? 1.05 : 0.95,
+                    y: isSelected ? -1 : 0,
                   }}
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 >
                   <div className="nav-icon-wrap">
-                    <Icon size={20} strokeWidth={(isActive && !isDragging) || isTargeted ? 2.4 : 2} />
+                    <Icon
+                      size={20}
+                      strokeWidth={isSelected ? 2.35 : 1.85}
+                    />
                   </div>
-                  <span>{item.label}</span>
+                  <span className="nav-label">{item.label}</span>
                 </motion.div>
               </button>
             );
@@ -291,40 +407,139 @@ const Layout = () => {
           .main-content-area {
             margin-left: 0;
             padding-top: 16px;
-            padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
             padding-left: calc(16px + env(safe-area-inset-left, 0px));
             padding-right: calc(16px + env(safe-area-inset-right, 0px));
           }
         }
 
-        /* Apple Liquid Glass Bottom Navigation */
+        /* ============================================================
+           APPLE LIQUID GLASS TOKENS (Clean Uniform Surface + Rim Light)
+           ============================================================ */
+        :root,
+        .theme-light {
+          --apple-dock-bg: rgba(255, 255, 255, 0.55);
+          --apple-dock-rim: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.85) 0%,
+            rgba(255, 255, 255, 0.35) 50%,
+            rgba(255, 255, 255, 0.7) 100%
+          );
+          --apple-dock-shadow:
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.75),
+            0 12px 32px -6px rgba(24, 28, 48, 0.14),
+            0 4px 12px -2px rgba(24, 28, 48, 0.06);
+          --apple-lens-bg: rgba(255, 255, 255, 0.78);
+          --apple-lens-rim: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(255, 255, 255, 0.45) 50%,
+            rgba(255, 255, 255, 0.8) 100%
+          );
+          --apple-lens-shadow:
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+            0 4px 14px -2px rgba(30, 40, 80, 0.12);
+          --apple-tab-inactive: rgba(45, 55, 72, 0.6);
+          --apple-tab-active: #1a202c;
+          --apple-tab-icon-active: var(--accent-primary, #5a67d8);
+          --apple-tab-glow: rgba(102, 126, 234, 0.28);
+        }
+
+        .theme-dark {
+          --apple-dock-bg: rgba(22, 22, 34, 0.52);
+          --apple-dock-rim: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.32) 0%,
+            rgba(255, 255, 255, 0.08) 50%,
+            rgba(255, 255, 255, 0.22) 100%
+          );
+          --apple-dock-shadow:
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+            0 16px 36px -6px rgba(0, 0, 0, 0.55),
+            0 4px 14px -2px rgba(0, 0, 0, 0.35);
+          --apple-lens-bg: rgba(255, 255, 255, 0.12);
+          --apple-lens-rim: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.48) 0%,
+            rgba(255, 255, 255, 0.12) 50%,
+            rgba(255, 255, 255, 0.32) 100%
+          );
+          --apple-lens-shadow:
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+            0 4px 16px -2px rgba(0, 0, 0, 0.38);
+          --apple-tab-inactive: rgba(226, 232, 240, 0.56);
+          --apple-tab-active: #ffffff;
+          --apple-tab-icon-active: #ffffff;
+          --apple-tab-glow: rgba(168, 85, 247, 0.45);
+        }
+
+        .theme-ocean {
+          --apple-dock-bg: rgba(10, 25, 47, 0.54);
+          --apple-dock-rim: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.3) 0%,
+            rgba(100, 255, 218, 0.1) 50%,
+            rgba(100, 255, 218, 0.24) 100%
+          );
+          --apple-dock-shadow:
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+            0 16px 36px -6px rgba(2, 10, 24, 0.6),
+            0 4px 14px -2px rgba(2, 10, 24, 0.4);
+          --apple-lens-bg: rgba(100, 255, 218, 0.11);
+          --apple-lens-rim: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.45) 0%,
+            rgba(100, 255, 218, 0.15) 50%,
+            rgba(100, 255, 218, 0.35) 100%
+          );
+          --apple-lens-shadow:
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.32),
+            0 4px 16px -2px rgba(0, 0, 0, 0.42);
+          --apple-tab-inactive: rgba(204, 214, 246, 0.56);
+          --apple-tab-active: #ffffff;
+          --apple-tab-icon-active: #64ffda;
+          --apple-tab-glow: rgba(100, 255, 218, 0.42);
+        }
+
+        /* ============================================================
+           APPLE LIQUID GLASS BOTTOM NAVIGATION BAR
+           ============================================================ */
         .bottom-nav.liquid-glass-dock {
           position: fixed;
-          bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+          bottom: calc(14px + env(safe-area-inset-bottom, 0px));
           left: 50%;
-          transform: translateX(-50%);
+          transform: translateX(-50%) translateZ(0);
           width: calc(100% - 28px);
-          max-width: 410px;
+          max-width: 416px;
           height: 60px;
           padding: 4px;
           z-index: 100;
-          
-          /* Layered Glass Refraction */
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%), var(--surface-elevated, rgba(13, 17, 28, 0.88));
-          backdrop-filter: blur(32px) saturate(190%) contrast(104%);
-          -webkit-backdrop-filter: blur(32px) saturate(190%) contrast(104%);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          
-          /* Liquid Specular Highlights & Depth */
-          box-shadow: 
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
-            inset 0 -1px 2px 0 rgba(0, 0, 0, 0.25),
-            0 16px 40px -8px rgba(0, 0, 0, 0.45),
-            0 4px 16px 0 rgba(0, 0, 0, 0.2);
-          border-radius: 30px;
+          border-radius: 9999px;
+
+          /* Clean, uniform translucent glass */
+          background: var(--apple-dock-bg);
+          backdrop-filter: blur(28px) saturate(190%);
+          -webkit-backdrop-filter: blur(28px) saturate(190%);
+          box-shadow: var(--apple-dock-shadow);
+
           user-select: none;
           -webkit-user-select: none;
           touch-action: pan-y;
+        }
+
+        /* 1px Fresnel Specular Rim Border */
+        .bottom-nav.liquid-glass-dock::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          padding: 1px;
+          background: var(--apple-dock-rim);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          z-index: 3;
         }
 
         .dock-track {
@@ -333,8 +548,18 @@ const Layout = () => {
           align-items: center;
           width: 100%;
           height: 100%;
+          border-radius: 9999px;
+          cursor: grab;
+          touch-action: none;
         }
-        
+
+        .dock-track:active {
+          cursor: grabbing;
+        }
+
+        /* ============================================================
+           FLOATING LIQUID CAPSULE (ACTIVE PILL)
+           ============================================================ */
         .liquid-bubble {
           position: absolute;
           top: 0;
@@ -344,43 +569,53 @@ const Layout = () => {
           z-index: 1;
           display: flex;
           align-items: center;
-          justifyContent: center;
+          justify-content: center;
           padding: 1px 2px;
-          cursor: grab;
-          touch-action: none;
+          pointer-events: none;
           box-sizing: border-box;
+          will-change: transform;
         }
 
-        .liquid-bubble:active, .liquid-bubble.dragging {
-          cursor: grabbing;
-        }
-
+        /* Clean Optical Glass Capsule */
         .liquid-bubble-glass {
+          position: relative;
           width: 100%;
           height: 100%;
-          border-radius: 26px;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%), rgba(147, 51, 234, 0.28);
-          border: 1px solid rgba(255, 255, 255, 0.32);
-          box-shadow: 
-            inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.6),
-            inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2),
-            0 4px 18px rgba(147, 51, 234, 0.4),
-            0 2px 8px rgba(0, 0, 0, 0.25);
-          backdrop-filter: blur(18px);
-          -webkit-backdrop-filter: blur(18px);
-          transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+          border-radius: 9999px;
+          background: var(--apple-lens-bg);
+          box-shadow: var(--apple-lens-shadow);
+          transition:
+            transform 0.15s ease,
+            background 0.15s ease,
+            box-shadow 0.15s ease;
         }
 
         .liquid-bubble.dragging .liquid-bubble-glass {
           transform: scale(1.05);
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%), rgba(168, 85, 247, 0.4);
-          box-shadow: 
-            inset 0 1px 2px 0 rgba(255, 255, 255, 0.75),
-            0 8px 26px rgba(168, 85, 247, 0.55),
-            0 2px 10px rgba(0, 0, 0, 0.3);
+          background: rgba(255, 255, 255, 0.18);
         }
 
-        .nav-item {
+        .theme-light .liquid-bubble.dragging .liquid-bubble-glass {
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        /* 1px Specular Edge Rim on the Active Pill */
+        .liquid-bubble-rim {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          padding: 1px;
+          background: var(--apple-lens-rim);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+        }
+
+        /* ============================================================
+           TAB ITEMS & ICON CHOREOGRAPHY
+           ============================================================ */
+        .bottom-nav .nav-item {
           position: relative;
           flex: 1;
           height: 100%;
@@ -392,25 +627,29 @@ const Layout = () => {
           background: transparent;
           border: none;
           padding: 0;
-          color: var(--text-secondary);
-          opacity: 0.6;
-          transition: opacity 0.2s ease, color 0.2s ease;
+          color: var(--apple-tab-inactive);
+          transition: color 0.2s ease;
           -webkit-tap-highlight-color: transparent;
           cursor: pointer;
           z-index: 2;
+          pointer-events: none;
         }
-        
-        .nav-item.active, .nav-item.targeted {
-          color: var(--text-primary);
-          opacity: 1;
+
+        /* Prevent global button:active scale from fighting Framer Motion */
+        .bottom-nav .nav-item:active {
+          transform: none !important;
         }
-        
+
+        .bottom-nav .nav-item.active {
+          color: var(--apple-tab-active);
+        }
+
         .nav-item-content {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 2px;
+          gap: 2.5px;
           pointer-events: none;
         }
 
@@ -418,17 +657,27 @@ const Layout = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+          transition:
+            color 0.2s ease,
+            filter 0.25s ease,
+            transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        .nav-item.active .nav-icon-wrap, .nav-item.targeted .nav-icon-wrap {
-          filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.5));
+        .bottom-nav .nav-item.active .nav-icon-wrap {
+          color: var(--apple-tab-icon-active);
+          filter: drop-shadow(0 2px 8px var(--apple-tab-glow));
         }
 
-        .nav-item span {
+        .nav-label {
           font-size: 10.5px;
+          font-weight: 600;
+          letter-spacing: -0.1px;
+          line-height: 1.1;
+          transition: font-weight 0.15s ease, opacity 0.2s ease;
+        }
+
+        .bottom-nav .nav-item.active .nav-label {
           font-weight: 700;
-          letter-spacing: -0.15px;
         }
       `}</style>
     </div>

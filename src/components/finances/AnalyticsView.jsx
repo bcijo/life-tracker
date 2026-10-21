@@ -4,16 +4,17 @@ import {
     PieChart, Pie 
 } from 'recharts';
 import { 
-    TrendingUp, Calendar, ChevronLeft, ChevronRight, Zap, 
-    AlertTriangle, ShoppingBag, ArrowUpRight, Award, Compass,
+    TrendingUp, ChevronLeft, ChevronRight, Zap, 
+    AlertTriangle, ShoppingBag, Compass,
     RefreshCw 
 } from 'lucide-react';
 import { 
     format, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, 
     isSameDay, subWeeks, addWeeks, startOfMonth, endOfMonth, 
-    subMonths, addMonths, isWeekend, getDay 
+    subMonths, addMonths, isWeekend
 } from 'date-fns';
 import { getIconByName } from '../ExpenseCard';
+import LiquidGlassSegmented from '../common/LiquidGlassSegmented';
 
 import useTransactions from '../../hooks/useTransactions';
 import useExpenseCards from '../../hooks/useExpenseCards';
@@ -22,6 +23,17 @@ import useRecurringExpenses from '../../hooks/useRecurringExpenses';
 const PRESET_COLORS = [
     '#8338ec', '#4ecdc4', '#ff6b6b', '#ffd166', '#06d6a0', 
     '#118ab2', '#3a86ff', '#f72585', '#7209b7', '#4361ee'
+];
+
+const TIMEFRAME_OPTIONS = [
+    { id: 'weekly', label: 'Weekly' },
+    { id: 'monthly', label: 'Monthly' },
+];
+
+const OUTLIER_OPTIONS = [
+    { id: 2000, label: '≥₹2k' },
+    { id: 3000, label: '≥₹3k' },
+    { id: 5000, label: '≥₹5k' },
 ];
 
 const isRecurringTransaction = (t) => {
@@ -73,7 +85,6 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
 
         if (!includeRecurring) return baseTx;
 
-        // Synthesize active recurring expenses for the relevant month(s) if not already in baseTx
         const activeRecurring = recurringExpenses.filter(r => r.is_active !== false);
         const monthsToCheck = timeframe === 'monthly'
             ? [targetMonth]
@@ -138,7 +149,6 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                 };
             });
         } else {
-            // Group by days of month
             const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
             return daysInMonth.map(day => {
                 const dayTotal = periodTransactions
@@ -153,7 +163,7 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
         }
     }, [periodTransactions, timeframe, weekStart, weekEnd, monthStart, monthEnd]);
 
-    // Category Breakdown (Properly categorizes recurring expenses)
+    // Category Breakdown
     const categoryBreakdown = useMemo(() => {
         const map = {};
         periodTransactions.forEach(t => {
@@ -165,7 +175,7 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
             
             if (isRec) {
                 catName = 'Recurring Expenses';
-                catColor = '#8B5CF6'; // purple / violet for recurring expenses
+                catColor = '#8B5CF6';
             } else if (card) {
                 catName = card.name;
                 catColor = card.color || '#4ECDC4';
@@ -280,46 +290,20 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                     flexWrap: 'wrap',
                     maxWidth: '100%'
                 }}>
-                    {/* Timeframe Switcher */}
-                    <div style={{
-                        display: 'flex',
-                        background: 'var(--surface-input)',
-                        padding: '3px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--glass-card-border)',
-                        flexShrink: 0
-                    }}>
-                        <button
-                            onClick={() => { setTimeframe('weekly'); setWeekOffset(0); }}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: timeframe === 'weekly' ? 'var(--glass-card-bg)' : 'transparent',
-                                color: timeframe === 'weekly' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                fontSize: '13px',
-                                fontWeight: timeframe === 'weekly' ? '700' : '500',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Weekly
-                        </button>
-                        <button
-                            onClick={() => { setTimeframe('monthly'); setMonthOffset(0); }}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: timeframe === 'monthly' ? 'var(--glass-card-bg)' : 'transparent',
-                                color: timeframe === 'monthly' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                fontSize: '13px',
-                                fontWeight: timeframe === 'monthly' ? '700' : '500',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Monthly
-                        </button>
-                    </div>
+                    {/* Apple Liquid Glass Timeframe Switcher */}
+                    <LiquidGlassSegmented
+                        options={TIMEFRAME_OPTIONS}
+                        value={timeframe}
+                        onChange={(val) => {
+                            setTimeframe(val);
+                            if (val === 'weekly') setWeekOffset(0);
+                            else setMonthOffset(0);
+                        }}
+                        size="sm"
+                        fullWidth={false}
+                        equalColumns={true}
+                        ariaLabel="Analytics timeframe"
+                    />
 
                     {/* Date Stepper */}
                     <div style={{
@@ -327,9 +311,10 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                         alignItems: 'center',
                         gap: '4px',
                         background: 'var(--surface-input)',
-                        padding: '4px 8px',
-                        borderRadius: '12px',
+                        padding: '4px 10px',
+                        borderRadius: '9999px',
                         border: '1px solid var(--glass-card-border)',
+                        height: '38px',
                         flexShrink: 0
                     }}>
                         <button
@@ -338,7 +323,7 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                         >
                             <ChevronLeft size={16} />
                         </button>
-                        <span style={{ fontSize: '13px', fontWeight: '600', minWidth: '90px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '600', minWidth: '90px', textAlign: 'center' }}>
                             {timeframe === 'monthly'
                                 ? format(targetMonth, 'MMMM yyyy')
                                 : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`}
@@ -366,8 +351,9 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            padding: '6px 12px',
-                            borderRadius: '12px',
+                            height: '38px',
+                            padding: '0 14px',
+                            borderRadius: '9999px',
                             border: includeRecurring ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid var(--glass-card-border)',
                             background: includeRecurring ? 'rgba(139, 92, 246, 0.15)' : 'var(--surface-input)',
                             color: includeRecurring ? '#A78BFA' : 'var(--text-secondary)',
@@ -569,7 +555,7 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
 
             {/* Outlier Spotlight */}
             <div className="glass-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
                     <div>
                         <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <AlertTriangle size={18} color="#ffd166" /> Outlier & Big Purchases
@@ -579,27 +565,16 @@ const AnalyticsView = ({ transactions: propTransactions, categories: propCategor
                         </p>
                     </div>
 
-                    {/* Threshold selector */}
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                        {[2000, 3000, 5000].map(val => (
-                            <button
-                                key={val}
-                                onClick={() => setOutlierThreshold(val)}
-                                style={{
-                                    padding: '4px 8px',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--glass-card-border)',
-                                    background: outlierThreshold === val ? 'var(--accent-primary, #4ecdc4)' : 'var(--surface-input)',
-                                    color: outlierThreshold === val ? '#fff' : 'var(--text-secondary)',
-                                    fontSize: '11px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                ≥₹{(val/1000).toFixed(0)}k
-                            </button>
-                        ))}
-                    </div>
+                    {/* Apple Liquid Glass Threshold Selector */}
+                    <LiquidGlassSegmented
+                        options={OUTLIER_OPTIONS}
+                        value={outlierThreshold}
+                        onChange={setOutlierThreshold}
+                        size="sm"
+                        fullWidth={false}
+                        equalColumns={true}
+                        ariaLabel="Outlier threshold"
+                    />
                 </div>
 
                 {outliers.length > 0 ? (

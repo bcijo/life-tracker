@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Swords, Plus, UserPlus, Bell, Share2, Link, Check, RefreshCw, Search, X, Handshake } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { Users, Trophy, Swords, UserPlus, Bell, Share2, Check, RefreshCw, Search, X, Handshake } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useFriends } from '../hooks/useFriends';
@@ -19,9 +19,251 @@ import AppLoader from '../components/common/AppLoader';
 const TABS = [
   { id: 'friends', label: 'Friends', icon: Users },
   { id: 'pacts', label: 'Duo', icon: Handshake },
-  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'leaderboard', label: 'Ranks', icon: Trophy },
   { id: 'compare', label: 'Compare', icon: Swords },
 ];
+
+// Isolated 120fps Apple Liquid Glass Tab Bar for Friends
+const FriendsLiquidBar = memo(({ currentActive, onSelectTab, hasFriendsBadge, hasPactsBadge }) => {
+  const trackRef = useRef(null);
+  const rectRef = useRef(null);
+
+  const [hoveredIndex, setHoveredIndex] = useState(currentActive);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const slotProgress = useMotionValue(currentActive);
+  const bubbleX = useTransform(slotProgress, (v) => `${v * 100}%`);
+
+  const pointerStateRef = useRef({
+    isPressed: false,
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    startSlot: currentActive,
+    startProgress: currentActive,
+    grabbedBubble: false,
+    hoveredSlot: currentActive,
+  });
+
+  useEffect(() => {
+    if (!pointerStateRef.current.isDragging) {
+      setHoveredIndex(currentActive);
+      pointerStateRef.current.hoveredSlot = currentActive;
+      const controls = animate(slotProgress, currentActive, {
+        type: 'spring',
+        stiffness: 450,
+        damping: 32,
+      });
+      return () => controls.stop();
+    }
+  }, [currentActive, slotProgress]);
+
+  const computeSlotFromX = (clientX) => {
+    const rect = rectRef.current || trackRef.current?.getBoundingClientRect();
+    if (!rect || !rect.width) return { slot: currentActive, raw: currentActive };
+    const numItems = TABS.length;
+    const slotWidth = rect.width / numItems;
+    const relX = clientX - rect.left;
+    const rawFloat = (relX - slotWidth / 2) / slotWidth;
+
+    let clampedFloat = rawFloat;
+    if (rawFloat < 0) {
+      clampedFloat = rawFloat * 0.12;
+    } else if (rawFloat > numItems - 1) {
+      clampedFloat = (numItems - 1) + (rawFloat - (numItems - 1)) * 0.12;
+    }
+
+    const nearestSlot = Math.max(
+      0,
+      Math.min(numItems - 1, Math.floor(relX / slotWidth))
+    );
+    return { slot: nearestSlot, raw: clampedFloat, slotWidth };
+  };
+
+  const handlePointerDown = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (!trackRef.current) return;
+
+    rectRef.current = trackRef.current.getBoundingClientRect();
+    const { slot } = computeSlotFromX(e.clientX);
+    const currentPos = slotProgress.get();
+
+    pointerStateRef.current = {
+      isPressed: true,
+      isDragging: false,
+      startX: e.clientX,
+      startY: e.clientY,
+      startSlot: slot,
+      startProgress: currentPos,
+      grabbedBubble: slot === currentActive,
+      hoveredSlot: currentActive,
+    };
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handlePointerMove = (e) => {
+    const state = pointerStateRef.current;
+    if (!state.isPressed) return;
+
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+
+    if (!state.isDragging && Math.abs(dx) > 4 && Math.abs(dx) > Math.abs(dy)) {
+      state.isDragging = true;
+      setIsDragging(true);
+      if (!state.grabbedBubble) {
+        const { raw, slot } = computeSlotFromX(e.clientX);
+        animate(slotProgress, raw, {
+          type: 'spring',
+          stiffness: 600,
+          damping: 35,
+        });
+        if (slot !== state.hoveredSlot) {
+          state.hoveredSlot = slot;
+          setHoveredIndex(slot);
+        }
+        return;
+      }
+    }
+
+    if (state.isDragging) {
+      const rect = rectRef.current;
+      if (!rect || !rect.width) return;
+      const numItems = TABS.length;
+      const slotWidth = rect.width / numItems;
+
+      let raw;
+      if (state.grabbedBubble) {
+        raw = state.startProgress + dx / slotWidth;
+        if (raw < 0) raw = raw * 0.12;
+        else if (raw > numItems - 1) raw = (numItems - 1) + (raw - (numItems - 1)) * 0.12;
+      } else {
+        raw = computeSlotFromX(e.clientX).raw;
+      }
+
+      slotProgress.set(raw);
+
+      const targetIdx = Math.max(0, Math.min(numItems - 1, Math.round(raw)));
+      if (targetIdx !== state.hoveredSlot) {
+        state.hoveredSlot = targetIdx;
+        setHoveredIndex(targetIdx);
+        if (navigator.vibrate) {
+          try {
+            navigator.vibrate(10);
+          } catch (err) {}
+        }
+      }
+    }
+  };
+
+  const handlePointerUpOrCancel = (e) => {
+    const state = pointerStateRef.current;
+    if (!state.isPressed) return;
+
+    const wasDragging = state.isDragging;
+    state.isPressed = false;
+    state.isDragging = false;
+    setIsDragging(false);
+
+    const targetSlot = wasDragging ? state.hoveredSlot : state.startSlot;
+    setHoveredIndex(targetSlot);
+
+    animate(slotProgress, targetSlot, {
+      type: 'spring',
+      stiffness: 450,
+      damping: 32,
+    });
+
+    if (targetSlot >= 0 && targetSlot < TABS.length && targetSlot !== currentActive) {
+      if (!wasDragging && navigator.vibrate) {
+        try {
+          navigator.vibrate(6);
+        } catch (err) {}
+      }
+      onSelectTab(TABS[targetSlot].id);
+    }
+  };
+
+  const activeVisualSlot = isDragging ? hoveredIndex : currentActive;
+
+  return (
+    <div
+      className="friends-liquid-dock"
+      role="tablist"
+      aria-label="Friends sections"
+    >
+      <div
+        className="friends-dock-track"
+        ref={trackRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUpOrCancel}
+        onPointerCancel={handlePointerUpOrCancel}
+      >
+        {/* Hardware-Accelerated Liquid Glass Bubble */}
+        <motion.div
+          className={`friends-liquid-bubble ${isDragging ? 'dragging' : ''}`}
+          style={{
+            width: `${100 / TABS.length}%`,
+            x: bubbleX,
+          }}
+        >
+          <div className="friends-liquid-bubble-glass">
+            <div className="friends-liquid-bubble-rim" />
+          </div>
+        </motion.div>
+
+        {/* Section Tabs */}
+        {TABS.map((tab, idx) => {
+          const isSelected = idx === activeVisualSlot;
+          const Icon = tab.icon;
+          const hasBadge =
+            (tab.id === 'friends' && hasFriendsBadge) ||
+            (tab.id === 'pacts' && hasPactsBadge);
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={idx === currentActive}
+              title={tab.label}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectTab(tab.id);
+                }
+              }}
+              className={`friends-nav-tab ${isSelected ? 'active' : ''}`}
+            >
+              <motion.div
+                className="friends-tab-inner"
+                animate={{
+                  scale: isSelected ? 1.05 : 0.95,
+                  y: isSelected ? -0.5 : 0,
+                }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              >
+                <span className="friends-tab-icon">
+                  <Icon
+                    size={16}
+                    strokeWidth={isSelected ? 2.35 : 1.85}
+                  />
+                </span>
+                <span className="friends-tab-text">{tab.label}</span>
+                {hasBadge && <span className="friends-tab-badge" />}
+              </motion.div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
 
 const Friends = () => {
   const { user } = useAuth();
@@ -121,6 +363,8 @@ const Friends = () => {
   }
 
   const hasPending = pendingReceived.length > 0 || pendingSent.length > 0;
+  const activeIndex = TABS.findIndex(t => t.id === activeTab);
+  const currentActive = activeIndex !== -1 ? activeIndex : 0;
 
   return (
     <div className="page-container" style={{ position: 'relative', zIndex: 1 }}>
@@ -216,50 +460,13 @@ const Friends = () => {
         </div>
       </motion.header>
 
-      {/* Tab Switcher */}
-      <motion.div
-        style={{
-          display: 'flex', gap: 4, marginBottom: 14,
-          background: 'var(--surface-input)',
-          borderRadius: 12, padding: 3,
-          border: '1px solid var(--border-subtle)',
-        }}
-        initial={{ opacity: 0, y: -4 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          const hasBadge = (tab.id === 'friends' && pendingReceived.length > 0) ||
-                           (tab.id === 'pacts' && mutualHabitsState?.pendingReceivedPacts?.length > 0);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                flex: 1, padding: '8px 0', borderRadius: 9,
-                background: isActive ? 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.12))' : 'transparent',
-                border: isActive ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent',
-                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontSize: 12, fontWeight: isActive ? 800 : 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                position: 'relative',
-              }}
-            >
-              <Icon size={14} />
-              {tab.label}
-              {hasBadge && (
-                <span style={{
-                  position: 'absolute', top: 4, right: 8,
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: '#ef4444',
-                  border: '2px solid var(--glass-card-bg)',
-                }} />
-              )}
-            </button>
-          );
-        })}
-      </motion.div>
+      {/* Isolated 120fps Apple Liquid Glass Segmented Tab Bar */}
+      <FriendsLiquidBar
+        currentActive={currentActive}
+        onSelectTab={setActiveTab}
+        hasFriendsBadge={pendingReceived.length > 0}
+        hasPactsBadge={(mutualHabitsState?.pendingReceivedPacts?.length || 0) > 0}
+      />
 
       {/* Tab Content */}
       <AnimatePresence mode="wait">
@@ -544,6 +751,191 @@ const Friends = () => {
         friend={friendToRemove}
         loading={removingFriend}
       />
+
+      <style>{`
+        .friends-liquid-dock {
+          position: sticky;
+          top: 70px;
+          z-index: 85;
+          height: 48px;
+          padding: 4px;
+          margin-bottom: 18px;
+          border-radius: 9999px;
+          background: var(--apple-dock-bg, rgba(22, 22, 34, 0.52));
+          backdrop-filter: blur(28px) saturate(190%);
+          -webkit-backdrop-filter: blur(28px) saturate(190%);
+          box-shadow: var(--apple-dock-shadow,
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+            0 12px 28px -6px rgba(0, 0, 0, 0.45),
+            0 4px 12px -2px rgba(0, 0, 0, 0.25)
+          );
+          user-select: none;
+          -webkit-user-select: none;
+          touch-action: pan-y;
+          transform: translateZ(0);
+        }
+
+        /* 1px Fresnel Specular Rim Border */
+        .friends-liquid-dock::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          padding: 1px;
+          background: var(--apple-dock-rim, linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.32) 0%,
+            rgba(255, 255, 255, 0.08) 50%,
+            rgba(255, 255, 255, 0.22) 100%
+          ));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          z-index: 3;
+        }
+
+        .friends-dock-track {
+          position: relative;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          align-items: center;
+          width: 100%;
+          height: 100%;
+          border-radius: 9999px;
+          cursor: grab;
+          touch-action: none;
+        }
+
+        .friends-dock-track:active {
+          cursor: grabbing;
+        }
+
+        .friends-liquid-bubble {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          height: 100%;
+          z-index: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1px 2px;
+          pointer-events: none;
+          box-sizing: border-box;
+          will-change: transform;
+        }
+
+        .friends-liquid-bubble-glass {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border-radius: 9999px;
+          background: var(--apple-lens-bg, rgba(255, 255, 255, 0.12));
+          box-shadow: var(--apple-lens-shadow,
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+            0 4px 16px -2px rgba(0, 0, 0, 0.38)
+          );
+          transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .friends-liquid-bubble.dragging .friends-liquid-bubble-glass {
+          transform: scale(1.05);
+          background: rgba(255, 255, 255, 0.18);
+        }
+
+        .theme-light .friends-liquid-bubble.dragging .friends-liquid-bubble-glass {
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        .friends-liquid-bubble-rim {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          padding: 1px;
+          background: var(--apple-lens-rim, linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.48) 0%,
+            rgba(255, 255, 255, 0.12) 50%,
+            rgba(255, 255, 255, 0.32) 100%
+          ));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+        }
+
+        .friends-nav-tab {
+          position: relative;
+          flex: 1;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          background: transparent;
+          color: var(--apple-tab-inactive, rgba(226, 232, 240, 0.56));
+          font-size: 12.5px;
+          font-weight: 600;
+          padding: 0 8px;
+          cursor: pointer;
+          white-space: nowrap;
+          z-index: 2;
+          pointer-events: none;
+          -webkit-tap-highlight-color: transparent;
+          transition: color 0.2s ease;
+        }
+
+        .friends-nav-tab:active {
+          transform: none !important;
+        }
+
+        .friends-nav-tab.active {
+          color: var(--apple-tab-active, #ffffff);
+          font-weight: 700;
+        }
+
+        .friends-tab-inner {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          pointer-events: none;
+        }
+
+        .friends-tab-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.2s ease, filter 0.25s ease;
+        }
+
+        .friends-nav-tab.active .friends-tab-icon {
+          color: var(--apple-tab-icon-active, #ffffff);
+          filter: drop-shadow(0 2px 8px var(--apple-tab-glow, rgba(168, 85, 247, 0.45)));
+        }
+
+        .friends-tab-badge {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #ef4444;
+          box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 420px) {
+          .friends-nav-tab {
+            font-size: 11.5px;
+            padding: 0 4px;
+          }
+          .friends-tab-inner {
+            gap: 4px;
+          }
+        }
+      `}</style>
     </div>
   );
 };

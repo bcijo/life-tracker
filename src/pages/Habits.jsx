@@ -5,6 +5,7 @@ import useHabits, { parseLocalDate, getLocalDateStr, calculateHabitStreak } from
 import useMutualHabits from '../hooks/useMutualHabits';
 import { useFriends } from '../hooks/useFriends';
 import HabitAnalytics from '../components/HabitAnalytics';
+import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import { format, subDays, parse, isToday as isDateToday, getDay } from 'date-fns';
 import { GradientOrbs } from '../components/habits/GradientOrbs';
 import { BentoGrid } from '../components/habits/BentoGrid';
@@ -12,9 +13,14 @@ import { HabitCard } from '../components/habits/HabitCard';
 import { WeeklySummary } from '../components/habits/WeeklySummary';
 import { HabitDetailModal } from '../components/habits/HabitDetailModal';
 import { HabitReorderPage } from '../components/habits/HabitReorderPage';
+import DateDisplay from '../components/common/DateDisplay';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TIME_OF_DAY_OPTIONS = [
+    { id: 'morning', label: 'Morning', emoji: '☀️', color: '#f59e0b' },
+    { id: 'evening', label: 'Evening', emoji: '🌙', color: '#a855f7' },
+];
 
 const Habits = () => {
     const {
@@ -178,7 +184,6 @@ const Habits = () => {
     // habits are already sorted by sort_order via useHabits getSortedHabits
     const sortedHabits = habits;
 
-    const today = new Date();
     const accentColor = '#a855f7';
 
     return (
@@ -250,6 +255,7 @@ const Habits = () => {
                 transition={{ duration: 0.4, ease: 'easeOut' }}
             >
                 <div>
+                    <DateDisplay />
                     <h1 style={{
                         margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em',
                         color: 'var(--text-primary)',
@@ -262,19 +268,6 @@ const Habits = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {/* Date pill */}
-                    <div style={{
-                        padding: '6px 12px', borderRadius: 9999,
-                        background: 'var(--surface-input, rgba(255,255,255,0.04))',
-                        border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-                        backdropFilter: 'blur(12px)',
-                        display: 'flex', alignItems: 'center', gap: 6,
-                    }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary, rgba(255,255,255,0.7))', fontFamily: 'monospace' }}>
-                            {format(today, 'MMM d')}
-                        </span>
-                    </div>
 
                     {/* Minimal Pause / Resume Trigger */}
                     {habits.length > 0 && (() => {
@@ -700,28 +693,17 @@ const Habits = () => {
                             }}
                         />
 
-                        {/* Time of day */}
+                        {/* Apple Liquid Glass Time of Day Selector */}
                         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Time of Day</p>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                            {[
-                                { val: 'morning', label: '☀️ Morning', color: '#f59e0b' },
-                                { val: 'evening', label: '🌙 Evening', color: '#a855f7' },
-                            ].map(({ val, label, color }) => (
-                                <button
-                                    key={val}
-                                    type="button"
-                                    onClick={() => setNewHabitTimeOfDay(val)}
-                                    style={{
-                                        flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                                        background: newHabitTimeOfDay === val ? `${color}22` : 'var(--surface-input, rgba(255,255,255,0.04))',
-                                        border: newHabitTimeOfDay === val ? `1.5px solid ${color}` : '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-                                        color: newHabitTimeOfDay === val ? color : 'var(--text-muted)',
-                                        cursor: 'pointer', transition: 'all 0.15s',
-                                    }}
-                                >
-                                    {label}
-                                </button>
-                            ))}
+                        <div style={{ marginBottom: 14 }}>
+                            <LiquidGlassSegmented
+                                options={TIME_OF_DAY_OPTIONS}
+                                value={newHabitTimeOfDay}
+                                onChange={setNewHabitTimeOfDay}
+                                size="md"
+                                fullWidth={true}
+                                ariaLabel="New habit time of day"
+                            />
                         </div>
 
                         {/* Active days */}

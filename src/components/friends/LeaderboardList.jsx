@@ -3,7 +3,13 @@ import { motion } from 'framer-motion';
 import { Users, Globe, Trophy } from 'lucide-react';
 import ScoreBadge from './ScoreBadge';
 import AppLoader from '../common/AppLoader';
+import LiquidGlassSegmented from '../common/LiquidGlassSegmented';
 import { getLevelData } from '../../utils/habitGamification';
+
+const SCOPE_OPTIONS = [
+  { id: 'friends', label: 'Friends', icon: Users },
+  { id: 'global', label: 'Global', icon: Globe },
+];
 
 const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loading }) => {
   const containerStyle = {
@@ -12,30 +18,6 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
     gap: '16px',
     padding: '0 0 24px 0'
   };
-
-  const toggleContainerStyle = {
-    display: 'flex',
-    background: 'var(--surface-elevated)',
-    borderRadius: '24px',
-    padding: '4px',
-    margin: '0 auto 16px auto',
-    width: 'fit-content'
-  };
-
-  const getToggleStyle = (isActive) => ({
-    padding: '8px 24px',
-    borderRadius: '20px',
-    border: 'none',
-    background: isActive ? 'var(--accent-gradient)' : 'transparent',
-    color: isActive ? '#fff' : 'var(--text-secondary)',
-    fontWeight: '600',
-    fontSize: '14px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    transition: 'all var(--transition-fast)'
-  });
 
   const getRankIcon = (rank) => {
     switch (rank) {
@@ -91,17 +73,23 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
     show: { opacity: 1, x: 0 }
   };
 
+  const scopeSwitcher = (
+    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+      <LiquidGlassSegmented
+        options={SCOPE_OPTIONS}
+        value={scope}
+        onChange={onScopeChange}
+        size="md"
+        fullWidth={false}
+        ariaLabel="Leaderboard scope"
+      />
+    </div>
+  );
+
   if (loading) {
     return (
       <div style={containerStyle}>
-        <div style={toggleContainerStyle}>
-          <button style={getToggleStyle(scope === 'friends')} onClick={() => onScopeChange('friends')}>
-            <Users size={16} /> Friends
-          </button>
-          <button style={getToggleStyle(scope === 'global')} onClick={() => onScopeChange('global')}>
-            <Globe size={16} /> Global
-          </button>
-        </div>
+        {scopeSwitcher}
         <AppLoader
           variant="section"
           size="normal"
@@ -113,14 +101,7 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
 
   return (
     <div style={containerStyle}>
-      <div style={toggleContainerStyle}>
-        <button style={getToggleStyle(scope === 'friends')} onClick={() => onScopeChange('friends')}>
-          <Users size={16} /> Friends
-        </button>
-        <button style={getToggleStyle(scope === 'global')} onClick={() => onScopeChange('global')}>
-          <Globe size={16} /> Global
-        </button>
-      </div>
+      {scopeSwitcher}
 
       {leaderboard.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
@@ -130,9 +111,8 @@ const LeaderboardList = ({ leaderboard, currentUserId, scope, onScopeChange, loa
         </div>
       ) : (
         <motion.div variants={listVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {leaderboard.map((user, index) => {
+          {leaderboard.map((user) => {
             const isCurrentUser = user.user_id === currentUserId;
-            // Force anonymous in global scope unless it's current user
             const displayName = scope === 'global' && !isCurrentUser
               ? `@${user.username}` 
               : (user.display_name || user.full_name || `@${user.username}`);

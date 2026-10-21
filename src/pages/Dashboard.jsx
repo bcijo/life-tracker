@@ -25,6 +25,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DailyReportModal } from '../components/dashboard/DailyReportModal';
 import { DailyWhisper } from '../components/dashboard/DailyWhisper';
+import DateDisplay from '../components/common/DateDisplay';
 
 const getUserDisplayName = (profile) => {
     if (!profile) return '';
@@ -100,7 +101,6 @@ const Dashboard = () => {
         return data;
     }, [transactions]);
 
-    const dateFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
     return (
         <div className="page-container" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -122,10 +122,7 @@ const Dashboard = () => {
             <div style={{ position: 'relative', zIndex: 1 }}>
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
-                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Calendar size={14} />
-                            {dateFormatted}
-                        </p>
+                        <DateDisplay />
                         <h1
                             onClick={() => setShowWhisper(prev => !prev)}
                             role="button"

@@ -3,12 +3,18 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Flame, Trash2, Edit2, ChevronLeft, X, Check, Trophy, Target, TrendingUp, PauseCircle, Play, Handshake, Zap, UserPlus } from 'lucide-react';
 import { AuraSpringToggle } from './AuraSpringToggle';
+import LiquidGlassSegmented from '../common/LiquidGlassSegmented';
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isFuture, isToday, subDays } from 'date-fns';
 import { parseLocalDate, getLocalDateStr } from '../../hooks/useHabits';
 import { computeDuoStreak, computeSynergyScore, getDuoBadge, computeDuoWeeklyMatrix, getPartnerDailyStatus } from '../../utils/duoHabitGamification';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+const TIME_OF_DAY_OPTIONS = [
+  { id: 'morning', label: 'Morning', emoji: '☀️', color: '#f59e0b' },
+  { id: 'evening', label: 'Evening', emoji: '🌙', color: '#a855f7' },
+];
 
 function computeBestStreak(habit) {
   if (!habit || !habit.history || habit.history.length === 0) return 0;
@@ -170,10 +176,6 @@ export function HabitDetailModal({
       onClose();
       await onDelete(habitId);
     }
-  };
-
-  const handleTimeToggle = async () => {
-    await onTimeOfDayChange(habit.id, timeOfDay === 'morning' ? 'evening' : 'morning');
   };
 
   const monthStart = startOfMonth(calendarMonth);
@@ -647,11 +649,15 @@ export function HabitDetailModal({
       >
         <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>Settings</p>
 
-        {/* Time toggle */}
-        <button onClick={handleTimeToggle} style={rowBtn}>
-          <span style={iconBox}>{timeOfDay === 'morning' ? '🌙' : '☀️'}</span>
-          Switch to {timeOfDay === 'morning' ? 'Evening' : 'Morning'}
-        </button>
+        {/* Apple Liquid Glass Time-of-Day Switcher */}
+        <LiquidGlassSegmented
+          options={TIME_OF_DAY_OPTIONS}
+          value={timeOfDay}
+          onChange={(val) => onTimeOfDayChange(habit.id, val)}
+          size="md"
+          fullWidth={true}
+          ariaLabel="Habit time of day"
+        />
 
         {/* Pause / Resume Habit toggle */}
         <button
@@ -969,4 +975,3 @@ const iconBox = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontSize: 14,
 };
-

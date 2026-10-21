@@ -6,7 +6,10 @@ import { Link } from 'react-router-dom';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).substring(2, 9);
 const fmt = (n) => `₹${Number(n).toFixed(2)}`;
-const fmtShort = (n) => `₹${Number(n).toFixed(0)}`;
+const fmtShort = (n) => {
+    const num = Number(n);
+    return num % 1 === 0 ? `₹${num.toFixed(0)}` : `₹${num.toFixed(2)}`;
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const BillSplitter = () => {
@@ -79,7 +82,7 @@ const BillSplitter = () => {
         if (items.length === 0) {
             setItems([{
                 id: uid(),
-                name: 'Item 1',
+                name: '',
                 quantity: 1,
                 unit_price: 0,
                 total_price: 0,
@@ -113,8 +116,11 @@ const BillSplitter = () => {
             const updated = { ...it, [field]: value };
             // Recalculate total_price when qty or unit_price changes
             if (field === 'quantity' || field === 'unit_price') {
-                updated.total_price = (field === 'quantity' ? value : updated.quantity)
-                    * (field === 'unit_price' ? value : updated.unit_price);
+                const qty = field === 'quantity' ? value : updated.quantity;
+                const unit = field === 'unit_price' ? value : updated.unit_price;
+                updated.total_price = qty * unit;
+            } else if (field === 'total_price') {
+                updated.unit_price = updated.quantity > 0 ? value / updated.quantity : value;
             }
             return updated;
         }));
@@ -140,7 +146,7 @@ const BillSplitter = () => {
     };
 
     const manualAddItem = () => {
-        setItems([...items, { id: uid(), name: `Item ${items.length + 1}`, quantity: 1, unit_price: 0, total_price: 0, activeParticipants: ['Me'] }]);
+        setItems([...items, { id: uid(), name: '', quantity: 1, unit_price: 0, total_price: 0, activeParticipants: ['Me'] }]);
     };
 
     const updateCharge = (id, field, value) => setCharges(charges.map(c => c.id === id ? { ...c, [field]: value } : c));
@@ -154,10 +160,8 @@ const BillSplitter = () => {
     // ── Calculations ───────────────────────────────────────────────────────
     const calculate = () => {
         const n = participants.length;
-        const totalCharges = charges.reduce((s, c) => s + c.amount, 0);
-        const totalDiscounts = discounts.reduce((s, d) => s + d.amount, 0);
-        const chargePerPerson = n > 0 ? totalCharges / n : 0;
-        const discountPerPerson = n > 0 ? totalDiscounts / n : 0;
+        const totalCharges = charges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+        const totalDiscounts = discounts.reduce((s, d) => s + (Number(d.amount) || 0), 0);
 
         // items consumed per person
         const personItems = {};
@@ -165,39 +169,88 @@ const BillSplitter = () => {
 
         items.forEach(it => {
             const count = it.activeParticipants.length;
-            if (count === 0 || it.total_price === 0) return;
+            if (count === 0 || !it.total_price) return;
             const share = it.total_price / count;
             it.activeParticipants.forEach(p => {
-                if (personItems[p]) personItems[p].push({ name: it.name, share });
+                if (personItems[p]) personItems[p].push({ name: it.name?.trim() || 'Item', share });
             });
         });
 
-        const totals = {};
+        // Calculate food subtotal per person
+        const personFoodTotals = {};
+        let totalAssignedFood = 0;
         participants.forEach(p => {
             const foodTotal = personItems[p].reduce((s, i) => s + i.share, 0);
-            totals[p] = foodTotal + chargePerPerson - discountPerPerson;
+            personFoodTotals[p] = foodTotal;
+            totalAssignedFood += foodTotal;
         });
 
-        const grandTotal = items.reduce((s, it) => s + it.total_price, 0)
+        // Split charges and discounts proportionally based on each person's food subtotal
+        const personCharges = {};
+        const personDiscounts = {};
+        const personRatios = {};
+        const totals = {};
+
+        participants.forEach(p => {
+            const foodTotal = personFoodTotals[p] || 0;
+            // If food is assigned, proportion is based on individual share of total assigned food.
+            // If no food items are assigned yet, fallback to equal split.
+            const ratio = totalAssignedFood > 0 ? (foodTotal / totalAssignedFood) : (n > 0 ? 1 / n : 0);
+            personRatios[p] = ratio;
+
+            const pCharge = totalCharges * ratio;
+            const pDiscount = totalDiscounts * ratio;
+
+            personCharges[p] = pCharge;
+            personDiscounts[p] = pDiscount;
+            totals[p] = foodTotal + pCharge - pDiscount;
+        });
+
+        const grandTotal = items.reduce((s, it) => s + (Number(it.total_price) || 0), 0)
             + totalCharges - totalDiscounts;
 
-        return { totals, grandTotal, personItems, chargePerPerson, discountPerPerson, totalCharges, totalDiscounts };
+        return {
+            totals,
+            grandTotal,
+            personItems,
+            personFoodTotals,
+            personCharges,
+            personDiscounts,
+            personRatios,
+            totalCharges,
+            totalDiscounts,
+            totalAssignedFood,
+        };
     };
 
     // ── Copy formatted text ────────────────────────────────────────────────
     const buildText = () => {
-        const { totals, grandTotal, personItems, chargePerPerson, discountPerPerson } = calculate();
+        const { totals, grandTotal, personItems, personRatios, totalAssignedFood } = calculate();
         const header = restaurantName ? `🍽️ *${restaurantName} — Bill Summary*` : `🍽️ *Bill Summary*`;
         let text = `${header}\n${'-'.repeat(30)}\n`;
 
         participants.forEach(p => {
-            const items_ = personItems[p];
-            text += `\n👤 *${p}*\n`;
+            const items_ = personItems[p] || [];
+            const ratio = (personRatios && personRatios[p]) || 0;
+            const pct = (ratio * 100).toFixed(0);
+            text += `\n👤 *${p}*${totalAssignedFood > 0 && ratio > 0 ? ` (${pct}% share)` : ''}\n`;
             items_.forEach(i => {
                 text += `   • ${i.name} — ${fmtShort(i.share)}\n`;
             });
-            if (chargePerPerson > 0) text += `   • Extra charges — ${fmtShort(chargePerPerson)}\n`;
-            if (discountPerPerson > 0) text += `   • Discount — -${fmtShort(discountPerPerson)}\n`;
+            charges.forEach(c => {
+                const cAmount = Number(c.amount) || 0;
+                if (cAmount > 0) {
+                    const cShare = ratio * cAmount;
+                    text += `   • ${c.name || 'Charge / GST'} — +${fmtShort(cShare)}\n`;
+                }
+            });
+            discounts.forEach(d => {
+                const dAmount = Number(d.amount) || 0;
+                if (dAmount > 0) {
+                    const dShare = ratio * dAmount;
+                    text += `   • ${d.name || 'Discount'} — -${fmtShort(dShare)}\n`;
+                }
+            });
             text += `   *Total: ${fmt(totals[p])}*\n`;
         });
 
@@ -231,7 +284,7 @@ const BillSplitter = () => {
     };
 
     const isReady = items.length > 0 || isManualMode;
-    const { totals, grandTotal, personItems, chargePerPerson, discountPerPerson, totalCharges, totalDiscounts } = isReady ? calculate() : {};
+    const { totals, grandTotal, personItems, personRatios, totalCharges, totalDiscounts, totalAssignedFood } = isReady ? calculate() : {};
 
     // ─── Render ────────────────────────────────────────────────────────────
     return (
@@ -438,8 +491,8 @@ const BillSplitter = () => {
                     {/* ║  EXTRA CHARGES           ║ */}
                     {/* ╚══════════════════════════╝ */}
                     <Section
-                        title="➕ Extra Charges"
-                        subtitle="Split equally among everyone"
+                        title="➕ Extra Charges / GST"
+                        subtitle="Split proportionally based on each person's share"
                         action={<button onClick={addCharge} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
                         style={{ marginBottom: '16px' }}
                     >
@@ -451,7 +504,7 @@ const BillSplitter = () => {
                                     <ChargeRow key={c.id} item={c} onUpdate={updateCharge} onDelete={deleteCharge} accentColor="rgba(102,126,234,0.12)" />
                                 ))}
                                 <div style={{ fontSize: '12px', opacity: 0.55, marginTop: '4px' }}>
-                                    Each person shares: {fmt(chargePerPerson)} / {participants.length}
+                                    Total: {fmt(totalCharges)} · {totalAssignedFood > 0 ? 'Split proportionally across orders' : 'Split equally'}
                                 </div>
                             </div>
                         )}
@@ -462,7 +515,7 @@ const BillSplitter = () => {
                     {/* ╚══════════════════════════╝ */}
                     <Section
                         title="🏷️ Discounts"
-                        subtitle="Deducted equally from everyone"
+                        subtitle="Deducted proportionally based on each person's share"
                         action={<button onClick={addDiscount} style={{ background: 'none', border: 'none', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}><Plus size={15} /> Add</button>}
                         style={{ marginBottom: '24px' }}
                     >
@@ -474,7 +527,7 @@ const BillSplitter = () => {
                                     <ChargeRow key={d.id} item={d} onUpdate={updateDiscount} onDelete={deleteDiscount} accentColor="rgba(39,174,96,0.1)" colorOverride="#27ae60" />
                                 ))}
                                 <div style={{ fontSize: '12px', opacity: 0.55, marginTop: '4px' }}>
-                                    Each person saves: {fmt(discountPerPerson)} / {participants.length}
+                                    Total: {fmt(totalDiscounts)} · {totalAssignedFood > 0 ? 'Deducted proportionally across orders' : 'Deducted equally'}
                                 </div>
                             </div>
                         )}
@@ -513,6 +566,11 @@ const BillSplitter = () => {
                                         >
                                             <div style={{ flex: 1 }}>
                                                 <span style={{ fontWeight: 600, fontSize: '15px' }}>{p}</span>
+                                                {totalAssignedFood > 0 && personRatios && personRatios[p] > 0 && (
+                                                    <span style={{ fontSize: '11px', opacity: 0.5, marginLeft: '6px' }}>
+                                                        ({(personRatios[p] * 100).toFixed(0)}%)
+                                                    </span>
+                                                )}
                                                 {!expanded && pItems.length > 0 && (
                                                     <span style={{ fontSize: '12px', opacity: 0.55, marginLeft: '8px' }}>
                                                         {pItems.map(i => i.name).join(', ')}
@@ -532,18 +590,28 @@ const BillSplitter = () => {
                                                         <span>{fmtShort(i.share)}</span>
                                                     </div>
                                                 ))}
-                                                {chargePerPerson > 0 && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: 'var(--accent-primary)' }}>
-                                                        <span>➕ Extra charges</span>
-                                                        <span>+{fmtShort(chargePerPerson)}</span>
-                                                    </div>
-                                                )}
-                                                {discountPerPerson > 0 && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: 'var(--success)' }}>
-                                                        <span>🏷️ Discount</span>
-                                                        <span>-{fmtShort(discountPerPerson)}</span>
-                                                    </div>
-                                                )}
+                                                {charges.map(c => {
+                                                    const cAmount = Number(c.amount) || 0;
+                                                    if (cAmount <= 0) return null;
+                                                    const cShare = (personRatios ? personRatios[p] || 0 : 0) * cAmount;
+                                                    return (
+                                                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: 'var(--accent-primary)' }}>
+                                                            <span>➕ {c.name || 'Extra charge / GST'}</span>
+                                                            <span>+{fmtShort(cShare)}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {discounts.map(d => {
+                                                    const dAmount = Number(d.amount) || 0;
+                                                    if (dAmount <= 0) return null;
+                                                    const dShare = (personRatios ? personRatios[p] || 0 : 0) * dAmount;
+                                                    return (
+                                                        <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', opacity: 0.75, color: 'var(--success)' }}>
+                                                            <span>🏷️ {d.name || 'Discount'}</span>
+                                                            <span>-{fmtShort(dShare)}</span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
@@ -657,13 +725,16 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
     return (
         <div style={{ borderRadius: '14px', border: '1px solid var(--glass-card-border)', overflow: 'hidden', background: 'var(--glass-card-bg)' }}>
             {/* ── Top strip: name + total ── */}
-            <div style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, width: '100%' }}>
                 <input
                     type="text"
                     value={item.name}
+                    placeholder="Item name…"
+                    onFocus={e => e.target.select()}
                     onChange={e => onUpdate(item.id, 'name', e.target.value)}
                     style={{
                         flex: 1,
+                        minWidth: 0,
                         border: 'none',
                         borderBottom: '1px solid var(--glass-card-border)',
                         background: 'var(--surface-input)',
@@ -674,14 +745,16 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                         outline: 'none',
                     }}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--glass-card-border)', background: 'var(--glass-card-bg)', borderLeft: '1px solid var(--glass-card-border)' }}>
-                    <span style={{ padding: '0 6px 0 12px', opacity: 0.5, fontSize: '14px', fontWeight: 'bold', lineHeight: 1 }}>₹</span>
+                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--glass-card-border)', background: 'var(--glass-card-bg)', borderLeft: '1px solid var(--glass-card-border)', flexShrink: 0 }}>
+                    <span style={{ padding: '0 4px 0 10px', opacity: 0.5, fontSize: '14px', fontWeight: 'bold', lineHeight: 1 }}>₹</span>
                     <input
                         type="number"
-                        value={item.total_price}
-                        onChange={e => onUpdate(item.id, 'total_price', parseFloat(e.target.value) || 0)}
+                        value={item.total_price === 0 ? '' : item.total_price}
+                        placeholder="0"
+                        onFocus={e => e.target.select()}
+                        onChange={e => onUpdate(item.id, 'total_price', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         style={{
-                            width: '72px',
+                            width: '68px',
                             border: 'none',
                             background: 'transparent',
                             padding: '11px 4px',
@@ -692,8 +765,28 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                         }}
                     />
                 </div>
-                <button onClick={() => onDelete(item.id)} style={{ border: 'none', borderLeft: '1px solid var(--glass-card-border)', borderBottom: '1px solid var(--glass-card-border)', background: 'var(--danger-bg)', color: 'var(--danger)', cursor: 'pointer', padding: '0 12px' }}>
-                    <Trash2 size={15} />
+                <button
+                    onClick={() => onDelete(item.id)}
+                    title="Delete item"
+                    aria-label="Delete item"
+                    style={{
+                        border: 'none',
+                        borderLeft: '1px solid var(--glass-card-border)',
+                        borderBottom: '1px solid var(--glass-card-border)',
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        color: 'var(--danger)',
+                        cursor: 'pointer',
+                        padding: '0 14px',
+                        minWidth: '44px',
+                        width: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        transition: 'background 0.2s',
+                    }}
+                >
+                    <Trash2 size={16} />
                 </button>
             </div>
 
@@ -717,8 +810,10 @@ const ItemCard = ({ item, participants, onUpdate, onDelete, onToggle, onSelectAl
                             <span style={{ display: 'flex', alignItems: 'center', background: 'rgba(102,126,234,0.08)', borderRadius: '8px', padding: '5px 10px' }}>
                                 ₹<input
                                     type="number"
-                                    value={item.unit_price}
-                                    onChange={e => onUpdate(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                                    value={item.unit_price === 0 ? '' : item.unit_price}
+                                    placeholder="0"
+                                    onFocus={e => e.target.select()}
+                                    onChange={e => onUpdate(item.id, 'unit_price', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                                     style={{ width: '44px', border: 'none', background: 'transparent', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', outline: 'none' }}
                                 />
                             </span>
@@ -778,18 +873,22 @@ const ChargeRow = ({ item, onUpdate, onDelete, accentColor = 'rgba(102,126,234,0
         <input
             type="text"
             value={item.name}
+            placeholder="Description"
+            onFocus={e => e.target.select()}
             onChange={e => onUpdate(item.id, 'name', e.target.value)}
-            style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 500, color: colorOverride || 'var(--text-primary)', outline: 'none' }}
+            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 500, color: colorOverride || 'var(--text-primary)', outline: 'none' }}
         />
         <span style={{ opacity: 0.5, fontSize: '13px', fontWeight: 'bold' }}>₹</span>
         <input
             type="number"
-            value={item.amount}
-            onChange={e => onUpdate(item.id, 'amount', parseFloat(e.target.value) || 0)}
+            value={item.amount === 0 ? '' : item.amount}
+            placeholder="0"
+            onFocus={e => e.target.select()}
+            onChange={e => onUpdate(item.id, 'amount', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
             style={{ width: '60px', border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 600, textAlign: 'right', color: colorOverride || 'var(--text-primary)', outline: 'none' }}
         />
-        <button onClick={() => onDelete(item.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.6 }}>
-            <Trash2 size={14} />
+        <button onClick={() => onDelete(item.id)} title="Delete" aria-label="Delete" style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7, flexShrink: 0 }}>
+            <Trash2 size={15} />
         </button>
     </div>
 );

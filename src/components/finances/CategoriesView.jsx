@@ -69,16 +69,44 @@ const CategoriesView = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: '20px',
-                flexWrap: 'wrap',
-                gap: '12px'
+                marginBottom: '18px',
+                gap: '12px',
             }}>
-                <div>
-                    <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>
-                        Categories & Subcategories
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <h2 style={{
+                        fontSize: '18px',
+                        fontWeight: '800',
+                        margin: 0,
+                        color: 'var(--text-primary)',
+                        letterSpacing: '-0.3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                    }}>
+                        <span>Categories</span>
+                        {cards.length > 0 && (
+                            <span style={{
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                background: 'rgba(168, 85, 247, 0.15)',
+                                color: '#a855f7',
+                                fontFamily: 'monospace',
+                            }}>
+                                {cards.length}
+                            </span>
+                        )}
                     </h2>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
-                        Organize your spending into custom groups & tags
+                    <p style={{
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                        margin: '2px 0 0 0',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                    }}>
+                        Organize your spending &amp; subcategories
                     </p>
                 </div>
 
@@ -88,19 +116,21 @@ const CategoriesView = () => {
                     onClick={() => setShowAddModal(true)}
                     className="btn-primary"
                     style={{
-                        display: 'flex',
+                        display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        padding: '9px 16px',
+                        padding: '8px 14px',
                         borderRadius: '12px',
                         fontSize: '13px',
                         fontWeight: '700',
                         border: 'none',
                         cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
                         boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
                     }}
                 >
-                    <Plus size={16} strokeWidth={2.5} />
+                    <Plus size={15} strokeWidth={2.5} />
                     <span>Add Category</span>
                 </motion.button>
             </div>
@@ -217,6 +247,50 @@ const CategoriesView = () => {
                         </motion.div>
                     );
                 })}
+
+                {cards.length > 0 && (
+                    <motion.div
+                        whileHover={{ scale: 1.01, borderColor: 'rgba(168, 85, 247, 0.4)' }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowAddModal(true)}
+                        style={{
+                            padding: '18px',
+                            borderRadius: '18px',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1.5px dashed rgba(255, 255, 255, 0.12)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            minHeight: '130px',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '12px',
+                            background: 'rgba(168, 85, 247, 0.12)',
+                            border: '1px solid rgba(168, 85, 247, 0.25)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#a855f7',
+                        }}>
+                            <Plus size={18} strokeWidth={2.5} />
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--text-primary)', display: 'block' }}>
+                                Add Category
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                Create new custom category
+                            </span>
+                        </div>
+                    </motion.div>
+                )}
 
                 {cards.length === 0 && (
                     <div style={{

@@ -1,13 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChevronLeft, ChevronRight, Target, Flame, ArrowUp, ArrowDown, TrendingUp, X } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, subWeeks, addWeeks, subDays, isToday, getDay } from 'date-fns';
+import {
+    format, startOfWeek, endOfWeek, eachDayOfInterval,
+    subWeeks, addWeeks, startOfMonth, endOfMonth,
+    subMonths, addMonths, subDays, isToday
+} from 'date-fns';
 import { parseLocalDate, getLocalDateStr } from '../hooks/useHabits';
+import LiquidGlassSegmented from './common/LiquidGlassSegmented';
+
+const PERIOD_OPTIONS = [
+    { id: 'weekly', label: 'Weekly' },
+    { id: 'monthly', label: 'Monthly' },
+];
+
+const TIME_FILTER_OPTIONS = [
+    { id: 'all', label: 'All Habits' },
+    { id: 'morning', label: 'Morning', emoji: '☀️', color: '#f59e0b' },
+    { id: 'evening', label: 'Evening', emoji: '🌙', color: '#a855f7' },
+];
 
 const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
+    const [period, setPeriod] = useState('weekly'); // 'weekly' | 'monthly'
     const [weekOffset, setWeekOffset] = useState(0);
+    const [monthOffset, setMonthOffset] = useState(0);
+    const [timeFilter, setTimeFilter] = useState('all'); // 'all' | 'morning' | 'evening'
     const [isMobile, setIsMobile] = useState(() =>
         typeof window !== 'undefined' ? window.innerWidth < 768 : false
     );
@@ -37,27 +56,39 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
     }, [onClose]);
 
     const currentDate = new Date();
-    const targetDate = weekOffset === 0 ? currentDate :
+    const targetWeekDate = weekOffset === 0 ? currentDate :
         weekOffset < 0 ? subWeeks(currentDate, Math.abs(weekOffset)) : addWeeks(currentDate, weekOffset);
+    const targetMonthDate = monthOffset === 0 ? currentDate :
+        monthOffset < 0 ? subMonths(currentDate, Math.abs(monthOffset)) : addMonths(currentDate, monthOffset);
 
-    const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
-    const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
+    const intervalStart = period === 'weekly'
+        ? startOfWeek(targetWeekDate, { weekStartsOn: 1 })
+        : startOfMonth(targetMonthDate);
+    const intervalEnd = period === 'weekly'
+        ? endOfWeek(targetWeekDate, { weekStartsOn: 1 })
+        : endOfMonth(targetMonthDate);
+    const daysInInterval = eachDayOfInterval({ start: intervalStart, end: intervalEnd });
+
+    const filteredHabits = useMemo(() => {
+        if (!habits) return [];
+        if (timeFilter === 'all') return habits;
+        return habits.filter(h => (h.time_of_day || 'morning') === timeFilter);
+    }, [habits, timeFilter]);
 
     const getCompletionForDate = (dateStr) => {
-        if (!habits || habits.length === 0) return { completed: 0, total: 0, rate: 0 };
+        if (!filteredHabits || filteredHabits.length === 0) return { completed: 0, total: 0, rate: 0 };
         const dow = parseLocalDate(dateStr).getDay();
-        const activeOnDay = habits.filter(h => !h.is_paused && (h.active_days || [0, 1, 2, 3, 4, 5, 6]).includes(dow));
+        const activeOnDay = filteredHabits.filter(h => !h.is_paused && (h.active_days || [0, 1, 2, 3, 4, 5, 6]).includes(dow));
         const total = activeOnDay.length;
         const completed = activeOnDay.filter(habit => getStatusForDate(habit, dateStr) === 'completed').length;
         return { completed, total, rate: total > 0 ? Math.round((completed / total) * 100) : 0 };
     };
 
-    const chartData = daysOfWeek.map(day => {
+    const chartData = daysInInterval.map(day => {
         const dateStr = getLocalDateStr(day);
         const stats = getCompletionForDate(dateStr);
         return {
-            day: format(day, 'EEE'),
+            day: period === 'weekly' ? format(day, 'EEE') : format(day, 'd'),
             date: format(day, 'MMM d'),
             dateStr, ...stats,
             isFuture: day > currentDate,
@@ -72,17 +103,17 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
     const todayVsYesterday = todayStats.completed - yesterdayStats.completed;
 
     const pastDays = chartData.filter(d => !d.isFuture);
-    const weekAverage = pastDays.length > 0
+    const periodAverage = pastDays.length > 0
         ? Math.round(pastDays.reduce((acc, d) => acc + d.rate, 0) / pastDays.length) : 0;
 
     const bestDay = pastDays.reduce((best, day) => day.rate > (best?.rate || 0) ? day : best, null);
 
     const calculateBestStreak = () => {
-        if (!habits || habits.length === 0) return 0;
+        if (!filteredHabits || filteredHabits.length === 0) return 0;
         const globalTrackingStart = localStorage.getItem('life_tracker_tracking_start');
         let bestStreak = 0;
 
-        habits.forEach(habit => {
+        filteredHabits.forEach(habit => {
             const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
             const startDateStr = globalTrackingStart || habit.tracking_start_date;
             let current = 0;
@@ -92,14 +123,13 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                 const date = subDays(currentDate, i);
                 const dateStr = getLocalDateStr(date);
                 if (startDateStr && dateStr < startDateStr) continue;
-                if (!activeDays.includes(date.getDay())) continue; // Rest day
+                if (!activeDays.includes(date.getDay())) continue;
 
                 const status = getStatusForDate(habit, dateStr);
                 if (status === 'completed') {
                     current++;
                     maxForHabit = Math.max(maxForHabit, current);
                 } else if (status === 'paused') {
-                    // Paused / vacation day does not reset streak
                     continue;
                 } else if (status === 'failed') {
                     current = 0;
@@ -163,8 +193,8 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
         </div>
     );
 
-    // Per-habit breakdown for the current week (only counting active scheduled days for each habit)
-    const habitBreakdown = habits.map(habit => {
+    // Per-habit breakdown for the active period
+    const habitBreakdown = filteredHabits.map(habit => {
         const activeDays = habit.active_days || [0, 1, 2, 3, 4, 5, 6];
         const scheduledDays = pastDays.filter(d => activeDays.includes(parseLocalDate(d.dateStr).getDay()));
         const completed = scheduledDays.filter(d => getStatusForDate(habit, d.dateStr) === 'completed').length;
@@ -175,29 +205,55 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
         return { id: habit.id, name: habit.name, completed, total, rate, accentColor, timeOfDay, isPaused: habit.is_paused };
     }).sort((a, b) => b.rate - a.rate);
 
+    const currentOffset = period === 'weekly' ? weekOffset : monthOffset;
+    const stepPeriod = (dir) => {
+        if (period === 'weekly') setWeekOffset(w => w + dir);
+        else setMonthOffset(m => m + dir);
+    };
+
+    const handlePeriodChange = (val) => {
+        setPeriod(val);
+        if (val === 'weekly') setWeekOffset(0);
+        else setMonthOffset(0);
+    };
+
     const bodyContent = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Week Navigator */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Full-Width Time-of-Day Liquid Glass Switcher */}
+            <LiquidGlassSegmented
+                options={TIME_FILTER_OPTIONS}
+                value={timeFilter}
+                onChange={setTimeFilter}
+                size="md"
+                fullWidth={true}
+                equalColumns={true}
+                ariaLabel="Filter habits by time of day"
+            />
+
+            {/* Period Navigator */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '10px 12px', borderRadius: 16,
                 background: 'var(--surface-elevated, rgba(255,255,255,0.03))',
                 border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
             }}>
-                <button onClick={() => setWeekOffset(w => w - 1)} style={navBtn}>
+                <button onClick={() => stepPeriod(-1)} style={navBtn}>
                     <ChevronLeft size={16} />
                 </button>
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary, #fff)', margin: 0 }}>
-                        {format(weekStart, 'MMM d')} – {format(weekEnd, 'MMM d, yyyy')}
+                        {period === 'weekly'
+                            ? `${format(intervalStart, 'MMM d')} – ${format(intervalEnd, 'MMM d, yyyy')}`
+                            : format(intervalStart, 'MMMM yyyy')}
                     </p>
                     <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                        {weekOffset === 0 ? 'This Week' : weekOffset === -1 ? 'Last Week' :
-                            `${Math.abs(weekOffset)} weeks ${weekOffset < 0 ? 'ago' : 'ahead'}`}
+                        {period === 'weekly'
+                            ? (weekOffset === 0 ? 'This Week' : weekOffset === -1 ? 'Last Week' : `${Math.abs(weekOffset)} weeks ${weekOffset < 0 ? 'ago' : 'ahead'}`)
+                            : (monthOffset === 0 ? 'This Month' : monthOffset === -1 ? 'Last Month' : `${Math.abs(monthOffset)} months ${monthOffset < 0 ? 'ago' : 'ahead'}`)}
                     </p>
                 </div>
-                <button onClick={() => setWeekOffset(w => w + 1)} disabled={weekOffset >= 0}
-                    style={{ ...navBtn, opacity: weekOffset >= 0 ? 0.25 : 1, cursor: weekOffset >= 0 ? 'default' : 'pointer' }}>
+                <button onClick={() => stepPeriod(1)} disabled={currentOffset >= 0}
+                    style={{ ...navBtn, opacity: currentOffset >= 0 ? 0.25 : 1, cursor: currentOffset >= 0 ? 'default' : 'pointer' }}>
                     <ChevronRight size={16} />
                 </button>
             </div>
@@ -261,8 +317,8 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                     todayVsYesterday > 0 ? <ArrowUp size={15} /> : todayVsYesterday < 0 ? <ArrowDown size={15} /> : null,
                     todayVsYesterday > 0 ? '#22c55e' : todayVsYesterday < 0 ? '#ef4444' : 'var(--text-muted)'
                 )}
-                {statCard('Week Avg', `${weekAverage}%`, <Target size={15} />, getBarColor(weekAverage, false))}
-                {statCard('Best Day', bestDay ? `${bestDay.day}` : '–', null, '#f59e0b')}
+                {statCard(period === 'weekly' ? 'Week Avg' : 'Month Avg', `${periodAverage}%`, <Target size={15} />, getBarColor(periodAverage, false))}
+                {statCard('Best Day', bestDay ? (period === 'weekly' ? `${bestDay.day}` : `${bestDay.date}`) : '–', null, '#f59e0b')}
                 {statCard('Best Streak', `${bestStreak}d`, <Flame size={15} />, bestStreak > 0 ? '#ef4444' : 'var(--text-muted)')}
             </div>
 
@@ -349,12 +405,13 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                 >
                     {/* Header */}
                     <div style={{
-                        padding: '18px 22px 14px',
+                        padding: '16px 22px 14px',
                         borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
                         background: 'var(--surface-elevated, #131b2e)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        gap: 12,
                         flexShrink: 0,
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -367,25 +424,39 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                             </div>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary, #fff)' }}>Habit Analytics</h2>
-                                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Weekly habit insights</p>
+                                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                                    {period === 'weekly' ? 'Weekly' : 'Monthly'} habit insights
+                                </p>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                width: 32, height: 32, borderRadius: '50%',
-                                background: 'var(--surface-input, rgba(255,255,255,0.06))',
-                                border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-                                color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            <X size={17} />
-                        </button>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <LiquidGlassSegmented
+                                options={PERIOD_OPTIONS}
+                                value={period}
+                                onChange={handlePeriodChange}
+                                size="sm"
+                                fullWidth={false}
+                                equalColumns={true}
+                                ariaLabel="Habit analytics period"
+                            />
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    width: 34, height: 34, borderRadius: '50%',
+                                    background: 'var(--surface-input, rgba(255,255,255,0.06))',
+                                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+                                    color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', flexShrink: 0,
+                                }}
+                            >
+                                <X size={17} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Body */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px 24px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px 24px' }}>
                         {bodyContent}
                     </div>
                 </motion.div>
@@ -416,7 +487,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                 overflow: 'hidden',
             }}
         >
-            {/* Top Fixed Bar */}
+            {/* Top Fixed Bar with Integrated Period Switcher */}
             <div style={{
                 flexShrink: 0,
                 padding: 'calc(12px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 12px calc(14px + env(safe-area-inset-left, 0px))',
@@ -424,35 +495,50 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                 borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
+                justifyContent: 'space-between',
+                gap: 10,
                 zIndex: 20,
             }}>
-                <button
-                    onClick={onClose}
-                    aria-label="Back"
-                    style={{
-                        flexShrink: 0,
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        background: 'var(--surface-elevated, rgba(255,255,255,0.08))',
-                        border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
-                        color: 'var(--text-primary, #fff)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                    }}
-                >
-                    <ChevronLeft size={20} />
-                </button>
-                <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <TrendingUp size={16} color="#22c55e" />
-                        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary, #fff)' }}>Analytics</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <button
+                        onClick={onClose}
+                        aria-label="Back"
+                        style={{
+                            flexShrink: 0,
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: 'var(--surface-elevated, rgba(255,255,255,0.08))',
+                            border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                            color: 'var(--text-primary, #fff)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <TrendingUp size={16} color="#22c55e" style={{ flexShrink: 0 }} />
+                            <h1 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary, #fff)', whiteSpace: 'nowrap' }}>Analytics</h1>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            {period === 'weekly' ? 'Weekly' : 'Monthly'} habit insights
+                        </p>
                     </div>
-                    <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>Weekly habit insights</p>
                 </div>
+
+                <LiquidGlassSegmented
+                    options={PERIOD_OPTIONS}
+                    value={period}
+                    onChange={handlePeriodChange}
+                    size="sm"
+                    fullWidth={false}
+                    equalColumns={true}
+                    ariaLabel="Habit analytics period"
+                />
             </div>
 
             {/* Scrollable Content */}
@@ -479,4 +565,3 @@ const navBtn = {
 };
 
 export default HabitAnalytics;
-
