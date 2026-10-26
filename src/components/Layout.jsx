@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Sparkles, Activity, Wallet, Users } from 'lucide-react';
+import { Home, Flame, Activity, Wallet, Users } from 'lucide-react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import useAuth from '../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
@@ -17,9 +17,9 @@ const Layout = () => {
 
   const desktopNavItems = [
     { to: '/', label: 'Home', icon: Home },
-    { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
     { to: '/habits', label: 'Habits', icon: Activity },
     { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
+    { to: '/calories', label: 'Calories', icon: Flame },
     { to: '/friends', label: 'Friends', icon: Users },
   ];
 
@@ -27,7 +27,7 @@ const Layout = () => {
     { to: '/', label: 'Home', icon: Home },
     { to: '/habits', label: 'Habits', icon: Activity },
     { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
-    { to: '/assistant', label: 'AI', icon: Sparkles },
+    { to: '/calories', label: 'Calories', icon: Flame },
     { to: '/friends', label: 'Friends', icon: Users },
   ];
 

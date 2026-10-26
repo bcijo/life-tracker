@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Todos = lazy(() => import('./pages/Todos'))
 const Habits = lazy(() => import('./pages/Habits'))
 const Finances = lazy(() => import('./pages/Finances'))
+const Calories = lazy(() => import('./pages/Calories'))
 const BillSplitter = lazy(() => import('./pages/BillSplitter'))
 const Friends = lazy(() => import('./pages/Friends'))
 const InviteLanding = lazy(() => import('./pages/InviteLanding'))
@@ -52,6 +53,7 @@ function App() {
                                 </ProtectedRoute>
                             }>
                                 <Route index element={<Dashboard />} />
+                                <Route path="calories" element={<Calories />} />
                                 <Route path="assistant" element={<Assistant />} />
                                 <Route path="ai" element={<Navigate to="/assistant" replace />} />
                                 <Route path="habits" element={<Habits />} />

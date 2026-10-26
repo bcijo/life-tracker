@@ -298,6 +298,18 @@ const Dashboard = () => {
                 </h2>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <Link to="/assistant" style={{ textDecoration: 'none' }}>
+                        <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(168,85,247,0.16)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Sparkles size={22} />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>AI Assistant</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>Ask about your data</p>
+                            </div>
+                        </div>
+                    </Link>
+
                     <Link to="/todos" style={{ textDecoration: 'none' }}>
                         <div className="glass-card hover-lift" style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                             <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(99,102,241,0.15)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -305,7 +317,7 @@ const Dashboard = () => {
                             </div>
                             <div>
                                 <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Todos</h3>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>{activeTodos} pending tasks</p>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>{activeTodos} pending tasks</p>
                             </div>
                         </div>
                     </Link>
@@ -317,7 +329,7 @@ const Dashboard = () => {
                             </div>
                             <div>
                                 <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Split a Bill</h3>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>Divide & share expenses</p>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>Divide & share expenses</p>
                             </div>
                         </div>
                     </Link>
@@ -332,8 +344,8 @@ const Dashboard = () => {
                         </div>
                         <div>
                             <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Daily Report</h3>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                                {isEveningWrapUp ? "Wrap up & share today's card" : "Share visual wrap-up for any date"}
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>
+                                {isEveningWrapUp ? "Today's wrap-up" : "Daily recap & share"}
                             </p>
                         </div>
                     </div>

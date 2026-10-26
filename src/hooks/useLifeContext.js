@@ -7,6 +7,7 @@ import useExpenseCards from './useExpenseCards';
 import useBudgets from './useBudgets';
 import useShopping from './useShopping';
 import useJournal from './useJournal';
+import useCalories from './useCalories';
 import { format, startOfMonth, parseISO } from 'date-fns';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -23,6 +24,7 @@ function useLifeContext() {
     const { budgets = [] } = useBudgets();
     const { items: shoppingItems = [] } = useShopping();
     const { weekEntries: journalEntries = [] } = useJournal();
+    const { dailySummary: caloriesToday, weeklyTrend: caloriesWeekly } = useCalories();
 
     const contextData = useMemo(() => {
         const today = new Date();
@@ -131,6 +133,16 @@ function useLifeContext() {
                     pendingCount: pendingTasks.length,
                     overdueCount: overdueTasks.length,
                 },
+                caloriesToday: {
+                    intakeKcal: caloriesToday?.totalIntake || 0,
+                    bmrKcal: caloriesToday?.expectedBmr || 0,
+                    exerciseBurnKcal: caloriesToday?.exerciseBurn || 0,
+                    totalBurnKcal: caloriesToday?.totalBurn || 0,
+                    netKcal: caloriesToday?.netBalance || 0,
+                    proteinG: caloriesToday?.totalProtein || 0,
+                    carbsG: caloriesToday?.totalCarbs || 0,
+                    fatG: caloriesToday?.totalFat || 0,
+                },
             },
             _raw: {
                 transactions,
@@ -144,12 +156,15 @@ function useLifeContext() {
                 todos,
                 shoppingItems,
                 journalEntries,
+                caloriesSummary: {
+                    today: caloriesToday,
+                    last7Days: caloriesWeekly,
+                },
             }
         };
-    }, [transactions, habits, todos, recurringExpenses, expenseCards, budgets, shoppingItems, journalEntries]);
+    }, [transactions, habits, todos, recurringExpenses, expenseCards, budgets, shoppingItems, journalEntries, caloriesToday, caloriesWeekly]);
 
     return contextData;
 }
 
 export default useLifeContext;
-

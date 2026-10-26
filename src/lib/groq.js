@@ -24,6 +24,7 @@ export function getHumanReadableQueryDescription(queryText) {
     if (q.includes('analyze_habits')) return "Analyzing habit streaks & 7-day consistency...";
     if (q.includes('get_tasks_and_shopping')) return "Scanning tasks, deadlines & shopping list...";
     if (q.includes('get_journal_and_mood')) return "Reviewing mood scores & journal reflections...";
+    if (q.includes('analyze_calories')) return "Analyzing calorie intake, macros, BMR & exercise burn...";
     if (q.includes('lookup_app_guide')) return "Looking up LifeTracker feature guide...";
 
     if (q.includes('recurring_expenses')) {
@@ -163,6 +164,24 @@ const ASSISTANT_TOOLS = [
                         description: "Number of recent journal entries to retrieve (default 7)"
                     }
                 }
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "analyze_calories",
+            description: "Use for ANY question about calories, food intake, macros (protein, carbs, fat), BMR, exercise burn, calorie deficit, or surplus.",
+            parameters: {
+                type: "object",
+                properties: {
+                    period: {
+                        type: "string",
+                        enum: ["today", "last_7_days", "all_recent"],
+                        description: "Time window to analyze calories"
+                    }
+                },
+                required: ["period"]
             }
         }
     },
@@ -540,6 +559,10 @@ function executeSpecializedTool(toolName, args, contextData) {
                 changeForTomorrow: e.change_for_tomorrow
             }))
         };
+    }
+
+    if (toolName === 'analyze_calories') {
+        return raw.caloriesSummary || contextData?.summary?.caloriesToday || { note: "No calorie logs recorded yet." };
     }
 
     if (toolName === 'lookup_app_guide') {
@@ -1245,4 +1268,164 @@ Analyze the user's YESTERDAY data (habits completed/missed, ₹ spending & categ
         console.warn('[DailyWhisper] Falling back to local synthesis:', e.message);
         return buildFallbackNextDayAdvice(yesterdayDigest);
     }
+}
+
+/**
+ * Helper to parse numeric macro/calorie values cleanly (e.g., "165 kcal" -> 165, "3.5g" -> 3.5)
+ */
+function parseNumericNutrition(val, fallback = 0) {
+    if (typeof val === 'number' && !isNaN(val)) return Math.max(0, Math.round(val * 10) / 10);
+    if (typeof val === 'string') {
+        const match = val.match(/(\d+(\.\d+)?)/);
+        if (match) return Math.max(0, Math.round(parseFloat(match[1]) * 10) / 10);
+    }
+    return fallback;
+}
+
+/**
+ * Extracts a JSON object from an LLM text response (handles fenced code blocks or raw JSON)
+ */
+function extractJsonObject(rawText) {
+    if (!rawText) return null;
+    try {
+        return JSON.parse(rawText);
+    } catch {
+        const match = String(rawText).match(/\{[\s\S]*\}/);
+        if (match) {
+            try {
+                return JSON.parse(match[0]);
+            } catch {
+                return null;
+            }
+        }
+        return null;
+    }
+}
+
+/**
+ * 5. Automated Web Search Food Nutrition Lookup (Per 100g)
+ * Uses Groq's built-in `browser_search` tool to search the web once for a food item
+ * (optimized for Indian dishes, regional meals, and branded foods) and extract
+ * standardized per-100g calories & macros so the caller can save it to `food_catalog`.
+ */
+export async function lookupFoodNutritionPer100g(foodQuery) {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error('VITE_GROQ_API_KEY is missing');
+    }
+
+    const cleanQuery = String(foodQuery || '').trim();
+    if (!cleanQuery) throw new Error('Food name is required');
+
+    const prompt = `Search the web for the nutritional values per 100g of "${cleanQuery}" (if it is an Indian dish or meal, use standard Indian home/restaurant or ICMR-NIN / HealthifyMe nutrition per 100g cooked edible portion).
+
+Return ONLY a valid JSON object with no markdown fences and no extra text in this exact format:
+{
+  "name": "Clean Title-Cased Food Name",
+  "category": "Short Category (e.g. South Indian, North Indian, Indian Bread, Rice & Grains, Dal & Legumes, Paneer & Veg, Meat, Fish & Eggs, Dairy & Beverages, Snack)",
+  "calories_per_100g": 165,
+  "protein_per_100g": 3.5,
+  "carbs_per_100g": 25.0,
+  "fat_per_100g": 6.0
+}`;
+
+    let parsed = null;
+    let usedWebSearch = false;
+
+    // Step A: Try live web search via Groq's native `browser_search` tool
+    try {
+        const searchData = await fetchGroqWithRetry({
+            model: FALLBACK_MODEL,
+            tools: [{ type: 'browser_search' }],
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are an Indian & global nutrition lookup engine. Always use browser_search to verify per-100g calories, protein, carbs, and fat, and output strictly valid JSON.'
+                },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.1,
+            max_tokens: 1024,
+        }, apiKey, 1);
+
+        const msg = searchData?.choices?.[0]?.message;
+        const executedTools = msg?.executed_tools || [];
+        usedWebSearch = executedTools.some(t => t?.type?.includes('browser'));
+        parsed = extractJsonObject(msg?.content);
+    } catch (webErr) {
+        console.warn('[Calories Web Lookup] browser_search fallback to direct LLM nutrition synthesis:', webErr.message);
+    }
+
+    // Step B: Fallback to structured JSON mode if browser_search returned non-JSON or hit a tool limit
+    if (!parsed || typeof parsed.calories_per_100g === 'undefined') {
+        const fallbackJsonStr = await callGroq(
+            [{ role: 'user', content: prompt }],
+            'You are an accurate nutrition database expert specializing in Indian (ICMR-NIN) and global foods. Return strictly valid JSON with per-100g nutritional values.',
+            true
+        );
+        parsed = extractJsonObject(fallbackJsonStr);
+    }
+
+    if (!parsed) {
+        throw new Error(`Could not retrieve nutritional values for "${cleanQuery}"`);
+    }
+
+    const calories = parseNumericNutrition(parsed.calories_per_100g, 0);
+    const protein = parseNumericNutrition(parsed.protein_per_100g, 0);
+    const carbs = parseNumericNutrition(parsed.carbs_per_100g, 0);
+    const fat = parseNumericNutrition(parsed.fat_per_100g, 0);
+
+    // Sanity check: if calories is 0 but macros exist, compute from 4-4-9 rule
+    const finalCalories = calories > 0
+        ? Math.round(calories)
+        : Math.round(protein * 4 + carbs * 4 + fat * 9);
+
+    return {
+        name: String(parsed.name || cleanQuery).trim(),
+        category: String(parsed.category || 'Indian Dish').trim(),
+        calories_per_100g: finalCalories,
+        protein_per_100g: protein,
+        carbs_per_100g: carbs,
+        fat_per_100g: fat,
+        source: usedWebSearch ? 'web_search' : 'ai_lookup',
+    };
+}
+
+/**
+ * 6. Automated Exercise Burn Lookup
+ * Estimates calories burned for an exercise given duration (mins) and user body weight (kg).
+ */
+export async function estimateExerciseBurn(exerciseName, durationMins, weightKg = 70) {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error('VITE_GROQ_API_KEY is missing');
+    }
+
+    const mins = Math.max(1, Number(durationMins) || 30);
+    const kg = Math.max(30, Number(weightKg) || 70);
+
+    const prompt = `Estimate calories burned for "${exerciseName}" performed for ${mins} minutes by a person weighing ${kg} kg using standard MET (Metabolic Equivalent of Task) values.
+Return ONLY valid JSON:
+{
+  "name": "Clean Exercise Name",
+  "met": 6.0,
+  "calories_burned": 210
+}`;
+
+    const jsonStr = await callGroq(
+        [{ role: 'user', content: prompt }],
+        'You are an exercise physiology calculator. Use standard Compendium of Physical Activities MET values: Calories = MET * weight_kg * (duration_mins / 60). Return strictly JSON.',
+        true
+    );
+
+    const parsed = extractJsonObject(jsonStr);
+    const met = parseNumericNutrition(parsed?.met, 5.0);
+    const computedCals = Math.round(met * kg * (mins / 60));
+    const burned = parseNumericNutrition(parsed?.calories_burned, computedCals);
+
+    return {
+        name: String(parsed?.name || exerciseName).trim(),
+        met,
+        calories_burned: Math.round(burned || computedCals),
+    };
 }
