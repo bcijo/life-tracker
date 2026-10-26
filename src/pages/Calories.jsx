@@ -20,6 +20,7 @@ import {
     Camera,
     Upload,
     Sparkles,
+    Clock,
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -321,6 +322,9 @@ const Calories = () => {
     const [scanStatusNote, setScanStatusNote] = useState('');
     const labelCameraInputRef = useRef(null);
     const labelFileInputRef = useRef(null);
+
+    /* ── Clicked food log detail card modal ── */
+    const [selectedFoodLog, setSelectedFoodLog] = useState(null);
 
     /* ── Full-screen scan overlay: { src, source, phase: 'scanning' | 'done' | 'error', result, error } ── */
     const [scanOverlay, setScanOverlay] = useState(null);
@@ -2207,6 +2211,7 @@ const Calories = () => {
                                     {visibleLogs.map((item) => {
                                         const isWater = item.type === 'water';
                                         const isBurn = item.type === 'burn';
+                                        const isFood = !isWater && !isBurn;
                                         const Icon = isWater ? Droplets : isBurn ? Dumbbell : Utensils;
                                         const tint = isWater ? '#06b6d4' : isBurn ? AMBER : ACCENT;
                                         return (
@@ -2217,7 +2222,19 @@ const Calories = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, height: 0 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="cal-log-row"
+                                                className={`cal-log-row ${isFood ? 'is-clickable' : ''}`}
+                                                onClick={() => {
+                                                    if (isFood) setSelectedFoodLog(item);
+                                                }}
+                                                role={isFood ? 'button' : undefined}
+                                                tabIndex={isFood ? 0 : undefined}
+                                                onKeyDown={(e) => {
+                                                    if (isFood && (e.key === 'Enter' || e.key === ' ')) {
+                                                        e.preventDefault();
+                                                        setSelectedFoodLog(item);
+                                                    }
+                                                }}
+                                                title={isFood ? 'Click to view nutrition details' : undefined}
                                             >
                                                 <div style={{
                                                     width: 34, height: 34, borderRadius: 10, flexShrink: 0,
@@ -2249,7 +2266,10 @@ const Calories = () => {
                                                 </span>
                                                 <button
                                                     type="button"
-                                                    onClick={() => (isWater ? deleteWaterLog(item.id) : deleteCalorieLog(item.id))}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        isWater ? deleteWaterLog(item.id) : deleteCalorieLog(item.id);
+                                                    }}
                                                     aria-label={`Remove ${item.name}`}
                                                     className="cal-del"
                                                 >
@@ -2713,6 +2733,243 @@ const Calories = () => {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Food Log Nutritional Details Card Modal */}
+            <Modal
+                isOpen={Boolean(selectedFoodLog)}
+                onClose={() => setSelectedFoodLog(null)}
+                maxWidth="440px"
+            >
+                {selectedFoodLog && (() => {
+                    const item = selectedFoodLog;
+                    const unit = item.unit || (isLiquidFood(item) ? 'ml' : 'g');
+                    const grams = Number(item.grams) || 0;
+                    const calories = Math.round(Number(item.calories) || 0);
+                    const protein = Math.round((Number(item.protein_g) || 0) * 10) / 10;
+                    const carbs = Math.round((Number(item.carbs_g) || 0) * 10) / 10;
+                    const fat = Math.round((Number(item.fat_g) || 0) * 10) / 10;
+                    const fiber = Math.round((Number(item.fiber_g) || 0) * 10) / 10;
+
+                    const proteinKcal = Math.round(protein * 4);
+                    const carbsKcal = Math.round(carbs * 4);
+                    const fatKcal = Math.round(fat * 9);
+                    const totalMacroKcal = (proteinKcal + carbsKcal + fatKcal) || calories || 1;
+
+                    const proteinPct = Math.round((proteinKcal / totalMacroKcal) * 100);
+                    const carbsPct = Math.round((carbsKcal / totalMacroKcal) * 100);
+                    const fatPct = Math.max(0, 100 - proteinPct - carbsPct);
+
+                    const factor100 = grams > 0 ? (100 / grams) : 1;
+                    const cal100 = Math.round(item.calories_per_100g || (calories * factor100));
+                    const protein100 = Math.round((protein * factor100) * 10) / 10;
+                    const carbs100 = Math.round((carbs * factor100) * 10) / 10;
+                    const fat100 = Math.round((fat * factor100) * 10) / 10;
+                    const fiber100 = Math.round((fiber * factor100) * 10) / 10;
+
+                    const timeString = item.created_at
+                        ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : null;
+
+                    const mealColors = {
+                        Breakfast: '#f59e0b',
+                        Lunch: '#10b981',
+                        Dinner: '#8b5cf6',
+                        Snacks: '#06b6d4',
+                    };
+                    const mealColor = mealColors[item.meal_type] || ACCENT;
+
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* Header */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingRight: 28 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                                            padding: '3px 9px', borderRadius: 9999,
+                                            fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                                            textTransform: 'uppercase',
+                                            background: `${mealColor}22`, color: mealColor,
+                                            border: `1px solid ${mealColor}44`,
+                                        }}>
+                                            <Utensils size={10} />
+                                            {item.meal_type || 'Food'}
+                                        </span>
+                                        {timeString && (
+                                            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                <Clock size={11} /> {timeString}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+                                        {item.name}
+                                    </h3>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        <span style={{
+                                            padding: '2px 8px', borderRadius: 8,
+                                            background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                            fontSize: 12, fontWeight: 700, fontFamily: MONO, color: 'var(--text-primary)',
+                                        }}>
+                                            {grams} {unit}
+                                        </span>
+                                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                            logged portion
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Hero Total Calories & Macro Split Card */}
+                            <div style={{
+                                padding: '16px 18px', borderRadius: 16,
+                                background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(236,72,153,0.08) 100%)',
+                                border: '1px solid rgba(168,85,247,0.22)',
+                                display: 'flex', flexDirection: 'column', gap: 12,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                                            Total Energy
+                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+                                            <span style={{ fontFamily: MONO, fontSize: 36, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+                                                {calories}
+                                            </span>
+                                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                                kcal
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
+                                            Calorie Ratio
+                                        </span>
+                                        <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-secondary)' }}>
+                                            P {proteinPct}% · C {carbsPct}% · F {fatPct}%
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Macro Split Bar */}
+                                <div style={{
+                                    height: 7, width: '100%', borderRadius: 9999, overflow: 'hidden',
+                                    display: 'flex', background: 'rgba(255,255,255,0.08)',
+                                }}>
+                                    <div style={{ width: `${proteinPct}%`, background: '#818cf8', transition: 'width 0.3s ease' }} title={`Protein: ${proteinPct}%`} />
+                                    <div style={{ width: `${carbsPct}%`, background: GREEN, transition: 'width 0.3s ease' }} title={`Carbs: ${carbsPct}%`} />
+                                    <div style={{ width: `${fatPct}%`, background: AMBER, transition: 'width 0.3s ease' }} title={`Fat: ${fatPct}%`} />
+                                </div>
+                            </div>
+
+                            {/* 4 Macro Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                                {[
+                                    { label: 'Protein', value: protein, color: '#818cf8', kcal: proteinKcal },
+                                    { label: 'Carbs', value: carbs, color: GREEN, kcal: carbsKcal },
+                                    { label: 'Fat', value: fat, color: AMBER, kcal: fatKcal },
+                                    { label: 'Fiber', value: fiber, color: FIBER_COLOR, kcal: null },
+                                ].map((m) => (
+                                    <div
+                                        key={m.label}
+                                        style={{
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                                            padding: '10px 4px', borderRadius: 12,
+                                            background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <span style={{ width: 6, height: 6, borderRadius: 9999, background: m.color }} />
+                                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{m.label}</span>
+                                        </div>
+                                        <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                                            {m.value}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
+                                        </div>
+                                        {m.kcal !== null && (
+                                            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                                {m.kcal} kcal
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Serving vs Per 100 Comparison Table */}
+                            <div style={{
+                                borderRadius: 14, overflow: 'hidden',
+                                border: '1px solid var(--border-subtle)',
+                                background: 'var(--surface-input)',
+                            }}>
+                                <div style={{
+                                    display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr',
+                                    padding: '9px 12px', background: 'rgba(255,255,255,0.03)',
+                                    borderBottom: '1px solid var(--border-subtle)',
+                                    fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                                    textTransform: 'uppercase', color: 'var(--text-muted)',
+                                }}>
+                                    <span>Nutrient</span>
+                                    <span style={{ textAlign: 'right' }}>Portion ({grams}{unit})</span>
+                                    <span style={{ textAlign: 'right' }}>Per 100{unit}</span>
+                                </div>
+
+                                {[
+                                    { name: 'Energy', portion: `${calories} kcal`, per100: `${cal100} kcal` },
+                                    { name: 'Protein', portion: `${protein} g`, per100: `${protein100} g` },
+                                    { name: 'Carbs', portion: `${carbs} g`, per100: `${carbs100} g` },
+                                    { name: 'Fat', portion: `${fat} g`, per100: `${fat100} g` },
+                                    { name: 'Dietary Fiber', portion: `${fiber} g`, per100: `${fiber100} g` },
+                                ].map((row, idx, arr) => (
+                                    <div
+                                        key={row.name}
+                                        style={{
+                                            display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr',
+                                            padding: '8px 12px',
+                                            borderBottom: idx < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                                            fontSize: 12,
+                                        }}
+                                    >
+                                        <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{row.name}</span>
+                                        <span style={{ textAlign: 'right', fontFamily: MONO, fontWeight: 700, color: 'var(--text-primary)' }}>{row.portion}</span>
+                                        <span style={{ textAlign: 'right', fontFamily: MONO, color: 'var(--text-muted)' }}>{row.per100}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const idToDelete = item.id;
+                                        setSelectedFoodLog(null);
+                                        deleteCalorieLog(idToDelete);
+                                    }}
+                                    style={{
+                                        padding: '11px 16px', borderRadius: 12,
+                                        background: 'var(--danger-bg, rgba(239,68,68,0.12))',
+                                        border: '1px solid var(--danger, rgba(239,68,68,0.3))',
+                                        color: 'var(--danger, #ef4444)',
+                                        fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    }}
+                                >
+                                    <Trash2 size={15} /> Delete Entry
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedFoodLog(null)}
+                                    className="btn-primary"
+                                    style={{
+                                        flex: 1, padding: 11, borderRadius: 12,
+                                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                    }}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
             </Modal>
 
             {/* Always-mounted hidden file and camera inputs for nutrition label scanning */}
@@ -3362,6 +3619,19 @@ const Calories = () => {
                     border-bottom: 1px solid var(--border-subtle); overflow: hidden;
                 }
                 .cal-log-row:last-child { border-bottom: none; }
+                .cal-log-row.is-clickable {
+                    cursor: pointer;
+                    border-radius: 12px;
+                    padding: 10px 8px;
+                    margin: 0 -8px;
+                    transition: background 0.15s ease, transform 0.1s ease;
+                }
+                .cal-log-row.is-clickable:hover {
+                    background: var(--surface-input);
+                }
+                .cal-log-row.is-clickable:active {
+                    transform: scale(0.995);
+                }
 
                 .cal-del {
                     background: transparent; border: none; color: var(--text-muted);
