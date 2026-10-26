@@ -1236,13 +1236,13 @@ const Calories = () => {
                                     </div>
                                 </div>
 
-                                {/* Quick Presets Grid: Glass, Bottle, Sipper, Flask */}
+                                {/* Quick Presets Grid: 250ml, 500ml, 750ml, 1L */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                                     {[
-                                        { ml: 250, label: '+250 ml', name: 'Glass', vessel: 'glass' },
-                                        { ml: 500, label: '+500 ml', name: 'Bottle', vessel: 'bottle' },
-                                        { ml: 750, label: '+750 ml', name: 'Sipper', vessel: 'sipper' },
-                                        { ml: 1000, label: '+1 L', name: 'Flask', vessel: 'flask' },
+                                        { ml: 250, label: '250 ml', vessel: 'glass' },
+                                        { ml: 500, label: '500 ml', vessel: 'bottle' },
+                                        { ml: 750, label: '750 ml', vessel: 'sipper' },
+                                        { ml: 1000, label: '1 L', vessel: 'flask' },
                                     ].map((preset) => (
                                         <motion.button
                                             key={preset.ml}
@@ -1253,7 +1253,7 @@ const Calories = () => {
                                             className="cal-water-btn"
                                             style={{
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                                gap: 5, padding: '12px 6px', borderRadius: 14,
+                                                gap: 8, padding: '14px 6px', borderRadius: 14,
                                                 background: 'rgba(6, 182, 212, 0.05)',
                                                 border: '1px solid rgba(6, 182, 212, 0.2)',
                                                 cursor: 'pointer', outline: 'none',
@@ -1267,23 +1267,13 @@ const Calories = () => {
                                             {/* Amount */}
                                             <span style={{
                                                 fontFamily: MONO,
-                                                fontSize: 12.5,
+                                                fontSize: 13,
                                                 fontWeight: 800,
                                                 color: 'var(--text-primary)',
                                                 letterSpacing: '-0.02em',
-                                                lineHeight: 1.1,
-                                            }}>
-                                                {preset.label}
-                                            </span>
-
-                                            {/* Label */}
-                                            <span style={{
-                                                fontSize: 10,
-                                                color: 'var(--text-muted)',
-                                                fontWeight: 600,
                                                 lineHeight: 1,
                                             }}>
-                                                {preset.name}
+                                                {preset.label}
                                             </span>
                                         </motion.button>
                                     ))}
