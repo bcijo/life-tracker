@@ -1318,15 +1318,18 @@ export async function lookupFoodNutritionPer100g(foodQuery) {
     if (!cleanQuery) throw new Error('Food name is required');
 
     const prompt = `Search the web for the nutritional values per 100g of "${cleanQuery}" (if it is an Indian dish or meal, use standard Indian home/restaurant or ICMR-NIN / HealthifyMe nutrition per 100g cooked edible portion).
+Also provide the standard single-unit name and weight in grams if this food is commonly eaten by count/piece/portion (e.g. "roti": 35g, "egg": 50g, "idli": 40g, "dosa": 85g, "paratha": 80g, "samosa": 65g, "slice": 30g, "katori": 150g, "cup": 150g).
 
 Return ONLY a valid JSON object with no markdown fences and no extra text in this exact format:
 {
-  "name": "Clean Title-Cased Food Name",
+  "name": "Clean Singular Title-Cased Food Name (e.g. Roti, Boiled Egg, Masala Dosa)",
   "category": "Short Category (e.g. South Indian, North Indian, Indian Bread, Rice & Grains, Dal & Legumes, Paneer & Veg, Meat, Fish & Eggs, Dairy & Beverages, Snack)",
   "calories_per_100g": 165,
   "protein_per_100g": 3.5,
   "carbs_per_100g": 25.0,
-  "fat_per_100g": 6.0
+  "fat_per_100g": 6.0,
+  "unit_name": "piece or roti or egg or idli or katori or serving",
+  "grams_per_unit": 50
 }`;
 
     let parsed = null;
@@ -1374,6 +1377,8 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
     const protein = parseNumericNutrition(parsed.protein_per_100g, 0);
     const carbs = parseNumericNutrition(parsed.carbs_per_100g, 0);
     const fat = parseNumericNutrition(parsed.fat_per_100g, 0);
+    const gramsPerUnit = parseNumericNutrition(parsed.grams_per_unit, 0);
+    const unitName = parsed.unit_name ? String(parsed.unit_name).trim().toLowerCase() : null;
 
     // Sanity check: if calories is 0 but macros exist, compute from 4-4-9 rule
     const finalCalories = calories > 0
@@ -1387,6 +1392,8 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
         protein_per_100g: protein,
         carbs_per_100g: carbs,
         fat_per_100g: fat,
+        unit_name: unitName,
+        grams_per_unit: gramsPerUnit > 0 ? Math.round(gramsPerUnit) : null,
         source: usedWebSearch ? 'web_search' : 'ai_lookup',
     };
 }

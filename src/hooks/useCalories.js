@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, subDays } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { lookupFoodNutritionPer100g, estimateExerciseBurn } from '../lib/groq';
-import { INDIAN_FOOD_SEED, normalizeFoodName } from '../lib/indianFoodCatalog';
+import { INDIAN_FOOD_SEED, normalizeFoodName, parseNaturalFoodQuery, resolveFoodUnit } from '../lib/indianFoodCatalog';
 import { useProfile } from './useProfile';
 
 const LOGS_CACHE_KEY = 'supa_cache_calorie_logs';
@@ -211,13 +211,16 @@ export default function useCalories(selectedDateStr = null) {
 
     /**
      * Step 1: Search the Database (`food_catalog` + cached + pre-seeded Indian staples)
+     * Also parses natural queries like "2 rotis" or "3 boiled eggs"
      */
     const searchFoodDatabase = useCallback((rawQuery) => {
-        const q = normalizeFoodName(rawQuery);
+        const parsedQuery = parseNaturalFoodQuery(rawQuery);
+        const q = normalizeFoodName(parsedQuery.cleanQuery);
         if (!q) {
             return {
                 results: foodCatalog.slice(0, 12),
                 hasExactMatch: false,
+                parsedQuery,
             };
         }
 
@@ -253,6 +256,7 @@ export default function useCalories(selectedDateStr = null) {
         return {
             results: scored.slice(0, 10).map(s => s.item),
             hasExactMatch,
+            parsedQuery,
         };
     }, [foodCatalog]);
 
@@ -261,7 +265,8 @@ export default function useCalories(selectedDateStr = null) {
      * Checks Supabase DB first; if not found, runs one web search via Groq and saves to DB permanently.
      */
     const lookupAndCacheFood = useCallback(async (foodQuery) => {
-        const cleanQuery = String(foodQuery || '').trim();
+        const parsedQuery = parseNaturalFoodQuery(foodQuery);
+        const cleanQuery = String(parsedQuery.cleanQuery || foodQuery || '').trim();
         const normQuery = normalizeFoodName(cleanQuery);
         if (!normQuery) throw new Error('Please enter a food name');
 
@@ -270,7 +275,7 @@ export default function useCalories(selectedDateStr = null) {
             item => (item.normalized_name || normalizeFoodName(item.name)) === normQuery
         );
         if (existingLocal) {
-            return { food: existingLocal, fromCache: true };
+            return { food: existingLocal, fromCache: true, parsedQuery };
         }
 
         // 2. Check remote Supabase `food_catalog` in case it was added previously
@@ -290,7 +295,7 @@ export default function useCalories(selectedDateStr = null) {
                     } catch {}
                     return next;
                 });
-                return { food: remoteMatch, fromCache: true };
+                return { food: remoteMatch, fromCache: true, parsedQuery };
             }
         } catch {
             // Ignore if table not created yet
@@ -299,6 +304,11 @@ export default function useCalories(selectedDateStr = null) {
         // 3. Not in DB -> Perform ONE Web Search via Groq `browser_search`
         const webFood = await lookupFoodNutritionPer100g(cleanQuery);
         const normalizedName = normalizeFoodName(webFood.name || cleanQuery);
+        const unitInfo = resolveFoodUnit({
+            name: webFood.name || cleanQuery,
+            unit_name: webFood.unit_name,
+            grams_per_unit: webFood.grams_per_unit,
+        });
 
         const newCatalogEntry = {
             id: 'food-' + Date.now(),
@@ -309,6 +319,8 @@ export default function useCalories(selectedDateStr = null) {
             protein_per_100g: webFood.protein_per_100g,
             carbs_per_100g: webFood.carbs_per_100g,
             fat_per_100g: webFood.fat_per_100g,
+            unit_name: unitInfo.unitName,
+            grams_per_unit: unitInfo.gramsPerUnit,
             source: webFood.source || 'web_search',
             created_at: new Date().toISOString(),
         };
@@ -358,18 +370,23 @@ export default function useCalories(selectedDateStr = null) {
             return next;
         });
 
-        return { food: newCatalogEntry, fromCache: false };
+        return { food: newCatalogEntry, fromCache: false, parsedQuery };
     }, [foodCatalog]);
 
     /**
-     * Add a Food Intake Log (strictly grams * per-100g multiplier)
+     * Add a Food Intake Log (strictly grams * per-100g multiplier, with optional piece count)
      */
-    const addFoodIntake = useCallback(async ({ foodItem, grams, mealType = 'lunch', date = activeDate }) => {
+    const addFoodIntake = useCallback(async ({ foodItem, grams, count = null, mealType = 'lunch', date = activeDate }) => {
         const computed = calculateFromPer100g(foodItem, grams);
         if (computed.grams <= 0) return { error: 'Enter a valid weight in grams' };
 
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
+
+        const numCount = count !== null ? Number(count) : null;
+        const displayName = numCount && numCount > 0
+            ? `${foodItem.name} × ${numCount}`
+            : foodItem.name;
 
         const tempId = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
         const newEntry = {
@@ -378,7 +395,7 @@ export default function useCalories(selectedDateStr = null) {
             date,
             type: 'intake',
             meal_type: mealType,
-            name: foodItem.name,
+            name: displayName,
             grams: computed.grams,
             calories_per_100g: Number(foodItem.calories_per_100g) || 0,
             duration_mins: null,

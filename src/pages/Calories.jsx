@@ -22,7 +22,7 @@ import {
     Tooltip,
 } from 'recharts';
 import useCalories, { calculateFromPer100g, calculateMifflinBmr } from '../hooks/useCalories';
-import { COMMON_EXERCISES } from '../lib/indianFoodCatalog';
+import { COMMON_EXERCISES, resolveFoodUnit } from '../lib/indianFoodCatalog';
 import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import DateDisplay from '../components/common/DateDisplay';
 import Modal from '../components/Modal';
@@ -33,6 +33,7 @@ const AMBER = '#f59e0b';
 const GREEN = '#22c55e';
 
 const GRAM_PRESETS = [50, 100, 150, 200, 250];
+const COUNT_PRESETS = [1, 2, 3, 4];
 
 const MEALS = [
     { id: 'breakfast', label: 'Breakfast', emoji: '🌅' },
@@ -139,6 +140,8 @@ const Calories = () => {
     });
     const [foodSearch, setFoodSearch] = useState('');
     const [selectedFood, setSelectedFood] = useState(null);
+    const [portionMode, setPortionMode] = useState('grams'); // 'unit' | 'grams'
+    const [countInput, setCountInput] = useState('1');
     const [gramsInput, setGramsInput] = useState('150');
     const [searchingWeb, setSearchingWeb] = useState(false);
     const [feedback, setFeedback] = useState('');
@@ -154,9 +157,18 @@ const Calories = () => {
     const [bmrForm, setBmrForm] = useState(bmrSettings);
 
     const dbSearch = useMemo(() => searchFoodDatabase(foodSearch), [foodSearch, searchFoodDatabase]);
+    const unitInfo = useMemo(() => resolveFoodUnit(selectedFood), [selectedFood]);
+    const effectiveGrams = useMemo(() => {
+        if (!selectedFood) return 0;
+        if (portionMode === 'unit') {
+            return Math.max(0, (parseFloat(countInput) || 0) * unitInfo.gramsPerUnit);
+        }
+        return Math.max(0, parseFloat(gramsInput) || 0);
+    }, [selectedFood, portionMode, countInput, gramsInput, unitInfo]);
+
     const livePreview = useMemo(
-        () => (selectedFood ? calculateFromPer100g(selectedFood, gramsInput) : null),
-        [selectedFood, gramsInput]
+        () => (selectedFood ? calculateFromPer100g(selectedFood, effectiveGrams) : null),
+        [selectedFood, effectiveGrams]
     );
 
     const weight = Number(bmrSettings.weight_kg) || 70;
@@ -211,6 +223,33 @@ const Calories = () => {
     ];
 
     /* ── Handlers ── */
+    const selectFoodItem = (food, queryOverride = null) => {
+        if (!food) return;
+        const info = resolveFoodUnit(food);
+        const pq = queryOverride || dbSearch.parsedQuery;
+
+        setSelectedFood(food);
+        setFoodSearch(food.name);
+
+        if (pq?.mode === 'unit' && pq.count > 0) {
+            setPortionMode('unit');
+            setCountInput(String(pq.count));
+            setGramsInput(String(Math.round(pq.count * info.gramsPerUnit)));
+        } else if (pq?.mode === 'grams' && pq.grams > 0) {
+            setPortionMode('grams');
+            setGramsInput(String(pq.grams));
+            setCountInput('1');
+        } else if (info.isCountable) {
+            setPortionMode('unit');
+            setCountInput('1');
+            setGramsInput(String(info.gramsPerUnit));
+        } else {
+            setPortionMode('grams');
+            setCountInput('1');
+            setGramsInput('150');
+        }
+    };
+
     const handleWebSearch = async (queryOverride) => {
         const q = String(queryOverride ?? foodSearch).trim();
         if (!q || searchingWeb) return;
@@ -218,9 +257,8 @@ const Calories = () => {
         setLookupError('');
         setFeedback('');
         try {
-            const { food, fromCache } = await lookupAndCacheFood(q);
-            setSelectedFood(food);
-            setFoodSearch(food.name);
+            const { food, fromCache, parsedQuery } = await lookupAndCacheFood(q);
+            selectFoodItem(food, parsedQuery);
             setFeedback(fromCache ? 'Found in your database' : `Saved ${food.name} to your database`);
         } catch (err) {
             setLookupError(err.message || 'Could not look up this food');
@@ -234,16 +272,21 @@ const Calories = () => {
         if (!selectedFood) {
             if (!foodSearch.trim()) return;
             if (dbSearch.results.length > 0) {
-                setSelectedFood(dbSearch.results[0]);
-                setFoodSearch(dbSearch.results[0].name);
+                selectFoodItem(dbSearch.results[0], dbSearch.parsedQuery);
             } else {
                 await handleWebSearch(foodSearch);
             }
             return;
         }
-        const grams = parseFloat(gramsInput);
-        if (!grams || grams <= 0) return;
-        await addFoodIntake({ foodItem: selectedFood, grams, mealType, date: selectedDate });
+        if (!effectiveGrams || effectiveGrams <= 0) return;
+        const loggedCount = portionMode === 'unit' ? parseFloat(countInput) || null : null;
+        await addFoodIntake({
+            foodItem: selectedFood,
+            grams: effectiveGrams,
+            count: loggedCount,
+            mealType,
+            date: selectedDate,
+        });
         setSelectedFood(null);
         setFoodSearch('');
         setFeedback('');
@@ -475,7 +518,7 @@ const Calories = () => {
                                             setLookupError('');
                                             setFeedback('');
                                         }}
-                                        placeholder="Search a food, e.g. Masala Dosa"
+                                        placeholder="Search food or count, e.g. 2 roti, boiled egg"
                                         className="surface-input"
                                         style={{ ...inputStyle, paddingLeft: 40, paddingRight: 38 }}
                                     />
@@ -520,27 +563,35 @@ const Calories = () => {
                                                             Saved foods
                                                         </Label>
                                                     )}
-                                                    {dbSearch.results.slice(0, foodSearch.trim() ? 8 : 6).map((item) => (
-                                                        <button
-                                                            key={item.id || item.normalized_name}
-                                                            type="button"
-                                                            onClick={() => { setSelectedFood(item); setFoodSearch(item.name); setFeedback(''); }}
-                                                            className="cal-row-btn"
-                                                        >
-                                                            <span style={{ minWidth: 0, textAlign: 'left' }}>
-                                                                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                    {item.name}
+                                                    {dbSearch.results.slice(0, foodSearch.trim() ? 8 : 6).map((item) => {
+                                                        const itemUnit = resolveFoodUnit(item);
+                                                        const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
+                                                        return (
+                                                            <button
+                                                                key={item.id || item.normalized_name}
+                                                                type="button"
+                                                                onClick={() => { selectFoodItem(item); setFeedback(''); }}
+                                                                className="cal-row-btn"
+                                                            >
+                                                                <span style={{ minWidth: 0, textAlign: 'left' }}>
+                                                                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                        {item.name}
+                                                                    </span>
+                                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                                                        {itemUnit.isCountable
+                                                                            ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
+                                                                            : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
+                                                                    </span>
                                                                 </span>
-                                                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                                                    P {item.protein_per_100g} · C {item.carbs_per_100g} · F {item.fat_per_100g}
+                                                                <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
+                                                                    {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
+                                                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                                                        {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
+                                                                    </span>
                                                                 </span>
-                                                            </span>
-                                                            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
-                                                                {Math.round(item.calories_per_100g)}
-                                                                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}> /100g</span>
-                                                            </span>
-                                                        </button>
-                                                    ))}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : foodSearch.trim() ? (
                                                 <div style={{
@@ -584,7 +635,9 @@ const Calories = () => {
                                                 <div style={{ minWidth: 0 }}>
                                                     <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedFood.name}</div>
                                                     <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                                        {Math.round(selectedFood.calories_per_100g)} kcal / 100g
+                                                        {portionMode === 'unit'
+                                                            ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
+                                                            : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`}
                                                     </div>
                                                 </div>
                                                 <button
@@ -596,41 +649,108 @@ const Calories = () => {
                                                 </button>
                                             </div>
 
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                <div style={{ position: 'relative', width: 112 }}>
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max="5000"
-                                                        step="any"
-                                                        inputMode="decimal"
-                                                        value={gramsInput}
-                                                        onChange={(e) => setGramsInput(e.target.value)}
-                                                        className="surface-input"
-                                                        style={{ ...inputStyle, padding: '9px 28px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
-                                                    />
-                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>g</span>
+                                            <LiquidGlassSegmented
+                                                options={[
+                                                    {
+                                                        id: 'unit',
+                                                        label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}g)`,
+                                                    },
+                                                    { id: 'grams', label: 'Grams (g)' },
+                                                ]}
+                                                value={portionMode}
+                                                onChange={(nextMode) => {
+                                                    setPortionMode(nextMode);
+                                                    if (nextMode === 'grams') {
+                                                        const g = Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit);
+                                                        setGramsInput(String(g || 100));
+                                                    } else {
+                                                        const c = Math.max(0.5, Math.round(((parseFloat(gramsInput) || unitInfo.gramsPerUnit) / unitInfo.gramsPerUnit) * 2) / 2);
+                                                        setCountInput(String(c));
+                                                    }
+                                                }}
+                                                size="sm"
+                                                fullWidth
+                                                ariaLabel="Portion unit mode"
+                                            />
+
+                                            {portionMode === 'unit' ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <div style={{ position: 'relative', width: 104 }}>
+                                                        <input
+                                                            type="number"
+                                                            min="0.25"
+                                                            max="50"
+                                                            step="any"
+                                                            inputMode="decimal"
+                                                            value={countInput}
+                                                            onChange={(e) => setCountInput(e.target.value)}
+                                                            className="surface-input"
+                                                            style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                        />
+                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
+                                                            ×
+                                                        </span>
+                                                    </div>
+                                                    {COUNT_PRESETS.map((c) => {
+                                                        const on = Number(countInput) === c;
+                                                        return (
+                                                            <button
+                                                                key={c}
+                                                                type="button"
+                                                                onClick={() => setCountInput(String(c))}
+                                                                style={{
+                                                                    padding: '6px 12px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                    fontFamily: MONO, cursor: 'pointer',
+                                                                    background: on ? `${ACCENT}22` : 'transparent',
+                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                    color: on ? ACCENT : 'var(--text-muted)',
+                                                                }}
+                                                            >
+                                                                {c}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginLeft: 'auto' }}>
+                                                        = {Math.round(effectiveGrams)}g
+                                                    </span>
                                                 </div>
-                                                {GRAM_PRESETS.map((g) => {
-                                                    const on = Number(gramsInput) === g;
-                                                    return (
-                                                        <button
-                                                            key={g}
-                                                            type="button"
-                                                            onClick={() => setGramsInput(String(g))}
-                                                            style={{
-                                                                padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
-                                                                fontFamily: MONO, cursor: 'pointer',
-                                                                background: on ? `${ACCENT}22` : 'transparent',
-                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
-                                                                color: on ? ACCENT : 'var(--text-muted)',
-                                                            }}
-                                                        >
-                                                            {g}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <div style={{ position: 'relative', width: 112 }}>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="5000"
+                                                            step="any"
+                                                            inputMode="decimal"
+                                                            value={gramsInput}
+                                                            onChange={(e) => setGramsInput(e.target.value)}
+                                                            className="surface-input"
+                                                            style={{ ...inputStyle, padding: '9px 28px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                        />
+                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>g</span>
+                                                    </div>
+                                                    {GRAM_PRESETS.map((g) => {
+                                                        const on = Number(gramsInput) === g;
+                                                        return (
+                                                            <button
+                                                                key={g}
+                                                                type="button"
+                                                                onClick={() => setGramsInput(String(g))}
+                                                                style={{
+                                                                    padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                    fontFamily: MONO, cursor: 'pointer',
+                                                                    background: on ? `${ACCENT}22` : 'transparent',
+                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                    color: on ? ACCENT : 'var(--text-muted)',
+                                                                }}
+                                                            >
+                                                                {g}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
 
                                             <div style={{
                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
