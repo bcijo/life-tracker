@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, subDays, parseISO } from 'date-fns';
 import {
@@ -321,6 +322,21 @@ const Calories = () => {
     const labelCameraInputRef = useRef(null);
     const labelFileInputRef = useRef(null);
 
+    /* ── Full-screen scan overlay: { src, phase: 'scanning' | 'done' | 'error', result, error } ── */
+    const [scanOverlay, setScanOverlay] = useState(null);
+    const closeScanOverlay = () => {
+        setScanOverlay((prev) => {
+            if (prev?.src) URL.revokeObjectURL(prev.src);
+            return null;
+        });
+    };
+    const retakeFromOverlay = () => {
+        closeScanOverlay();
+        setLabelImagePreview(null);
+        setScanStatusNote('');
+        setTimeout(() => labelFileInputRef.current?.click(), 150);
+    };
+
     const openManualFoodModal = (prefillName = '', triggerAction = null) => {
         const query = prefillName || foodSearch.trim();
         const liquid = isLiquidFood({ name: query });
@@ -354,6 +370,8 @@ const Calories = () => {
         setManualFoodError('');
         setScanStatusNote('');
         setScanningLabel(true);
+        const objectUrl = URL.createObjectURL(file);
+        setScanOverlay({ src: objectUrl, phase: 'scanning', result: null, error: '' });
         try {
             const compressedDataUrl = await compressImageFile(file, 1600, 0.85);
             setLabelImagePreview(compressedDataUrl);
@@ -379,9 +397,12 @@ const Calories = () => {
                     ? `Normalized to 100${parsed.is_liquid ? 'ml' : 'g'} (label: ${parsed.serving_size_text})`
                     : `Extracted nutrition per 100${parsed.is_liquid ? 'ml' : 'g'}`
             );
+            setScanOverlay((prev) => (prev ? { ...prev, phase: 'done', result: parsed } : prev));
         } catch (err) {
             console.error('Label scan error:', err);
-            setManualFoodError(err.message || 'Could not parse nutrition label from this image');
+            const msg = err.message || 'Could not parse nutrition label from this image';
+            setManualFoodError(msg);
+            setScanOverlay((prev) => (prev ? { ...prev, phase: 'error', error: msg } : prev));
         } finally {
             setScanningLabel(false);
         }
@@ -2707,6 +2728,168 @@ const Calories = () => {
                 </form>
             </Modal>
 
+            {/* Full-screen nutrition label scan overlay */}
+            {createPortal(
+                <AnimatePresence>
+                    {scanOverlay && (
+                        <motion.div
+                            key="scan-overlay"
+                            className="cal-scan-overlay"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.25 }}
+                            onClick={scanOverlay.phase !== 'scanning' ? closeScanOverlay : undefined}
+                        >
+                            {scanOverlay.phase !== 'scanning' && (
+                                <button
+                                    type="button"
+                                    className="cal-scan-close"
+                                    onClick={(e) => { e.stopPropagation(); closeScanOverlay(); }}
+                                    aria-label="Close"
+                                >
+                                    <X size={18} />
+                                </button>
+                            )}
+
+                            <motion.div
+                                className="cal-scan-frame"
+                                initial={{ scale: 0.96, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <img
+                                    src={scanOverlay.src}
+                                    alt="Nutrition label"
+                                    className="cal-scan-img"
+                                    style={{
+                                        filter: scanOverlay.phase === 'scanning'
+                                            ? 'none'
+                                            : 'blur(16px) brightness(0.4) saturate(0.9)',
+                                        transform: scanOverlay.phase === 'scanning' ? 'scale(1)' : 'scale(1.06)',
+                                    }}
+                                />
+
+                                {/* Scanning sweep */}
+                                {scanOverlay.phase === 'scanning' && (
+                                    <>
+                                        <div className="cal-scan-tint" />
+                                        <motion.div
+                                            className="cal-scan-line"
+                                            initial={{ top: '0%' }}
+                                            animate={{ top: ['0%', '100%', '0%'] }}
+                                            transition={{ duration: 3.2, ease: 'easeInOut', repeat: Infinity }}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Results */}
+                                {scanOverlay.phase === 'done' && scanOverlay.result && (() => {
+                                    const r = scanOverlay.result;
+                                    const unit = r.is_liquid ? 'ml' : 'g';
+                                    const rows = [
+                                        { label: 'Protein', value: r.protein_per_100g, color: '#6366f1' },
+                                        { label: 'Carbs', value: r.carbs_per_100g, color: GREEN },
+                                        { label: 'Fat', value: r.fat_per_100g, color: AMBER },
+                                        { label: 'Fiber', value: r.fiber_per_100g, color: FIBER_COLOR },
+                                    ];
+                                    return (
+                                        <motion.div
+                                            className="cal-scan-result"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.2, duration: 0.35 }}
+                                        >
+                                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>
+                                                Per 100{unit}
+                                            </div>
+                                            {(r.name || manualFoodForm.name) && (
+                                                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', textAlign: 'center' }}>
+                                                    {manualFoodForm.name || r.name}
+                                                </div>
+                                            )}
+                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                                                <span style={{ fontFamily: MONO, fontSize: 44, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                                                    {Math.round(Number(r.calories_per_100g) || 0)}
+                                                </span>
+                                                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>kcal</span>
+                                            </div>
+                                            <div className="cal-scan-macros">
+                                                {rows.map((m) => (
+                                                    <div key={m.label} className="cal-scan-macro">
+                                                        <span style={{ width: 8, height: 8, borderRadius: 9999, background: m.color, boxShadow: `0 0 8px ${m.color}` }} />
+                                                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', flex: 1 }}>{m.label}</span>
+                                                        <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                                                            {Math.round((Number(m.value) || 0) * 10) / 10}g
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {r.serving_size_text && (
+                                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>
+                                                    Label serving: {r.serving_size_text}
+                                                </div>
+                                            )}
+                                            <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 4 }}>
+                                                <button type="button" onClick={retakeFromOverlay} className="cal-scan-btn-ghost">
+                                                    Retake
+                                                </button>
+                                                <button type="button" onClick={closeScanOverlay} className="btn-primary" style={{ flex: 1, padding: '11px 16px', fontSize: 14 }}>
+                                                    <Check size={15} style={{ marginRight: 6, verticalAlign: '-2px' }} />
+                                                    Use values
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })()}
+
+                                {/* Error */}
+                                {scanOverlay.phase === 'error' && (
+                                    <motion.div
+                                        className="cal-scan-result"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.15, duration: 0.3 }}
+                                    >
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Couldn't read this label</div>
+                                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: 280 }}>
+                                            {scanOverlay.error}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 4 }}>
+                                            <button type="button" onClick={closeScanOverlay} className="cal-scan-btn-ghost">
+                                                Close
+                                            </button>
+                                            <button type="button" onClick={retakeFromOverlay} className="btn-primary" style={{ flex: 1, padding: '11px 16px', fontSize: 14 }}>
+                                                Try another photo
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </motion.div>
+
+                            {/* Minimal status caption */}
+                            {scanOverlay.phase === 'scanning' && (
+                                <motion.div
+                                    className="cal-scan-caption"
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                >
+                                    <motion.span
+                                        style={{ width: 6, height: 6, borderRadius: 9999, background: '#a5f3fc', display: 'inline-block' }}
+                                        animate={{ opacity: [0.3, 1, 0.3] }}
+                                        transition={{ duration: 1.4, repeat: Infinity }}
+                                    />
+                                    Reading label
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
             {/* Circular Floating Add Action Button */}
             <motion.button
                 whileHover={{ scale: 1.08 }}
@@ -2743,6 +2926,82 @@ const Calories = () => {
                 }
                 .fab-add-calorie:hover {
                     box-shadow: 0 12px 30px rgba(124, 58, 237, 0.6);
+                }
+
+                /* ── Full-screen label scan overlay ── */
+                .cal-scan-overlay {
+                    position: fixed; inset: 0; z-index: 10050;
+                    background: rgba(5, 6, 12, 0.94);
+                    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    gap: 18px;
+                    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+                }
+                .cal-scan-close {
+                    position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px;
+                    width: 38px; height: 38px; border-radius: 50%;
+                    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+                    color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+                    z-index: 2;
+                }
+                .cal-scan-frame {
+                    position: relative; overflow: hidden; border-radius: 18px;
+                    display: inline-flex; max-width: 100%;
+                    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08);
+                }
+                .cal-scan-img {
+                    display: block;
+                    max-width: min(94vw, 900px);
+                    max-height: calc(100vh - 120px);
+                    min-width: min(320px, 90vw);
+                    min-height: 380px;
+                    object-fit: cover;
+                    transition: filter 0.7s ease, transform 0.9s ease;
+                }
+                .cal-scan-tint {
+                    position: absolute; inset: 0; pointer-events: none;
+                    background: linear-gradient(180deg, rgba(6,182,212,0.04), rgba(168,85,247,0.05));
+                }
+                .cal-scan-line {
+                    position: absolute; left: 0; right: 0; height: 90px;
+                    transform: translateY(-50%);
+                    pointer-events: none;
+                    background: linear-gradient(180deg,
+                        rgba(165,243,252,0) 0%,
+                        rgba(165,243,252,0.10) 45%,
+                        rgba(165,243,252,0.85) 50%,
+                        rgba(165,243,252,0.10) 55%,
+                        rgba(165,243,252,0) 100%);
+                    mix-blend-mode: screen;
+                }
+                .cal-scan-caption {
+                    display: inline-flex; align-items: center; gap: 8px;
+                    font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
+                    color: rgba(255,255,255,0.75);
+                }
+                .cal-scan-result {
+                    position: absolute; inset: 0;
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    gap: 14px; padding: 24px;
+                    text-shadow: 0 1px 12px rgba(0,0,0,0.45);
+                }
+                .cal-scan-macros {
+                    width: 100%; max-width: 300px;
+                    display: flex; flex-direction: column; gap: 2px;
+                    padding: 10px 14px; border-radius: 14px;
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.10);
+                }
+                .cal-scan-macro {
+                    display: flex; align-items: center; gap: 10px; padding: 7px 0;
+                    border-bottom: 1px solid rgba(255,255,255,0.07);
+                }
+                .cal-scan-macro:last-child { border-bottom: none; }
+                .cal-scan-result > div:last-child { max-width: 300px; }
+                .cal-scan-btn-ghost {
+                    padding: 11px 16px; border-radius: 12px; font-size: 14px; font-weight: 600;
+                    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16);
+                    color: #fff; cursor: pointer;
                 }
                 @media (min-width: 768px) {
                     .fab-add-calorie {
