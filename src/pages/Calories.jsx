@@ -1878,19 +1878,9 @@ const Calories = () => {
                                             <Droplets size={20} />
                                         </div>
                                         <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                                                    Water Intake
-                                                </h3>
-                                                <span style={{
-                                                    fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
-                                                    background: isGoalMet ? 'rgba(34,197,94,0.14)' : 'rgba(6,182,212,0.14)',
-                                                    color: isGoalMet ? GREEN : '#06b6d4',
-                                                    border: `1px solid ${isGoalMet ? 'rgba(34,197,94,0.3)' : 'rgba(6,182,212,0.3)'}`,
-                                                }}>
-                                                    {isGoalMet ? '🎉 100% Goal Met' : `${dailySummary.waterPct}%`}
-                                                </span>
-                                            </div>
+                                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                                                Water Intake
+                                            </h3>
                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
                                                 {isGoalMet
                                                     ? 'Target achieved! Keep staying hydrated.'
@@ -1904,32 +1894,14 @@ const Calories = () => {
                                             <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 800, color: '#06b6d4', lineHeight: 1 }}>
                                                 {(totalWaterMl / 1000).toFixed(1)}
                                             </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setWaterGoalInput(String(waterGoalMl));
-                                                    setShowEditWaterGoal(true);
-                                                }}
-                                                title="Edit daily water goal"
-                                                style={{
-                                                    background: 'rgba(6, 182, 212, 0.08)',
-                                                    border: '1px solid rgba(6, 182, 212, 0.22)',
-                                                    borderRadius: 8,
-                                                    padding: '2px 6px',
-                                                    fontSize: 12,
-                                                    color: 'var(--text-secondary)',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                    transition: 'all 0.15s ease',
-                                                }}
-                                                className="cal-goal-btn"
-                                            >
+                                            <span style={{
+                                                fontSize: 13,
+                                                color: 'var(--text-muted)',
+                                                fontFamily: MONO,
+                                                fontWeight: 600,
+                                            }}>
                                                 / {(waterGoalMl / 1000).toFixed(1)} L
-                                                <Settings2 size={11} style={{ color: '#06b6d4', opacity: 0.8 }} />
-                                            </button>
+                                            </span>
                                         </div>
                                         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, display: 'block', marginTop: 2 }}>
                                             {totalWaterMl.toLocaleString()} / {waterGoalMl.toLocaleString()} ml
