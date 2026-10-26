@@ -73,7 +73,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
 
   // ── Card Styles ──────────────────────────────────────────────────────────
   const cardBase = {
-    background: 'var(--surface-elevated, rgba(255,255,255,0.04))',
+    background: 'var(--surface-elevated-translucent, rgba(20, 20, 35, 0.68))',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
     border: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',

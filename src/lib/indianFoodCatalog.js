@@ -102,6 +102,28 @@ export function parseNaturalFoodQuery(rawInput) {
         };
     }
 
+    // Pattern 2: Leading or trailing explicit ml e.g. "250ml milk" or "milk 250ml"
+    const mlLead = raw.match(/^(\d+(?:\.\d+)?)\s*(?:ml|milliliters?)\b\s+(.+)$/i);
+    if (mlLead) {
+        return {
+            cleanQuery: mlLead[2].trim(),
+            count: null,
+            grams: parseFloat(mlLead[1]),
+            ml: parseFloat(mlLead[1]),
+            mode: 'ml',
+        };
+    }
+    const mlTrail = raw.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(?:ml|milliliters?)$/i);
+    if (mlTrail) {
+        return {
+            cleanQuery: mlTrail[1].trim(),
+            count: null,
+            grams: parseFloat(mlTrail[2]),
+            ml: parseFloat(mlTrail[2]),
+            mode: 'ml',
+        };
+    }
+
     // Pattern 2: Leading count e.g. "2 roti", "3 boiled eggs", "1.5 paratha"
     const countLead = raw.match(/^(\d+(?:\.\d+)?)\s*(?:x|pcs?|pieces?)?\s+([a-zA-Z].*)$/);
     if (countLead) {
@@ -150,24 +172,37 @@ const UNIT_PATTERNS = [
     { regex: /\b(apple|orange|pear|guava|pomegranate|mango)\b/i, unitName: 'fruit', gramsPerUnit: 150, isCountable: true },
     { regex: /\b(gulab jamun|rasgulla|laddu|ladoo|barfi|burfi|peda|jalebi|mysore pak)\b/i, unitName: 'piece', gramsPerUnit: 45, isCountable: true },
     { regex: /\b(biscuit|cookie|rusk|khari)\b/i, unitName: 'piece', gramsPerUnit: 12, isCountable: true },
-    { regex: /\b(chai|tea|coffee|filter coffee|green tea)\b/i, unitName: 'cup', gramsPerUnit: 150, isCountable: true },
-    { regex: /\b(lassi|buttermilk|chaas|milk|protein shake|juice|coconut water)\b/i, unitName: 'glass', gramsPerUnit: 200, isCountable: true },
+    { regex: /\b(chai|tea|coffee|filter coffee|green tea)\b/i, unitName: 'cup', gramsPerUnit: 150, isCountable: true, isLiquid: true },
+    { regex: /\b(lassi|buttermilk|chaas|milk|doodh|protein shake|juice|coconut water|smoothie)\b/i, unitName: 'glass', gramsPerUnit: 200, isCountable: true, isLiquid: true },
     { regex: /\b(dal|sambar|rasam|kadhi|rajma|chole|chana|paneer|curry|sabzi|bhaji|korma|curd|dahi|raita|khichdi|poha|upma)\b/i, unitName: 'katori', gramsPerUnit: 150, isCountable: false },
     { regex: /\b(rice|biryani|pulao|fried rice)\b/i, unitName: 'katori', gramsPerUnit: 150, isCountable: false },
 ];
 
 /**
+ * Check if a food item is a beverage/liquid
+ */
+export function isLiquidFood(foodItem) {
+    if (!foodItem) return false;
+    if (foodItem.is_liquid) return true;
+    const name = String(foodItem.name || '').toLowerCase();
+    const unit = String(foodItem.unit_name || '').toLowerCase();
+    if (unit === 'ml' || unit === 'milliliter' || unit === 'milliliters') return true;
+    return /\b(milk|doodh|lassi|buttermilk|chaas|juice|shake|smoothie|tea|chai|coffee|soup|rasam|curd|water|drink|beverage|kombucha|soda|cola)\b/i.test(name);
+}
+
+/**
  * Resolves the unit info for any food item:
- * Returns `{ unitName, gramsPerUnit, isCountable }`
+ * Returns `{ unitName, gramsPerUnit, isCountable, isLiquid }`
  * - `isCountable: true` means the UI should default to Count mode (e.g., 1, 2, 3 rotis or eggs)
  * - `isCountable: false` means the UI defaults to Grams mode, but still offers the unit (e.g., katori) as a quick toggle
  */
 export function resolveFoodUnit(foodItem) {
     if (!foodItem) {
-        return { unitName: 'piece', gramsPerUnit: 100, isCountable: false };
+        return { unitName: 'piece', gramsPerUnit: 100, isCountable: false, isLiquid: false };
     }
 
     const name = String(foodItem.name || '');
+    const isLiquid = isLiquidFood(foodItem);
 
     // Check known Indian & everyday countable food patterns first
     for (const pattern of UNIT_PATTERNS) {
@@ -177,6 +212,7 @@ export function resolveFoodUnit(foodItem) {
                 unitName: foodItem.unit_name || pattern.unitName,
                 gramsPerUnit: customGrams > 0 ? customGrams : pattern.gramsPerUnit,
                 isCountable: pattern.isCountable,
+                isLiquid: Boolean(pattern.isLiquid || isLiquid),
             };
         }
     }
@@ -185,18 +221,20 @@ export function resolveFoodUnit(foodItem) {
     const dbUnit = String(foodItem.unit_name || '').trim().toLowerCase();
     const dbGrams = Number(foodItem.grams_per_unit);
     if (dbUnit && dbUnit !== 'g' && dbUnit !== 'gram' && dbUnit !== 'grams' && dbUnit !== '100g' && dbGrams > 0) {
-        const countableUnits = ['roti', 'chapati', 'phulka', 'paratha', 'naan', 'puri', 'egg', 'idli', 'dosa', 'vada', 'piece', 'slice', 'pav', 'bun', 'banana', 'fruit', 'cup', 'glass', 'biscuit', 'cookie', 'scoop', 'tbsp'];
+        const countableUnits = ['roti', 'chapati', 'phulka', 'paratha', 'naan', 'puri', 'egg', 'idli', 'dosa', 'vada', 'piece', 'slice', 'pav', 'bun', 'banana', 'fruit', 'cup', 'glass', 'biscuit', 'cookie', 'scoop', 'tbsp', 'bowl'];
         return {
             unitName: dbUnit,
             gramsPerUnit: dbGrams,
             isCountable: countableUnits.some((u) => dbUnit.includes(u)),
+            isLiquid: Boolean(isLiquid || dbUnit === 'ml'),
         };
     }
 
     return {
-        unitName: 'serving',
-        gramsPerUnit: 100,
-        isCountable: false,
+        unitName: isLiquid ? 'glass' : 'serving',
+        gramsPerUnit: isLiquid ? 200 : 100,
+        isCountable: isLiquid,
+        isLiquid,
     };
 }
 

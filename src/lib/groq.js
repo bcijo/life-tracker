@@ -992,6 +992,140 @@ Return only valid JSON, no markdown fences, no extra text. Example structure:
     }
 }
 
+/**
+ * Compresses and resizes an image file to a base64 Data URL to fit within Vision LLM limits.
+ */
+export function compressImageFile(file, maxDimension = 1600, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+        if (!file) return reject(new Error('No file provided'));
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = Math.round((height * maxDimension) / width);
+                        width = maxDimension;
+                    } else {
+                        width = Math.round((width * maxDimension) / height);
+                        height = maxDimension;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Reads a food product nutrition label/table image via Groq Vision,
+ * extracts macronutrients and standardizes values to PER-100g (or PER-100ml for liquids).
+ */
+export async function parseNutritionLabelImage(base64ImageDataUrl, productNameHint = '') {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) throw new Error('VITE_GROQ_API_KEY is missing');
+
+    const prompt = `You are an expert nutrition facts reader. Analyze this image of a food product's nutrition facts panel, label, or package table.
+
+Extract the nutritional information and normalize it STRICTLY to PER 100g (or PER 100ml if it is a beverage/liquid).
+
+CRITICAL INSTRUCTIONS:
+1. Product Name: Identify the brand and product name from the image if visible (e.g. "Amul Gold Milk", "Kellogg's Corn Flakes", "Britannia Good Day", "Pintola Peanut Butter"). If unclear or missing, use: "${productNameHint || 'Packaged Food'}".
+2. Liquid or Solid:
+   - "is_liquid": true if the product is milk, juice, shake, tea, soup, beverage, edible oil, liquid syrup, etc.
+   - "is_liquid": false if it is solid/powder (biscuits, bread, cereal, protein powder, chocolate, snacks, etc.).
+3. Serving Basis & Math Conversion:
+   - Look for whether values are given "Per 100g" / "Per 100ml" or "Per Serving" (e.g. per 30g, per 1 biscuit 12.5g, per scoop 32g).
+   - If "Per 100g" or "Per 100ml" is present on the table, extract those values directly!
+   - If values are ONLY listed per serving, identify the serving size in grams or ml (e.g. serving size = 25g).
+     Then mathematically calculate per-100g = (per_serving_value / serving_size) * 100.
+4. Energy/Calories:
+   - Return "calories_per_100g" in kcal (kilocalories).
+   - If only kJ is given on the label, convert: kcal = Math.round(kJ / 4.184). Must be a positive number.
+5. Macronutrients per 100g (or per 100ml):
+   - "protein_per_100g": grams of protein (number, 1 decimal)
+   - "carbs_per_100g": grams of total carbohydrates (number, 1 decimal)
+   - "fat_per_100g": grams of total fat (number, 1 decimal)
+   - "fiber_per_100g": grams of dietary fiber (number, 1 decimal, default 0 if not listed)
+6. Serving Unit:
+   - "unit_name": single portion name if applicable (e.g. "biscuit", "cookie", "bar", "scoop", "slice", "glass", "cup", "pack", "piece", "serving")
+   - "grams_per_unit": weight or volume of 1 serving/unit in grams or ml (number). If not clear, default to 30 for solid or 200 for liquid.
+   - "serving_size_text": brief note of serving size read from label (e.g. "30g (approx 2 cookies)", "1 scoop (33g)", "100ml")
+
+Return ONLY a valid JSON object with NO markdown fences and NO extra commentary matching this schema:
+{
+  "name": "Product Name",
+  "category": "Packaged Food",
+  "is_liquid": false,
+  "calories_per_100g": 450,
+  "protein_per_100g": 7.5,
+  "carbs_per_100g": 65.0,
+  "fat_per_100g": 18.0,
+  "fiber_per_100g": 3.0,
+  "unit_name": "biscuit",
+  "grams_per_unit": 12,
+  "serving_size_text": "1 biscuit (12g)"
+}`;
+
+    const candidateModels = [VISION_MODEL_NAME, 'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'];
+    let lastError = null;
+
+    for (const model of candidateModels) {
+        try {
+            const payload = {
+                model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            { type: 'image_url', image_url: { url: base64ImageDataUrl } }
+                        ]
+                    }
+                ],
+                temperature: 0.1,
+                max_tokens: 1024,
+                response_format: { type: 'json_object' }
+            };
+
+            const data = await fetchGroqWithRetry(payload, apiKey, 1);
+            const content = data.choices[0]?.message?.content;
+            if (!content) continue;
+
+            const parsed = JSON.parse(content);
+            return {
+                name: String(parsed.name || productNameHint || 'Scanned Food').trim(),
+                category: parsed.category || (parsed.is_liquid ? 'Beverage' : 'Packaged Food'),
+                is_liquid: Boolean(parsed.is_liquid),
+                calories_per_100g: Math.max(0, Math.round(Number(parsed.calories_per_100g) || 0)),
+                protein_per_100g: Math.max(0, Math.round((Number(parsed.protein_per_100g) || 0) * 10) / 10),
+                carbs_per_100g: Math.max(0, Math.round((Number(parsed.carbs_per_100g) || 0) * 10) / 10),
+                fat_per_100g: Math.max(0, Math.round((Number(parsed.fat_per_100g) || 0) * 10) / 10),
+                fiber_per_100g: Math.max(0, Math.round((Number(parsed.fiber_per_100g) || 0) * 10) / 10),
+                unit_name: String(parsed.unit_name || (parsed.is_liquid ? 'glass' : 'serving')).toLowerCase().trim(),
+                grams_per_unit: Math.max(1, Math.round(Number(parsed.grams_per_unit) || (parsed.is_liquid ? 200 : 30))),
+                serving_size_text: String(parsed.serving_size_text || '').trim(),
+                source: 'scan'
+            };
+        } catch (err) {
+            console.warn(`[Groq Nutrition Vision] Model ${model} failed:`, err.message);
+            lastError = err;
+        }
+    }
+
+    throw lastError || new Error("Failed to scan nutrition label image");
+}
+
 // 4. Speech-to-Text Transcription via Groq Whisper Large V3
 const AUDIO_TRANSCRIPTION_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const WHISPER_MODEL = 'whisper-large-v3-turbo';
@@ -1328,6 +1462,7 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
   "protein_per_100g": 3.5,
   "carbs_per_100g": 25.0,
   "fat_per_100g": 6.0,
+  "fiber_per_100g": 2.5,
   "unit_name": "piece or roti or egg or idli or katori or serving",
   "grams_per_unit": 50
 }`;
@@ -1377,6 +1512,7 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
     const protein = parseNumericNutrition(parsed.protein_per_100g, 0);
     const carbs = parseNumericNutrition(parsed.carbs_per_100g, 0);
     const fat = parseNumericNutrition(parsed.fat_per_100g, 0);
+    const fiber = parseNumericNutrition(parsed.fiber_per_100g, 0);
     const gramsPerUnit = parseNumericNutrition(parsed.grams_per_unit, 0);
     const unitName = parsed.unit_name ? String(parsed.unit_name).trim().toLowerCase() : null;
 
@@ -1392,6 +1528,7 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
         protein_per_100g: protein,
         carbs_per_100g: carbs,
         fat_per_100g: fat,
+        fiber_per_100g: fiber,
         unit_name: unitName,
         grams_per_unit: gramsPerUnit > 0 ? Math.round(gramsPerUnit) : null,
         source: usedWebSearch ? 'web_search' : 'ai_lookup',

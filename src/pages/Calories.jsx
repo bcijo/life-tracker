@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, subDays, parseISO } from 'date-fns';
 import {
@@ -13,19 +13,25 @@ import {
     X,
     Check,
     Scale,
+    Droplets,
+    RotateCcw,
+    TrendingUp,
+    Camera,
+    Upload,
+    Sparkles,
 } from 'lucide-react';
 import {
     ResponsiveContainer,
-    BarChart,
-    Bar,
     AreaChart,
     Area,
     XAxis,
     YAxis,
     Tooltip,
+    ReferenceLine,
 } from 'recharts';
 import useCalories, { calculateFromPer100g, calculateMifflinBmr } from '../hooks/useCalories';
-import { COMMON_EXERCISES, resolveFoodUnit } from '../lib/indianFoodCatalog';
+import { COMMON_EXERCISES, resolveFoodUnit, isLiquidFood } from '../lib/indianFoodCatalog';
+import { parseNutritionLabelImage, compressImageFile } from '../lib/groq';
 import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import DateDisplay from '../components/common/DateDisplay';
 import Modal from '../components/Modal';
@@ -34,8 +40,10 @@ const MONO = "'JetBrains Mono', monospace";
 const ACCENT = '#a855f7';
 const AMBER = '#f59e0b';
 const GREEN = '#22c55e';
+const FIBER_COLOR = '#ec4899';
 
 const GRAM_PRESETS = [50, 100, 150, 200, 250];
+const ML_PRESETS = [100, 150, 200, 250, 500];
 const COUNT_PRESETS = [1, 2, 3, 4];
 
 const MEALS = [
@@ -46,13 +54,14 @@ const MEALS = [
 ];
 
 const card = {
-    background: 'var(--surface-elevated)',
+    background: 'var(--surface-elevated-translucent, rgba(20, 20, 35, 0.68))',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    border: '1px solid var(--border-subtle)',
+    border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))',
     borderRadius: 22,
     padding: 18,
     position: 'relative',
+    overflow: 'hidden',
 };
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('en-IN');
@@ -132,9 +141,13 @@ const Calories = () => {
         weekWeightStats,
         searchFoodDatabase,
         lookupAndCacheFood,
+        addCustomFood,
         addFoodIntake,
         addExerciseBurn,
         deleteCalorieLog,
+        addWater,
+        deleteWaterLog,
+        undoLastWater,
         logDailyWeight,
         deleteDailyWeight,
         saveBmrSettings,
@@ -150,9 +163,10 @@ const Calories = () => {
     });
     const [foodSearch, setFoodSearch] = useState('');
     const [selectedFood, setSelectedFood] = useState(null);
-    const [portionMode, setPortionMode] = useState('grams'); // 'unit' | 'grams'
+    const [portionMode, setPortionMode] = useState('grams'); // 'unit' | 'grams' | 'ml'
     const [countInput, setCountInput] = useState('1');
     const [gramsInput, setGramsInput] = useState('150');
+    const [mlInput, setMlInput] = useState('200');
     const [searchingWeb, setSearchingWeb] = useState(false);
     const [feedback, setFeedback] = useState('');
     const [lookupError, setLookupError] = useState('');
@@ -176,19 +190,215 @@ const Calories = () => {
         setWeightFeedback('');
     }, [selectedDate, todayWeightLog, currentWeight]);
 
+    /* ── Weekly analytics modal & averages ── */
+    const [showAnalytics, setShowAnalytics] = useState(false);
+    const avgWeekIntake = useMemo(
+        () => Math.round(weeklyTrend.reduce((s, d) => s + (d.intake || 0), 0) / (weeklyTrend.length || 1)),
+        [weeklyTrend]
+    );
+    const avgWeekBurn = useMemo(
+        () => Math.round(weeklyTrend.reduce((s, d) => s + (d.totalBurn || 0), 0) / (weeklyTrend.length || 1)),
+        [weeklyTrend]
+    );
+    const avgWeekWaterL = useMemo(
+        () => ((weeklyTrend.reduce((s, d) => s + (d.waterMl || 0), 0) / (weeklyTrend.length || 1)) / 1000).toFixed(1),
+        [weeklyTrend]
+    );
+
     /* ── BMR modal ── */
     const [showBmr, setShowBmr] = useState(false);
     const [bmrForm, setBmrForm] = useState(bmrSettings);
+
+    /* ── Water tracker state ── */
+    const [customWaterInput, setCustomWaterInput] = useState('');
+    const [showCustomWater, setShowCustomWater] = useState(false);
+    const [waterFeedback, setWaterFeedback] = useState('');
+
+    const handleQuickWater = async (ml) => {
+        const res = await addWater(ml);
+        if (!res?.error) {
+            setWaterFeedback(`+${ml >= 1000 ? `${(ml / 1000).toFixed(1)} L` : `${ml} ml`} added`);
+            setTimeout(() => setWaterFeedback(''), 1800);
+        }
+    };
+
+    const handleCustomWaterSubmit = async (e) => {
+        e.preventDefault();
+        const ml = parseInt(customWaterInput, 10);
+        if (ml > 0) {
+            const res = await addWater(ml);
+            if (!res?.error) {
+                setCustomWaterInput('');
+                setShowCustomWater(false);
+                setWaterFeedback(`+${ml >= 1000 ? `${(ml / 1000).toFixed(1)} L` : `${ml} ml`} added`);
+                setTimeout(() => setWaterFeedback(''), 1800);
+            }
+        }
+    };
+
+    /* ── Manual Food modal state ── */
+    const [showManualFoodModal, setShowManualFoodModal] = useState(false);
+    const [manualFoodForm, setManualFoodForm] = useState({
+        name: '',
+        calories_per_100g: '',
+        protein_per_100g: '',
+        carbs_per_100g: '',
+        fat_per_100g: '',
+        fiber_per_100g: '',
+        is_liquid: false,
+        unit_name: '',
+        grams_per_unit: '',
+        source: 'manual',
+    });
+    const [manualFoodSaving, setManualFoodSaving] = useState(false);
+    const [manualFoodError, setManualFoodError] = useState('');
+    const [labelImagePreview, setLabelImagePreview] = useState(null);
+    const [scanningLabel, setScanningLabel] = useState(false);
+    const [scanStatusNote, setScanStatusNote] = useState('');
+    const labelCameraInputRef = useRef(null);
+    const labelFileInputRef = useRef(null);
+
+    const openManualFoodModal = (prefillName = '', triggerAction = null) => {
+        const query = prefillName || foodSearch.trim();
+        const liquid = isLiquidFood({ name: query });
+        setManualFoodForm({
+            name: query,
+            calories_per_100g: '',
+            protein_per_100g: '',
+            carbs_per_100g: '',
+            fat_per_100g: '',
+            fiber_per_100g: '',
+            is_liquid: liquid,
+            unit_name: liquid ? 'glass' : '',
+            grams_per_unit: liquid ? '200' : '',
+            source: 'manual',
+        });
+        setLabelImagePreview(null);
+        setScanningLabel(false);
+        setScanStatusNote('');
+        setManualFoodError('');
+        setShowManualFoodModal(true);
+
+        if (triggerAction === 'camera') {
+            setTimeout(() => labelCameraInputRef.current?.click(), 150);
+        } else if (triggerAction === 'upload') {
+            setTimeout(() => labelFileInputRef.current?.click(), 150);
+        }
+    };
+
+    const handleLabelImageFile = async (file) => {
+        if (!file) return;
+        setManualFoodError('');
+        setScanStatusNote('');
+        setScanningLabel(true);
+        try {
+            const compressedDataUrl = await compressImageFile(file, 1600, 0.85);
+            setLabelImagePreview(compressedDataUrl);
+
+            const parsed = await parseNutritionLabelImage(compressedDataUrl, manualFoodForm.name || foodSearch);
+
+            setManualFoodForm((prev) => ({
+                ...prev,
+                name: prev.name.trim() ? prev.name : (parsed.name || prev.name),
+                calories_per_100g: parsed.calories_per_100g > 0 ? String(parsed.calories_per_100g) : prev.calories_per_100g,
+                protein_per_100g: parsed.protein_per_100g >= 0 ? String(parsed.protein_per_100g) : prev.protein_per_100g,
+                carbs_per_100g: parsed.carbs_per_100g >= 0 ? String(parsed.carbs_per_100g) : prev.carbs_per_100g,
+                fat_per_100g: parsed.fat_per_100g >= 0 ? String(parsed.fat_per_100g) : prev.fat_per_100g,
+                fiber_per_100g: parsed.fiber_per_100g >= 0 ? String(parsed.fiber_per_100g) : prev.fiber_per_100g,
+                is_liquid: Boolean(parsed.is_liquid),
+                unit_name: parsed.unit_name || prev.unit_name,
+                grams_per_unit: parsed.grams_per_unit ? String(parsed.grams_per_unit) : prev.grams_per_unit,
+                source: 'scan',
+            }));
+
+            setScanStatusNote(
+                parsed.serving_size_text
+                    ? `Normalized to 100${parsed.is_liquid ? 'ml' : 'g'} (label: ${parsed.serving_size_text})`
+                    : `Extracted nutrition per 100${parsed.is_liquid ? 'ml' : 'g'}`
+            );
+        } catch (err) {
+            console.error('Label scan error:', err);
+            setManualFoodError(err.message || 'Could not parse nutrition label from this image');
+        } finally {
+            setScanningLabel(false);
+        }
+    };
+
+    const handleManualFoodSubmit = async (e) => {
+        e.preventDefault();
+        if (!manualFoodForm.name.trim()) {
+            setManualFoodError('Please enter a food name');
+            return;
+        }
+        if (!manualFoodForm.calories_per_100g || Number(manualFoodForm.calories_per_100g) < 0) {
+            setManualFoodError('Please enter valid calories per 100g');
+            return;
+        }
+        setManualFoodSaving(true);
+        setManualFoodError('');
+        try {
+            const saved = await addCustomFood(manualFoodForm);
+            setShowManualFoodModal(false);
+            selectFoodItem(saved);
+            setFeedback(`Saved "${saved.name}" to your database`);
+            setTimeout(() => setFeedback(''), 2500);
+        } catch (err) {
+            setManualFoodError(err.message || 'Could not save food');
+        } finally {
+            setManualFoodSaving(false);
+        }
+    };
+
+    const getSourceChip = (source) => {
+        const s = String(source || '').toLowerCase();
+        if (s === 'scan' || s === 'photo' || s === 'vision') {
+            return (
+                <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5,
+                    background: 'rgba(16,185,129,0.14)', color: '#10b981', letterSpacing: '0.03em',
+                    display: 'inline-flex', alignItems: 'center', lineHeight: 1.3, gap: 3,
+                }}>
+                    <Camera size={9} /> Scan
+                </span>
+            );
+        }
+        if (s === 'manual') {
+            return (
+                <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5,
+                    background: 'rgba(168,85,247,0.14)', color: ACCENT, letterSpacing: '0.03em',
+                    display: 'inline-flex', alignItems: 'center', lineHeight: 1.3,
+                }}>
+                    Manual
+                </span>
+            );
+        }
+        if (s === 'web' || s === 'web_search') {
+            return (
+                <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5,
+                    background: 'rgba(6,182,212,0.14)', color: '#06b6d4', letterSpacing: '0.03em',
+                    display: 'inline-flex', alignItems: 'center', lineHeight: 1.3,
+                }}>
+                    Web
+                </span>
+            );
+        }
+        return null;
+    };
 
     const dbSearch = useMemo(() => searchFoodDatabase(foodSearch), [foodSearch, searchFoodDatabase]);
     const unitInfo = useMemo(() => resolveFoodUnit(selectedFood), [selectedFood]);
     const effectiveGrams = useMemo(() => {
         if (!selectedFood) return 0;
+        if (portionMode === 'ml') {
+            return Math.max(0, parseFloat(mlInput) || 0);
+        }
         if (portionMode === 'unit') {
             return Math.max(0, (parseFloat(countInput) || 0) * unitInfo.gramsPerUnit);
         }
         return Math.max(0, parseFloat(gramsInput) || 0);
-    }, [selectedFood, portionMode, countInput, gramsInput, unitInfo]);
+    }, [selectedFood, portionMode, countInput, gramsInput, mlInput, unitInfo]);
 
     const livePreview = useMemo(
         () => (selectedFood ? calculateFromPer100g(selectedFood, effectiveGrams) : null),
@@ -203,11 +413,14 @@ const Calories = () => {
     /* ── Date strip: last 7 days as a glass segmented control ── */
     const dateOptions = useMemo(() => {
         const days = [];
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
         for (let i = 6; i >= 0; i--) {
             const d = subDays(new Date(), i);
+            const id = format(d, 'yyyy-MM-dd');
+            const isTod = id === todayStr;
             days.push({
-                id: format(d, 'yyyy-MM-dd'),
-                label: narrow ? format(d, 'EEEEE') : format(d, 'EEE'),
+                id,
+                label: narrow ? `${format(d, 'EEE, d MMM')}${isTod ? ' (Today)' : ''}` : format(d, 'EEE'),
                 badge: narrow ? undefined : format(d, 'd'),
             });
         }
@@ -234,16 +447,29 @@ const Calories = () => {
     const fPct = macroKcal > 0 ? Math.max(0, 100 - pPct - cPct) : 0;
 
     const allLogs = useMemo(() => {
-        const merged = [...dailySummary.intakeLogs, ...dailySummary.burnLogs];
+        const waterEntries = (dailySummary.waterLogs || []).map((w) => ({
+            ...w,
+            type: 'water',
+            name: `${w.amount_ml >= 1000 ? `${(w.amount_ml / 1000).toFixed(1)} L` : `${w.amount_ml} ml`} Water`,
+            calories: 0,
+        }));
+        const merged = [...dailySummary.intakeLogs, ...dailySummary.burnLogs, ...waterEntries];
         return merged.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    }, [dailySummary.intakeLogs, dailySummary.burnLogs]);
-    const visibleLogs = allLogs.filter((l) =>
-        logFilter === 'all' ? true : logFilter === 'food' ? l.type === 'intake' : l.type === 'burn'
-    );
+    }, [dailySummary.intakeLogs, dailySummary.burnLogs, dailySummary.waterLogs]);
+
+    const visibleLogs = allLogs.filter((l) => {
+        if (logFilter === 'all') return true;
+        if (logFilter === 'food') return l.type === 'intake';
+        if (logFilter === 'exercise') return l.type === 'burn';
+        if (logFilter === 'water') return l.type === 'water';
+        return true;
+    });
+
     const logOptions = [
         { id: 'all', label: 'All', count: allLogs.length },
         { id: 'food', label: 'Food', count: dailySummary.intakeLogs.length },
         { id: 'exercise', label: 'Exercise', count: dailySummary.burnLogs.length },
+        { id: 'water', label: 'Water', count: (dailySummary.waterLogs || []).length },
     ];
 
     /* ── Handlers ── */
@@ -255,22 +481,37 @@ const Calories = () => {
         setSelectedFood(food);
         setFoodSearch(food.name);
 
-        if (pq?.mode === 'unit' && pq.count > 0) {
+        if (pq?.mode === 'ml' && pq.ml > 0) {
+            setPortionMode('ml');
+            setMlInput(String(pq.ml));
+            setGramsInput(String(pq.ml));
+            setCountInput('1');
+        } else if (pq?.mode === 'unit' && pq.count > 0) {
             setPortionMode('unit');
             setCountInput(String(pq.count));
             setGramsInput(String(Math.round(pq.count * info.gramsPerUnit)));
+            setMlInput(String(Math.round(pq.count * info.gramsPerUnit)));
         } else if (pq?.mode === 'grams' && pq.grams > 0) {
             setPortionMode('grams');
             setGramsInput(String(pq.grams));
+            setMlInput(String(pq.grams));
+            setCountInput('1');
+        } else if (info.isLiquid || food.is_liquid || isLiquidFood(food)) {
+            setPortionMode('ml');
+            const defaultMl = info.gramsPerUnit || 200;
+            setMlInput(String(defaultMl));
+            setGramsInput(String(defaultMl));
             setCountInput('1');
         } else if (info.isCountable) {
             setPortionMode('unit');
             setCountInput('1');
             setGramsInput(String(info.gramsPerUnit));
+            setMlInput(String(info.gramsPerUnit));
         } else {
             setPortionMode('grams');
             setCountInput('1');
             setGramsInput('150');
+            setMlInput('150');
         }
     };
 
@@ -304,10 +545,12 @@ const Calories = () => {
         }
         if (!effectiveGrams || effectiveGrams <= 0) return;
         const loggedCount = portionMode === 'unit' ? parseFloat(countInput) || null : null;
+        const loggedUnit = portionMode === 'ml' ? 'ml' : (portionMode === 'unit' ? unitInfo.unitName : 'g');
         await addFoodIntake({
             foodItem: selectedFood,
             grams: effectiveGrams,
             count: loggedCount,
+            unit: loggedUnit,
             mealType,
             date: selectedDate,
         });
@@ -356,6 +599,7 @@ const Calories = () => {
             age: bmrSettings.age || 24,
             gender: bmrSettings.gender || 'male',
             bmr_override: bmrSettings.bmr_override || '',
+            water_goal_ml: bmrSettings.water_goal_ml || 3000,
         });
         setShowBmr(true);
     };
@@ -365,6 +609,7 @@ const Calories = () => {
         await saveBmrSettings({
             ...bmrForm,
             bmr_override: bmrForm.bmr_override ? Number(bmrForm.bmr_override) : null,
+            water_goal_ml: bmrForm.water_goal_ml ? Number(bmrForm.water_goal_ml) : 3000,
         });
         setShowBmr(false);
     };
@@ -376,6 +621,287 @@ const Calories = () => {
 
     const heightM = (Number(bmrSettings.height_cm) || 175) / 100;
     const enteredBmi = heightM > 0 && parseFloat(weightInput) > 0 ? (parseFloat(weightInput) / (heightM * heightM)).toFixed(1) : null;
+
+    const renderWeeklyAnalytics = (inModal = false) => {
+        const waterGoalL = Math.round(((Number(bmrSettings?.water_goal_ml) || 3000) / 1000) * 10) / 10;
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 10, flexWrap: 'wrap' }}>
+                    <div>
+                        {!inModal && <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>This week</h2>}
+                        {chartTab === 'weight' && weekWeightStats.count > 0 && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
+                                {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
+                            </span>
+                        )}
+                        {chartTab === 'calories' && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
+                                Avg: {fmt(avgWeekIntake)} in · {fmt(avgWeekBurn)} out
+                            </span>
+                        )}
+                        {chartTab === 'water' && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
+                                Avg: {avgWeekWaterL} L/day
+                            </span>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {chartTab === 'calories' ? (
+                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT }} /> In
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: AMBER }} /> Out
+                                </span>
+                            </div>
+                        ) : chartTab === 'water' ? (
+                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#06b6d4' }} /> Water (L)
+                                </span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} /> kg
+                                </span>
+                            </div>
+                        )}
+                        <div style={{ width: narrow ? 210 : 225 }}>
+                            <LiquidGlassSegmented
+                                options={[
+                                    { id: 'calories', label: 'Calories' },
+                                    { id: 'weight', label: 'Weight' },
+                                    { id: 'water', label: 'Water' },
+                                ]}
+                                value={chartTab}
+                                onChange={setChartTab}
+                                size="sm"
+                                fullWidth
+                                ariaLabel="Chart view"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ width: '100%', height: inModal ? 210 : 170 }}>
+                    {chartTab === 'calories' ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={weeklyTrend} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="intakeWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={ACCENT} stopOpacity={0.45} />
+                                        <stop offset="95%" stopColor={ACCENT} stopOpacity={0.0} />
+                                    </linearGradient>
+                                    <linearGradient id="burnWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={AMBER} stopOpacity={0.22} />
+                                        <stop offset="95%" stopColor={AMBER} stopOpacity={0.0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload || !payload.length) return null;
+                                        const intakeVal = payload.find(p => p.dataKey === 'intake')?.value || 0;
+                                        const burnVal = payload.find(p => p.dataKey === 'totalBurn')?.value || 0;
+                                        const netVal = intakeVal - burnVal;
+                                        return (
+                                            <div style={{
+                                                background: 'var(--surface-elevated)',
+                                                border: '1px solid var(--glass-border)',
+                                                borderRadius: 12,
+                                                padding: '8px 12px',
+                                                fontSize: 12,
+                                                boxShadow: '0 8px 30px rgba(0,0,0,0.35)',
+                                            }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 5, color: 'var(--text-primary)' }}>{label}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: ACCENT, fontSize: 11 }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT }} />
+                                                    <span>Intake: <strong>{intakeVal} kcal</strong></span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: AMBER, fontSize: 11, marginTop: 2 }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: AMBER }} />
+                                                    <span>Burn: <strong>{burnVal} kcal</strong></span>
+                                                </div>
+                                                <div style={{
+                                                    marginTop: 6,
+                                                    paddingTop: 5,
+                                                    borderTop: '1px solid var(--border-subtle)',
+                                                    fontFamily: MONO,
+                                                    fontSize: 11,
+                                                    color: netVal > 0 ? AMBER : GREEN,
+                                                }}>
+                                                    Net: {netVal > 0 ? `+${netVal}` : netVal} kcal ({netVal > 0 ? 'Surplus' : 'Deficit'})
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="totalBurn"
+                                    name="Burn"
+                                    stroke={AMBER}
+                                    strokeWidth={2}
+                                    strokeDasharray="4 4"
+                                    fill="url(#burnWaveGrad)"
+                                    dot={{ r: 3, fill: AMBER, stroke: 'var(--surface-elevated)', strokeWidth: 1.5 }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="intake"
+                                    name="Intake"
+                                    stroke={ACCENT}
+                                    strokeWidth={2.5}
+                                    fill="url(#intakeWaveGrad)"
+                                    dot={{ r: 4, fill: ACCENT, stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    ) : chartTab === 'water' ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={weeklyTrend} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="waterWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.45} />
+                                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis
+                                    stroke="var(--text-muted)"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    unit="L"
+                                    domain={[0, (dataMax) => Math.max(Math.ceil((dataMax || 3) + 0.5), Math.ceil(waterGoalL))]}
+                                />
+                                <Tooltip
+                                    cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload || !payload.length) return null;
+                                        const waterVal = payload[0]?.value || 0;
+                                        const pct = waterGoalL > 0 ? Math.round((waterVal / waterGoalL) * 100) : 0;
+                                        return (
+                                            <div style={{
+                                                background: 'var(--surface-elevated)',
+                                                border: '1px solid var(--glass-border)',
+                                                borderRadius: 12,
+                                                padding: '8px 12px',
+                                                fontSize: 12,
+                                                boxShadow: '0 8px 30px rgba(0,0,0,0.35)',
+                                            }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>{label}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#06b6d4', fontSize: 11 }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#06b6d4' }} />
+                                                    <span>Water: <strong>{waterVal} L</strong> ({Math.round(waterVal * 1000)} ml)</span>
+                                                </div>
+                                                <div style={{
+                                                    marginTop: 5,
+                                                    paddingTop: 5,
+                                                    borderTop: '1px solid var(--border-subtle)',
+                                                    fontFamily: MONO,
+                                                    fontSize: 11,
+                                                    color: waterVal >= waterGoalL ? GREEN : 'var(--text-muted)',
+                                                }}>
+                                                    {pct}% of {waterGoalL}L goal {waterVal >= waterGoalL ? '✓' : ''}
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                {waterGoalL > 0 && (
+                                    <ReferenceLine
+                                        y={waterGoalL}
+                                        stroke="rgba(6,182,212,0.4)"
+                                        strokeDasharray="4 4"
+                                        label={{ value: `${waterGoalL}L Goal`, fill: 'var(--text-muted)', fontSize: 9, position: 'insideTopRight' }}
+                                    />
+                                )}
+                                <Area
+                                    type="monotone"
+                                    dataKey="waterL"
+                                    name="Water"
+                                    stroke="#06b6d4"
+                                    strokeWidth={2.5}
+                                    fill="url(#waterWaveGrad)"
+                                    dot={{ r: 4, fill: '#06b6d4', stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    ) : weekWeightStats.count === 0 ? (
+                    <div style={{
+                        height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', gap: 8, textAlign: 'center', padding: '0 16px',
+                    }}>
+                        <Scale size={24} style={{ color: '#3b82f6', opacity: 0.8 }} />
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            No weigh-ins recorded for this 7-day period.
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (inModal) setShowAnalytics(false);
+                                setMode('weight');
+                            }}
+                            style={{
+                                padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                background: 'rgba(59,130,246,0.15)', color: '#3b82f6',
+                                border: '1px solid rgba(59,130,246,0.3)', cursor: 'pointer',
+                            }}
+                        >
+                            Log weight
+                        </button>
+                    </div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={weeklyTrend} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="weightAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                            <YAxis
+                                stroke="var(--text-muted)"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                domain={[
+                                    (dataMin) => Math.floor(Math.max(0, (dataMin || currentWeight) - 1)),
+                                    (dataMax) => Math.ceil((dataMax || currentWeight) + 1),
+                                ]}
+                            />
+                            <Tooltip
+                                cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
+                                contentStyle={{
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)',
+                                    borderRadius: 10, fontSize: 12,
+                                }}
+                                formatter={(val) => (val ? [`${val} kg`, 'Weight'] : ['Not logged', 'Weight'])}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="weight"
+                                stroke="#3b82f6"
+                                strokeWidth={2.5}
+                                fill="url(#weightAreaGrad)"
+                                connectNulls={true}
+                                dot={{ r: 4, fill: '#3b82f6', stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
+                                activeDot={{ r: 6, fill: '#60a5fa' }}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    );
+};
 
     /* ═══════════════ RENDER ═══════════════ */
     return (
@@ -432,6 +958,22 @@ const Calories = () => {
                         <span style={{ fontFamily: MONO }}>{fmt(expectedBmr)}</span>
                         <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>BMR</span>
                     </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => setShowAnalytics(true)}
+                        aria-label="Weekly analytics"
+                        style={{
+                            height: 36, padding: '0 12px', borderRadius: 12, display: 'flex',
+                            alignItems: 'center', gap: 6, cursor: 'pointer',
+                            background: showAnalytics ? 'rgba(168,85,247,0.18)' : 'var(--surface-input, rgba(255,255,255,0.04))',
+                            border: showAnalytics ? '1px solid var(--accent, #a855f7)' : '1px solid var(--border-subtle)',
+                            color: showAnalytics ? 'var(--accent, #a855f7)' : 'var(--text-secondary)',
+                            fontSize: 12, fontWeight: 700,
+                        }}
+                    >
+                        <TrendingUp size={15} style={{ color: ACCENT }} />
+                        <span>Analytics</span>
+                    </motion.button>
                 </div>
             </motion.header>
 
@@ -443,79 +985,83 @@ const Calories = () => {
                     onChange={setSelectedDate}
                     size="sm"
                     fullWidth
+                    dropdownBreakpoint={520}
+                    dropdownLabel="Date:"
                     ariaLabel="Select day"
                 />
             </div>
 
             <div className="cal-layout">
                 {/* ───────── LEFT COLUMN ───────── */}
-                <div className="cal-col">
-                    <div className="cal-top">
-                        {/* Hero: intake vs burn */}
-                        <motion.section
-                            style={{ ...card, display: 'flex', flexDirection: 'column', gap: 16 }}
-                            initial={{ opacity: 0, y: 14 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.05, type: 'spring', stiffness: 300, damping: 25 }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-                                <Ring pct={ringPct} color={ringColor}>
-                                    <span style={{ fontFamily: MONO, fontSize: 26, fontWeight: 800, lineHeight: 1, color: 'var(--text-primary)' }}>
-                                        {fmt(totalIntake)}
+                <div className="cal-col cal-col-left">
+                    {/* Unified Daily Nutrition: Hero & Macros */}
+                    <motion.section
+                        className="gradient-border glow-purple cal-card-nutrition"
+                        style={{ ...card, display: 'flex', flexDirection: 'column', gap: 16 }}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05, type: 'spring', stiffness: 300, damping: 25 }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                            <Ring pct={ringPct} color={ringColor}>
+                                <span style={{ fontFamily: MONO, fontSize: 26, fontWeight: 800, lineHeight: 1, color: 'var(--text-primary)' }}>
+                                    {fmt(totalIntake)}
+                                </span>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                                    of {fmt(totalBurn)} kcal
+                                </span>
+                            </Ring>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <Label>Net balance</Label>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                                    <span style={{ fontFamily: MONO, fontSize: 28, fontWeight: 800, lineHeight: 1, color: isDeficit ? GREEN : AMBER }}>
+                                        {netBalance > 0 ? '+' : ''}{fmt(netBalance)}
                                     </span>
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                                        of {fmt(totalBurn)} kcal
-                                    </span>
-                                </Ring>
-                                <div style={{ minWidth: 0 }}>
-                                    <Label>Net balance</Label>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                                        <span style={{ fontFamily: MONO, fontSize: 28, fontWeight: 800, lineHeight: 1, color: isDeficit ? GREEN : AMBER }}>
-                                            {netBalance > 0 ? '+' : ''}{fmt(netBalance)}
-                                        </span>
-                                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>kcal</span>
-                                    </div>
-                                    <span style={{
-                                        display: 'inline-block', marginTop: 8, padding: '2px 9px', borderRadius: 9999,
-                                        fontSize: 11, fontWeight: 700,
-                                        background: isDeficit ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
-                                        color: isDeficit ? GREEN : AMBER,
-                                    }}>
-                                        {isDeficit ? 'Deficit' : 'Surplus'}
-                                    </span>
+                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>kcal</span>
                                 </div>
+                                <span style={{
+                                    display: 'inline-block', marginTop: 8, padding: '2px 9px', borderRadius: 9999,
+                                    fontSize: 11, fontWeight: 700,
+                                    background: isDeficit ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+                                    color: isDeficit ? GREEN : AMBER,
+                                }}>
+                                    {isDeficit ? 'Deficit' : 'Surplus'}
+                                </span>
                             </div>
+                        </div>
 
-                            <div style={{
-                                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-                                paddingTop: 14, borderTop: '1px solid var(--border-subtle)',
-                            }}>
-                                {[
-                                    { label: 'Intake', value: totalIntake, color: ACCENT },
-                                    { label: 'BMR', value: dailySummary.expectedBmr, color: 'var(--text-primary)' },
-                                    { label: 'Exercise', value: exerciseBurn, color: AMBER, prefix: '+' },
-                                ].map((s, i) => (
-                                    <div key={s.label} style={{
-                                        textAlign: 'center', padding: '0 4px',
-                                        borderLeft: i > 0 ? '1px solid var(--border-subtle)' : 'none',
-                                    }}>
-                                        <div style={{ fontFamily: MONO, fontSize: 17, fontWeight: 800, color: s.color }}>
-                                            {s.prefix || ''}{fmt(s.value)}
-                                        </div>
-                                        <Label style={{ fontSize: 10 }}>{s.label}</Label>
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+                            paddingTop: 14, borderTop: '1px solid var(--border-subtle)',
+                        }}>
+                            {[
+                                { label: 'Intake', value: totalIntake, color: ACCENT },
+                                { label: 'BMR', value: dailySummary.expectedBmr, color: 'var(--text-primary)' },
+                                { label: 'Exercise', value: exerciseBurn, color: AMBER, prefix: '+' },
+                            ].map((s, i) => (
+                                <div key={s.label} style={{
+                                    textAlign: 'center', padding: '0 4px',
+                                    borderLeft: i > 0 ? '1px solid var(--border-subtle)' : 'none',
+                                }}>
+                                    <div style={{ fontFamily: MONO, fontSize: 17, fontWeight: 800, color: s.color }}>
+                                        {s.prefix || ''}{fmt(s.value)}
                                     </div>
-                                ))}
-                            </div>
-                        </motion.section>
+                                    <Label style={{ fontSize: 10 }}>{s.label}</Label>
+                                </div>
+                            ))}
+                        </div>
 
                         {/* Macros */}
-                        <motion.section
-                            style={{ ...card, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}
-                            initial={{ opacity: 0, y: 14 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 25 }}
-                        >
-                            <Label>Macros</Label>
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', gap: 12,
+                            paddingTop: 14, borderTop: '1px solid var(--border-subtle)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Label>Macros</Label>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                    {Math.round(macroKcal)} kcal logged
+                                </span>
+                            </div>
                             <div style={{
                                 display: 'flex', height: 8, borderRadius: 9999, overflow: 'hidden',
                                 background: 'var(--border-subtle)', gap: 2,
@@ -524,29 +1070,206 @@ const Calories = () => {
                                 <div style={{ width: `${cPct}%`, background: GREEN, transition: 'width .4s ease' }} />
                                 <div style={{ width: `${fPct}%`, background: AMBER, transition: 'width .4s ease' }} />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                                 {[
                                     { label: 'Protein', value: dailySummary.totalProtein, color: '#6366f1', pct: pPct },
                                     { label: 'Carbs', value: dailySummary.totalCarbs, color: GREEN, pct: cPct },
                                     { label: 'Fat', value: dailySummary.totalFat, color: AMBER, pct: fPct },
+                                    { label: 'Fiber', value: dailySummary.totalFiber || 0, color: FIBER_COLOR, pct: null },
                                 ].map((m) => (
                                     <div key={m.label}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: m.color }} />
                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{m.label}</span>
                                         </div>
-                                        <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
+                                        <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>
                                             {Math.round(m.value)}<span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>g</span>
                                         </div>
-                                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO }}>{m.pct}%</span>
+                                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                            {m.pct !== null ? `${m.pct}%` : `${Math.round(m.value)}g`}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
-                        </motion.section>
-                    </div>
+                        </div>
+                    </motion.section>
 
+                    {/* Water Intake Tracker */}
+                    <motion.section
+                        className="gradient-border glow-cyan cal-card-water"
+                        style={{ ...card, display: 'flex', flexDirection: 'column', gap: 14 }}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.12, type: 'spring', stiffness: 300, damping: 25 }}
+                    >
+                        {/* Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{
+                                    width: 36, height: 36, borderRadius: 10,
+                                    background: 'rgba(6,182,212,0.14)', color: '#06b6d4',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <Droplets size={18} />
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Water Intake</h3>
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
+                                            background: dailySummary.waterPct >= 100 ? 'rgba(34,197,94,0.12)' : 'rgba(6,182,212,0.12)',
+                                            color: dailySummary.waterPct >= 100 ? GREEN : '#06b6d4',
+                                        }}>
+                                            {dailySummary.waterPct}%
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                        {dailySummary.waterLogs?.length || 0} bottle{dailySummary.waterLogs?.length === 1 ? '' : 's'} logged today
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent: 'flex-end' }}>
+                                    <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 800, color: '#06b6d4', lineHeight: 1 }}>
+                                        {(dailySummary.totalWaterMl / 1000).toFixed(1)}
+                                    </span>
+                                    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                        / {(dailySummary.waterGoalMl / 1000).toFixed(1)} L
+                                    </span>
+                                </div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                    {dailySummary.totalWaterMl} / {dailySummary.waterGoalMl} ml
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div style={{
+                            width: '100%', height: 8, borderRadius: 9999, overflow: 'hidden',
+                            background: 'var(--border-subtle)', position: 'relative',
+                        }}>
+                            <div style={{
+                                width: `${Math.min(100, dailySummary.waterPct)}%`,
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%)',
+                                borderRadius: 9999,
+                                transition: 'width .35s ease',
+                            }} />
+                        </div>
+
+                        {/* Quick Presets: 250ml, 500ml, 750ml, 1L */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                            {[
+                                { ml: 250, label: '250 ml', sub: 'Glass' },
+                                { ml: 500, label: '500 ml', sub: 'Bottle' },
+                                { ml: 750, label: '750 ml', sub: 'Bottle' },
+                                { ml: 1000, label: '1 L', sub: 'Flask' },
+                            ].map((preset) => (
+                                <button
+                                    key={preset.ml}
+                                    type="button"
+                                    onClick={() => handleQuickWater(preset.ml)}
+                                    className="cal-water-btn"
+                                    style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                        gap: 3, padding: '10px 6px', borderRadius: 12,
+                                        background: 'rgba(6,182,212,0.06)',
+                                        border: '1px solid rgba(6,182,212,0.22)',
+                                        cursor: 'pointer', transition: 'all .15s ease',
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <Droplets size={13} style={{ color: '#06b6d4' }} />
+                                        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
+                                            +{preset.label}
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                        {preset.sub}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Actions & Feedback */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <button
+                                    type="button"
+                                    onClick={() => undoLastWater()}
+                                    disabled={!dailySummary.waterLogs || dailySummary.waterLogs.length === 0}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 5,
+                                        padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                                        background: 'transparent', border: '1px solid var(--border-subtle)',
+                                        color: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 'var(--text-muted)' : 'var(--text-secondary)',
+                                        cursor: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 'not-allowed' : 'pointer',
+                                        opacity: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 0.4 : 1,
+                                    }}
+                                >
+                                    <RotateCcw size={12} /> Undo
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomWater(!showCustomWater)}
+                                    style={{
+                                        padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                                        background: showCustomWater ? 'rgba(6,182,212,0.12)' : 'transparent',
+                                        border: '1px solid var(--border-subtle)',
+                                        color: showCustomWater ? '#06b6d4' : 'var(--text-secondary)',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {showCustomWater ? 'Cancel' : '+ Custom ml'}
+                                </button>
+                            </div>
+
+                            {waterFeedback && (
+                                <motion.span
+                                    initial={{ opacity: 0, x: 6 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    style={{ fontSize: 12, fontWeight: 700, color: '#06b6d4' }}
+                                >
+                                    {waterFeedback}
+                                </motion.span>
+                            )}
+                        </div>
+
+                        {/* Custom ml input dropdown form */}
+                        {showCustomWater && (
+                            <form onSubmit={handleCustomWaterSubmit} style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="5000"
+                                    step="10"
+                                    placeholder="Enter ml (e.g. 350)"
+                                    value={customWaterInput}
+                                    onChange={(e) => setCustomWaterInput(e.target.value)}
+                                    autoFocus
+                                    className="surface-input"
+                                    style={{ ...inputStyle, padding: '8px 12px', fontSize: 13, fontFamily: MONO, flex: 1 }}
+                                />
+                                <button
+                                    type="submit"
+                                    className="btn-primary"
+                                    style={{ padding: '8px 16px', fontSize: 13, background: '#06b6d4' }}
+                                >
+                                    Add
+                                </button>
+                            </form>
+                        )}
+                    </motion.section>
+                </div>
+
+                {/* ───────── RIGHT COLUMN ───────── */}
+                <div className="cal-col cal-col-right">
                     {/* Logger */}
                     <motion.section
+                        className="cal-card-logger"
                         style={{ ...card, display: 'flex', flexDirection: 'column', gap: 14 }}
                         initial={{ opacity: 0, y: 14 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -607,6 +1330,33 @@ const Calories = () => {
                                     )}
                                 </div>
 
+                                {!foodSearch.trim() && !selectedFood && (
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: -4 }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => openManualFoodModal('', 'camera')}
+                                            style={{
+                                                background: 'transparent', border: 'none', color: '#10b981',
+                                                fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                padding: '2px 4px',
+                                            }}
+                                        >
+                                            <Camera size={12} /> Scan label
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => openManualFoodModal('')}
+                                            style={{
+                                                background: 'transparent', border: 'none', color: 'var(--text-muted)',
+                                                fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                padding: '2px 4px',
+                                            }}
+                                        >
+                                            <Plus size={12} /> Add manually
+                                        </button>
+                                    </div>
+                                )}
+
                                 {feedback && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: GREEN }}>
                                         <Check size={14} /> {feedback}
@@ -618,76 +1368,146 @@ const Calories = () => {
 
                                 <AnimatePresence mode="wait" initial={false}>
                                     {!selectedFood ? (
-                                        <motion.div
-                                            key="results"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.15 }}
-                                        >
-                                            {dbSearch.results.length > 0 ? (
-                                                <div style={{ maxHeight: 232, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
-                                                    {!foodSearch.trim() && (
+                                        foodSearch.trim() ? (
+                                            <motion.div
+                                                key="results"
+                                                initial={{ opacity: 0, y: 4 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.15 }}
+                                            >
+                                                {dbSearch.results.length > 0 ? (
+                                                    <div style={{ maxHeight: 250, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
                                                         <Label style={{ display: 'block', margin: '2px 0 6px' }}>
-                                                            Saved foods
+                                                            Database suggestions ({dbSearch.results.length})
                                                         </Label>
-                                                    )}
-                                                    {dbSearch.results.slice(0, foodSearch.trim() ? 8 : 6).map((item) => {
-                                                        const itemUnit = resolveFoodUnit(item);
-                                                        const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
-                                                        return (
+                                                        {dbSearch.results.slice(0, 8).map((item) => {
+                                                            const itemUnit = resolveFoodUnit(item);
+                                                            const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
+                                                            return (
+                                                                <button
+                                                                    key={item.id || item.normalized_name}
+                                                                    type="button"
+                                                                    onClick={() => { selectFoodItem(item); setFeedback(''); }}
+                                                                    className="cal-row-btn"
+                                                                >
+                                                                    <span style={{ minWidth: 0, textAlign: 'left' }}>
+                                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                                                                            {getSourceChip(item.source)}
+                                                                        </span>
+                                                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                                                            {itemUnit.isCountable
+                                                                                ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
+                                                                                : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}${item.fiber_per_100g ? ` · Fib ${item.fiber_per_100g}g` : ''}`}
+                                                                        </span>
+                                                                    </span>
+                                                                    <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
+                                                                        {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
+                                                                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                                                            {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
+                                                                        </span>
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
+
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-subtle)',
+                                                            flexWrap: 'wrap',
+                                                        }}>
+                                                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Not in suggestions?</span>
+                                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openManualFoodModal(foodSearch, 'camera')}
+                                                                    style={{
+                                                                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                                                        background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
+                                                                        color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                                    }}
+                                                                >
+                                                                    <Camera size={12} /> Scan
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleWebSearch(foodSearch)}
+                                                                    disabled={searchingWeb}
+                                                                    style={{
+                                                                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                                                        background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
+                                                                        color: '#06b6d4', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                                    }}
+                                                                >
+                                                                    {searchingWeb ? <Loader2 size={12} className="spin" /> : <Globe size={12} />}
+                                                                    {searchingWeb ? 'Searching…' : 'Web lookup'}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openManualFoodModal(foodSearch)}
+                                                                    style={{
+                                                                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                                                        background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
+                                                                        color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                                    }}
+                                                                >
+                                                                    <Plus size={12} /> Add manually
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{
+                                                        display: 'flex', flexDirection: 'column', gap: 10, padding: '14px', borderRadius: 14,
+                                                        background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                                    }}>
+                                                        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                            "{foodSearch.trim()}" is not in your database yet.
+                                                        </span>
+                                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                                             <button
-                                                                key={item.id || item.normalized_name}
                                                                 type="button"
-                                                                onClick={() => { selectFoodItem(item); setFeedback(''); }}
-                                                                className="cal-row-btn"
+                                                                onClick={() => openManualFoodModal(foodSearch, 'camera')}
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                                    padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
+                                                                    background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
+                                                                    color: '#10b981', borderRadius: 12, fontWeight: 700, cursor: 'pointer',
+                                                                }}
                                                             >
-                                                                <span style={{ minWidth: 0, textAlign: 'left' }}>
-                                                                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                        {item.name}
-                                                                    </span>
-                                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                                                        {itemUnit.isCountable
-                                                                            ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
-                                                                            : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
-                                                                    </span>
-                                                                </span>
-                                                                <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
-                                                                    {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
-                                                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
-                                                                        {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
-                                                                    </span>
-                                                                </span>
+                                                                <Camera size={14} /> Scan label
                                                             </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : foodSearch.trim() ? (
-                                                <div style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    gap: 12, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 14,
-                                                    background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                                }}>
-                                                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                                        Not saved yet. Look it up once and keep it.
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleWebSearch(foodSearch)}
-                                                        disabled={searchingWeb}
-                                                        className="btn-primary"
-                                                        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 13 }}
-                                                    >
-                                                        {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
-                                                        {searchingWeb ? 'Searching…' : 'Search web'}
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '6px 0' }}>
-                                                    Search any dish. It is looked up once, then saved.
-                                                </p>
-                                            )}
-                                        </motion.div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleWebSearch(foodSearch)}
+                                                                disabled={searchingWeb}
+                                                                className="btn-primary"
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                                                    padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 140,
+                                                                }}
+                                                            >
+                                                                {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
+                                                                {searchingWeb ? 'Searching…' : 'Search web & save'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openManualFoodModal(foodSearch)}
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                                    padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
+                                                                    background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.35)',
+                                                                    color: ACCENT, borderRadius: 12, fontWeight: 700, cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                <Plus size={14} /> Add manually
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        ) : null
                                     ) : (
                                         <motion.div
                                             key="selected"
@@ -702,11 +1522,18 @@ const Calories = () => {
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{ minWidth: 0 }}>
-                                                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedFood.name}</div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedFood.name}</span>
+                                                        {getSourceChip(selectedFood.source)}
+                                                    </div>
                                                     <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                                        {portionMode === 'unit'
-                                                            ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
-                                                            : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`}
+                                                        {unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood)
+                                                            ? (portionMode === 'unit'
+                                                                ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}ml · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
+                                                                : `${Math.round(selectedFood.calories_per_100g)} kcal / 100ml`)
+                                                            : (portionMode === 'unit'
+                                                                ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
+                                                                : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`)}
                                                     </div>
                                                 </div>
                                                 <button
@@ -718,108 +1545,172 @@ const Calories = () => {
                                                 </button>
                                             </div>
 
-                                            <LiquidGlassSegmented
-                                                options={[
-                                                    {
-                                                        id: 'unit',
-                                                        label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}g)`,
-                                                    },
-                                                    { id: 'grams', label: 'Grams (g)' },
-                                                ]}
-                                                value={portionMode}
-                                                onChange={(nextMode) => {
-                                                    setPortionMode(nextMode);
-                                                    if (nextMode === 'grams') {
-                                                        const g = Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit);
-                                                        setGramsInput(String(g || 100));
-                                                    } else {
-                                                        const c = Math.max(0.5, Math.round(((parseFloat(gramsInput) || unitInfo.gramsPerUnit) / unitInfo.gramsPerUnit) * 2) / 2);
-                                                        setCountInput(String(c));
-                                                    }
-                                                }}
-                                                size="sm"
-                                                fullWidth
-                                                ariaLabel="Portion unit mode"
-                                            />
+                                            {(() => {
+                                                const isLiquid = Boolean(unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood));
+                                                const portionOptions = isLiquid
+                                                    ? [
+                                                        { id: 'ml', label: 'Milliliters (ml)' },
+                                                        ...(unitInfo.isCountable
+                                                            ? [{ id: 'unit', label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}ml)` }]
+                                                            : []),
+                                                        { id: 'grams', label: 'Grams (g)' },
+                                                    ]
+                                                    : [
+                                                        ...(unitInfo.isCountable
+                                                            ? [{ id: 'unit', label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}g)` }]
+                                                            : []),
+                                                        { id: 'grams', label: 'Grams (g)' },
+                                                    ];
 
-                                            {portionMode === 'unit' ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                    <div style={{ position: 'relative', width: 104 }}>
-                                                        <input
-                                                            type="number"
-                                                            min="0.25"
-                                                            max="50"
-                                                            step="any"
-                                                            inputMode="decimal"
-                                                            value={countInput}
-                                                            onChange={(e) => setCountInput(e.target.value)}
-                                                            className="surface-input"
-                                                            style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                return (
+                                                    <>
+                                                        <LiquidGlassSegmented
+                                                            options={portionOptions}
+                                                            value={portionMode}
+                                                            dropdownBreakpoint={380}
+                                                            dropdownLabel="Unit:"
+                                                            onChange={(nextMode) => {
+                                                                setPortionMode(nextMode);
+                                                                if (nextMode === 'ml') {
+                                                                    const mlVal = portionMode === 'unit'
+                                                                        ? Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit)
+                                                                        : Math.round(parseFloat(gramsInput) || 200);
+                                                                    setMlInput(String(mlVal || 200));
+                                                                } else if (nextMode === 'grams') {
+                                                                    const g = portionMode === 'unit'
+                                                                        ? Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit)
+                                                                        : Math.round(parseFloat(mlInput) || 150);
+                                                                    setGramsInput(String(g || 150));
+                                                                } else if (nextMode === 'unit') {
+                                                                    const base = portionMode === 'ml'
+                                                                        ? (parseFloat(mlInput) || unitInfo.gramsPerUnit)
+                                                                        : (parseFloat(gramsInput) || unitInfo.gramsPerUnit);
+                                                                    const c = Math.max(0.5, Math.round((base / (unitInfo.gramsPerUnit || 100)) * 2) / 2);
+                                                                    setCountInput(String(c));
+                                                                }
+                                                            }}
+                                                            size="sm"
+                                                            fullWidth
+                                                            ariaLabel="Portion unit mode"
                                                         />
-                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
-                                                            ×
-                                                        </span>
-                                                    </div>
-                                                    {COUNT_PRESETS.map((c) => {
-                                                        const on = Number(countInput) === c;
-                                                        return (
-                                                            <button
-                                                                key={c}
-                                                                type="button"
-                                                                onClick={() => setCountInput(String(c))}
-                                                                style={{
-                                                                    padding: '6px 12px', borderRadius: 9, fontSize: 12, fontWeight: 700,
-                                                                    fontFamily: MONO, cursor: 'pointer',
-                                                                    background: on ? `${ACCENT}22` : 'transparent',
-                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
-                                                                    color: on ? ACCENT : 'var(--text-muted)',
-                                                                }}
-                                                            >
-                                                                {c}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginLeft: 'auto' }}>
-                                                        = {Math.round(effectiveGrams)}g
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                    <div style={{ position: 'relative', width: 112 }}>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            max="5000"
-                                                            step="any"
-                                                            inputMode="decimal"
-                                                            value={gramsInput}
-                                                            onChange={(e) => setGramsInput(e.target.value)}
-                                                            className="surface-input"
-                                                            style={{ ...inputStyle, padding: '9px 28px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
-                                                        />
-                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>g</span>
-                                                    </div>
-                                                    {GRAM_PRESETS.map((g) => {
-                                                        const on = Number(gramsInput) === g;
-                                                        return (
-                                                            <button
-                                                                key={g}
-                                                                type="button"
-                                                                onClick={() => setGramsInput(String(g))}
-                                                                style={{
-                                                                    padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
-                                                                    fontFamily: MONO, cursor: 'pointer',
-                                                                    background: on ? `${ACCENT}22` : 'transparent',
-                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
-                                                                    color: on ? ACCENT : 'var(--text-muted)',
-                                                                }}
-                                                            >
-                                                                {g}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+
+                                                        {portionMode === 'ml' ? (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                <div style={{ position: 'relative', width: 112 }}>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max="5000"
+                                                                        step="any"
+                                                                        inputMode="decimal"
+                                                                        value={mlInput}
+                                                                        onChange={(e) => setMlInput(e.target.value)}
+                                                                        className="surface-input"
+                                                                        style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                                    />
+                                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>ml</span>
+                                                                </div>
+                                                                {ML_PRESETS.map((m) => {
+                                                                    const on = Number(mlInput) === m;
+                                                                    return (
+                                                                        <button
+                                                                            key={m}
+                                                                            type="button"
+                                                                            onClick={() => setMlInput(String(m))}
+                                                                            style={{
+                                                                                padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                                fontFamily: MONO, cursor: 'pointer',
+                                                                                background: on ? `${ACCENT}22` : 'transparent',
+                                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                                color: on ? ACCENT : 'var(--text-muted)',
+                                                                            }}
+                                                                        >
+                                                                            {m}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : portionMode === 'unit' ? (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                <div style={{ position: 'relative', width: 104 }}>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0.25"
+                                                                        max="50"
+                                                                        step="any"
+                                                                        inputMode="decimal"
+                                                                        value={countInput}
+                                                                        onChange={(e) => setCountInput(e.target.value)}
+                                                                        className="surface-input"
+                                                                        style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                                    />
+                                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
+                                                                        ×
+                                                                    </span>
+                                                                </div>
+                                                                {COUNT_PRESETS.map((c) => {
+                                                                    const on = Number(countInput) === c;
+                                                                    return (
+                                                                        <button
+                                                                            key={c}
+                                                                            type="button"
+                                                                            onClick={() => setCountInput(String(c))}
+                                                                            style={{
+                                                                                padding: '6px 12px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                                fontFamily: MONO, cursor: 'pointer',
+                                                                                background: on ? `${ACCENT}22` : 'transparent',
+                                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                                color: on ? ACCENT : 'var(--text-muted)',
+                                                                            }}
+                                                                        >
+                                                                            {c}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginLeft: 'auto' }}>
+                                                                    = {Math.round(effectiveGrams)}{isLiquid ? 'ml' : 'g'}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                <div style={{ position: 'relative', width: 112 }}>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max="5000"
+                                                                        step="any"
+                                                                        inputMode="decimal"
+                                                                        value={gramsInput}
+                                                                        onChange={(e) => setGramsInput(e.target.value)}
+                                                                        className="surface-input"
+                                                                        style={{ ...inputStyle, padding: '9px 28px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                                    />
+                                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>g</span>
+                                                                </div>
+                                                                {GRAM_PRESETS.map((g) => {
+                                                                    const on = Number(gramsInput) === g;
+                                                                    return (
+                                                                        <button
+                                                                            key={g}
+                                                                            type="button"
+                                                                            onClick={() => setGramsInput(String(g))}
+                                                                            style={{
+                                                                                padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                                fontFamily: MONO, cursor: 'pointer',
+                                                                                background: on ? `${ACCENT}22` : 'transparent',
+                                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                                color: on ? ACCENT : 'var(--text-muted)',
+                                                                            }}
+                                                                        >
+                                                                            {g}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
 
                                             <div style={{
                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -831,7 +1722,7 @@ const Calories = () => {
                                                     </span>
                                                     <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>kcal</span>
                                                     <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                                        P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}
+                                                        P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}{livePreview?.fiber_g ? ` · Fib ${livePreview.fiber_g}g` : ''}
                                                     </div>
                                                 </div>
                                                 <button
@@ -1050,12 +1941,10 @@ const Calories = () => {
                             </form>
                         )}
                     </motion.section>
-                </div>
 
-                {/* ───────── RIGHT COLUMN ───────── */}
-                <div className="cal-col">
                     {/* Log */}
                     <motion.section
+                        className="cal-card-log"
                         style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}
                         initial={{ opacity: 0, y: 14 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1074,6 +1963,8 @@ const Calories = () => {
                             onChange={setLogFilter}
                             size="sm"
                             fullWidth
+                            dropdownBreakpoint={420}
+                            dropdownLabel="Filter:"
                             ariaLabel="Filter log"
                         />
 
@@ -1085,9 +1976,10 @@ const Calories = () => {
                             <div>
                                 <AnimatePresence initial={false}>
                                     {visibleLogs.map((item) => {
+                                        const isWater = item.type === 'water';
                                         const isBurn = item.type === 'burn';
-                                        const Icon = isBurn ? Dumbbell : Utensils;
-                                        const tint = isBurn ? AMBER : ACCENT;
+                                        const Icon = isWater ? Droplets : isBurn ? Dumbbell : Utensils;
+                                        const tint = isWater ? '#06b6d4' : isBurn ? AMBER : ACCENT;
                                         return (
                                             <motion.div
                                                 key={item.id}
@@ -1110,17 +2002,25 @@ const Calories = () => {
                                                         {item.name}
                                                     </div>
                                                     <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {isBurn
+                                                        {isWater
+                                                            ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
+                                                            : isBurn
                                                             ? `${item.duration_mins || '—'} min`
-                                                            : `${item.grams}g · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
+                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}${item.fiber_g ? ` Fib${Math.round(item.fiber_g)}g` : ''}`}
                                                     </div>
                                                 </div>
-                                                <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 800, color: isBurn ? AMBER : 'var(--text-primary)', flexShrink: 0 }}>
-                                                    {isBurn ? '+' : ''}{fmt(item.calories)}
+                                                <span style={{
+                                                    fontFamily: MONO, fontSize: 14, fontWeight: 800,
+                                                    color: isWater ? '#06b6d4' : isBurn ? AMBER : 'var(--text-primary)',
+                                                    flexShrink: 0,
+                                                }}>
+                                                    {isWater
+                                                        ? `${item.amount_ml >= 1000 ? `${(item.amount_ml / 1000).toFixed(1)} L` : `${item.amount_ml} ml`}`
+                                                        : `${isBurn ? '+' : ''}${fmt(item.calories)}`}
                                                 </span>
                                                 <button
                                                     type="button"
-                                                    onClick={() => deleteCalorieLog(item.id)}
+                                                    onClick={() => (isWater ? deleteWaterLog(item.id) : deleteCalorieLog(item.id))}
                                                     aria-label={`Remove ${item.name}`}
                                                     className="cal-del"
                                                 >
@@ -1133,141 +2033,306 @@ const Calories = () => {
                             </div>
                         )}
                     </motion.section>
-
-                    {/* Weekly chart */}
-                    <motion.section
-                        style={{ ...card }}
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.25, type: 'spring', stiffness: 300, damping: 25 }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10, flexWrap: 'wrap' }}>
-                            <div>
-                                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>This week</h2>
-                                {chartTab === 'weight' && weekWeightStats.count > 0 && (
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
-                                        {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
-                                    </span>
-                                )}
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                {chartTab === 'calories' ? (
-                                    <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                            <span style={{ width: 8, height: 8, borderRadius: 3, background: ACCENT }} /> In
-                                        </span>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                            <span style={{ width: 8, height: 8, borderRadius: 3, background: AMBER }} /> Out
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} /> kg
-                                        </span>
-                                    </div>
-                                )}
-                                <div style={{ width: narrow ? 150 : 168 }}>
-                                    <LiquidGlassSegmented
-                                        options={[
-                                            { id: 'calories', label: 'Calories' },
-                                            { id: 'weight', label: 'Weight' },
-                                        ]}
-                                        value={chartTab}
-                                        onChange={setChartTab}
-                                        size="sm"
-                                        fullWidth
-                                        ariaLabel="Chart view"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ width: '100%', height: 170 }}>
-                            {chartTab === 'calories' ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={weeklyTrend} margin={{ top: 4, right: 0, left: -26, bottom: 0 }} barGap={3}>
-                                        <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                                        <Tooltip
-                                            cursor={{ fill: 'var(--border-subtle)' }}
-                                            contentStyle={{
-                                                background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)',
-                                                borderRadius: 10, fontSize: 12,
-                                            }}
-                                            formatter={(val, name) => [`${val} kcal`, name]}
-                                        />
-                                        <Bar dataKey="intake" name="Intake" fill={ACCENT} radius={[5, 5, 0, 0]} />
-                                        <Bar dataKey="totalBurn" name="Burn" fill={AMBER} radius={[5, 5, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            ) : weekWeightStats.count === 0 ? (
-                                <div style={{
-                                    height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                    justifyContent: 'center', gap: 8, textAlign: 'center', padding: '0 16px',
-                                }}>
-                                    <Scale size={24} style={{ color: '#3b82f6', opacity: 0.8 }} />
-                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                        No weigh-ins recorded for this 7-day period.
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setMode('weight')}
-                                        style={{
-                                            padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                                            background: 'rgba(59,130,246,0.15)', color: '#3b82f6',
-                                            border: '1px solid rgba(59,130,246,0.3)', cursor: 'pointer',
-                                        }}
-                                    >
-                                        Log weight
-                                    </button>
-                                </div>
-                            ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={weeklyTrend} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="weightAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                                        <YAxis
-                                            stroke="var(--text-muted)"
-                                            fontSize={10}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            domain={[
-                                                (dataMin) => Math.floor(Math.max(0, (dataMin || currentWeight) - 1)),
-                                                (dataMax) => Math.ceil((dataMax || currentWeight) + 1),
-                                            ]}
-                                        />
-                                        <Tooltip
-                                            cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
-                                            contentStyle={{
-                                                background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)',
-                                                borderRadius: 10, fontSize: 12,
-                                            }}
-                                            formatter={(val) => (val ? [`${val} kg`, 'Weight'] : ['Not logged', 'Weight'])}
-                                        />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="weight"
-                                            stroke="#3b82f6"
-                                            strokeWidth={2.5}
-                                            fill="url(#weightAreaGrad)"
-                                            connectNulls={true}
-                                            dot={{ r: 4, fill: '#3b82f6', stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
-                                            activeDot={{ r: 6, fill: '#60a5fa' }}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            )}
-                        </div>
-                    </motion.section>
                 </div>
             </div>
+
+            {/* Weekly Analytics Modal */}
+            <Modal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} title="Weekly Analytics">
+                {renderWeeklyAnalytics(true)}
+            </Modal>
+
+            {/* Manual Food Modal */}
+            <Modal isOpen={showManualFoodModal} onClose={() => setShowManualFoodModal(false)} title="Add Food to Database">
+                <form onSubmit={handleManualFoodSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {/* AI Nutrition Label Scanner Box */}
+                    <div style={{
+                        borderRadius: 14,
+                        border: '1px dashed var(--border-subtle)',
+                        background: 'rgba(168,85,247,0.05)',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                                width: 28, height: 28, borderRadius: 8,
+                                background: 'rgba(168,85,247,0.18)', color: ACCENT,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                            }}>
+                                <Sparkles size={15} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    Scan Nutrition Label
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                    Upload or snap a photo of the nutrition table to auto-fill
+                                </div>
+                            </div>
+                        </div>
+
+                        {labelImagePreview ? (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px',
+                                borderRadius: 10, background: 'var(--surface-input)', border: '1px solid var(--border-subtle)'
+                            }}>
+                                <img
+                                    src={labelImagePreview}
+                                    alt="Nutrition label preview"
+                                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-subtle)', flexShrink: 0 }}
+                                />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    {scanningLabel ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: ACCENT }}>
+                                            <Loader2 size={13} className="spin" /> Reading nutrition label with AI...
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: GREEN, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <Check size={14} /> {scanStatusNote || 'Label analyzed successfully'}
+                                        </div>
+                                    )}
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                        {scanningLabel ? 'Calculating per 100g/ml values...' : 'Review & adjust the auto-filled values below'}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setLabelImagePreview(null);
+                                        setScanStatusNote('');
+                                    }}
+                                    disabled={scanningLabel}
+                                    style={{
+                                        background: 'transparent', border: 'none', color: 'var(--text-muted)',
+                                        fontSize: 11, cursor: 'pointer', padding: '4px 6px', flexShrink: 0,
+                                    }}
+                                >
+                                    Retake
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button
+                                    type="button"
+                                    disabled={scanningLabel}
+                                    onClick={() => labelCameraInputRef.current?.click()}
+                                    style={{
+                                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                        padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                        background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                        color: 'var(--text-primary)', cursor: 'pointer',
+                                    }}
+                                >
+                                    <Camera size={14} color={ACCENT} /> Take Photo
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={scanningLabel}
+                                    onClick={() => labelFileInputRef.current?.click()}
+                                    style={{
+                                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                        padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                        background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                        color: 'var(--text-primary)', cursor: 'pointer',
+                                    }}
+                                >
+                                    <Upload size={14} color={ACCENT} /> Upload Image
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Hidden file and camera inputs */}
+                        <input
+                            ref={labelCameraInputRef}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleLabelImageFile(file);
+                                e.target.value = '';
+                            }}
+                        />
+                        <input
+                            ref={labelFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleLabelImageFile(file);
+                                e.target.value = '';
+                            }}
+                        />
+                    </div>
+
+                    <div>
+                        <Label style={{ display: 'block', marginBottom: 6 }}>Food Name *</Label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="e.g. Protein Smoothie, Paneer Wrap"
+                            value={manualFoodForm.name}
+                            onChange={(e) => setManualFoodForm({ ...manualFoodForm, name: e.target.value })}
+                            className="surface-input"
+                            style={{ ...inputStyle }}
+                        />
+                    </div>
+
+                    <div>
+                        <Label style={{ display: 'block', marginBottom: 6 }}>Food Type</Label>
+                        <LiquidGlassSegmented
+                            options={[
+                                { id: 'solid', label: 'Solid (g)' },
+                                { id: 'liquid', label: 'Liquid (ml)' },
+                            ]}
+                            value={manualFoodForm.is_liquid ? 'liquid' : 'solid'}
+                            onChange={(val) => {
+                                const isLiq = val === 'liquid';
+                                setManualFoodForm((prev) => ({
+                                    ...prev,
+                                    is_liquid: isLiq,
+                                    unit_name: isLiq ? (prev.unit_name || 'glass') : (prev.unit_name === 'glass' ? '' : prev.unit_name),
+                                    grams_per_unit: isLiq ? (prev.grams_per_unit || '200') : prev.grams_per_unit,
+                                }));
+                            }}
+                            size="sm"
+                            fullWidth
+                            ariaLabel="Food type"
+                        />
+                    </div>
+
+                    <div>
+                        <Label style={{ display: 'block', marginBottom: 6 }}>Nutrition ({manualFoodForm.is_liquid ? 'Per 100ml' : 'Per 100g'})</Label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Calories (kcal) *</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    required
+                                    placeholder="e.g. 250"
+                                    value={manualFoodForm.calories_per_100g}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, calories_per_100g: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Protein (g)</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={manualFoodForm.protein_per_100g}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, protein_per_100g: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Carbs (g)</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={manualFoodForm.carbs_per_100g}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, carbs_per_100g: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Fat (g)</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={manualFoodForm.fat_per_100g}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, fat_per_100g: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Fiber (g)</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={manualFoodForm.fiber_per_100g}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, fiber_per_100g: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <Label style={{ display: 'block', marginBottom: 6 }}>
+                            {manualFoodForm.is_liquid ? 'Optional Serving Unit (e.g. Glass, Cup)' : 'Optional Piece / Serving Unit'}
+                        </Label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10 }}>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                                    Unit Name {manualFoodForm.is_liquid ? '(e.g. glass, mug)' : '(e.g. piece, scoop)'}
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder={manualFoodForm.is_liquid ? 'glass' : 'piece'}
+                                    value={manualFoodForm.unit_name}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, unit_name: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, padding: '9px 10px' }}
+                                />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                                    {manualFoodForm.is_liquid ? 'Volume per unit (ml)' : 'Weight per unit (g)'}
+                                </span>
+                                <input
+                                    type="number"
+                                    step="1"
+                                    placeholder={manualFoodForm.is_liquid ? '200' : '50'}
+                                    value={manualFoodForm.grams_per_unit}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, grams_per_unit: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {manualFoodError && (
+                        <div style={{ fontSize: 12, color: 'var(--danger)' }}>{manualFoodError}</div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 6 }}>
+                        <button
+                            type="button"
+                            onClick={() => setShowManualFoodModal(false)}
+                            style={{
+                                padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600,
+                                background: 'transparent', border: '1px solid var(--border-subtle)',
+                                color: 'var(--text-secondary)', cursor: 'pointer',
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={manualFoodSaving}
+                            className="btn-primary"
+                            style={{ padding: '10px 20px', fontSize: 13 }}
+                        >
+                            {manualFoodSaving ? 'Saving to Database…' : 'Save to Database'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
 
             {/* BMR settings */}
             <Modal isOpen={showBmr} onClose={() => setShowBmr(false)} title="BMR settings">
@@ -1318,6 +2383,19 @@ const Calories = () => {
                         />
                     </div>
 
+                    <div>
+                        <Label style={{ display: 'block', marginBottom: 6 }}>Daily Water Goal (ml)</Label>
+                        <input
+                            type="number"
+                            step="100"
+                            placeholder="3000"
+                            value={bmrForm.water_goal_ml || ''}
+                            onChange={(e) => setBmrForm({ ...bmrForm, water_goal_ml: e.target.value })}
+                            className="surface-input"
+                            style={{ ...inputStyle, fontFamily: MONO }}
+                        />
+                    </div>
+
                     <div style={{
                         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
                         padding: '12px 14px', borderRadius: 14, background: 'var(--surface-input)',
@@ -1340,10 +2418,9 @@ const Calories = () => {
                 .spin { animation: cal-spin 1s linear infinite; }
                 @keyframes cal-spin { to { transform: rotate(360deg); } }
 
-                /* Mobile first: single column */
+                /* Mobile & Tablet: ergonomic single column ordering */
                 .cal-layout { display: flex; flex-direction: column; gap: 14px; }
                 .cal-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-                .cal-top { display: flex; flex-direction: column; gap: 14px; }
                 .cal-ex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
                 .cal-row-btn {
@@ -1368,23 +2445,36 @@ const Calories = () => {
                 }
                 .cal-del:hover { color: var(--danger); background: var(--danger-bg); }
 
+                .cal-water-btn:hover {
+                    background: rgba(6, 182, 212, 0.14) !important;
+                    border-color: rgba(6, 182, 212, 0.45) !important;
+                    transform: translateY(-1px);
+                }
+                .cal-water-btn:active {
+                    transform: translateY(0px) scale(0.98);
+                }
+
                 @media (max-width: 520px) {
                     .cal-add-btn { width: 100%; }
                 }
 
-                /* Tablet (content area is narrow next to the sidebar): hero + macros side by side */
-                @media (min-width: 960px) and (max-width: 1099px) {
-                    .cal-top { flex-direction: row; }
-                    .cal-top > * { flex: 1; min-width: 0; }
+                @media (max-width: 1099px) {
+                    .cal-col-left, .cal-col-right { display: contents; }
+                    .cal-card-nutrition { order: 1; }
+                    .cal-card-logger { order: 2; }
+                    .cal-card-log { order: 3; }
+                    .cal-card-water { order: 4; }
                 }
 
-                /* Desktop: two columns */
+                /* Desktop: two balanced columns */
                 @media (min-width: 1100px) {
                     .cal-layout {
-                        display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-                        gap: 16px; align-items: start;
+                        display: grid;
+                        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+                        gap: 20px;
+                        align-items: start;
                     }
-                    .cal-col, .cal-top { gap: 16px; }
+                    .cal-col { gap: 20px; }
                 }
             `}</style>
         </div>

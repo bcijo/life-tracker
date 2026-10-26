@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS food_catalog (
     protein_per_100g DECIMAL(8, 2) DEFAULT 0,
     carbs_per_100g DECIMAL(8, 2) DEFAULT 0,
     fat_per_100g DECIMAL(8, 2) DEFAULT 0,
+    fiber_per_100g DECIMAL(8, 2) DEFAULT 0,
     source TEXT DEFAULT 'web_search',
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS calorie_logs (
     protein_g DECIMAL(8, 2) DEFAULT 0,
     carbs_g DECIMAL(8, 2) DEFAULT 0,
     fat_g DECIMAL(8, 2) DEFAULT 0,
+    fiber_g DECIMAL(8, 2) DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -91,4 +93,29 @@ ALTER TABLE weight_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage own weight_logs" ON weight_logs;
 CREATE POLICY "Users can manage own weight_logs" ON weight_logs
     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- 5. Migration: Add Fiber and Source columns if upgrading existing tables
+ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS fiber_per_100g DECIMAL(8, 2) DEFAULT 0;
+ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'web';
+ALTER TABLE calorie_logs ADD COLUMN IF NOT EXISTS fiber_g DECIMAL(8, 2) DEFAULT 0;
+
+-- 6. User Daily Water Logs
+CREATE TABLE IF NOT EXISTS water_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    date TEXT NOT NULL, -- YYYY-MM-DD local date
+    amount_ml INTEGER NOT NULL, -- e.g. 250, 500, 750, 1000
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_water_logs_user_date ON water_logs(user_id, date);
+
+ALTER TABLE water_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage own water_logs" ON water_logs;
+CREATE POLICY "Users can manage own water_logs" ON water_logs
+    FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS water_goal_ml INTEGER DEFAULT 3000;
 

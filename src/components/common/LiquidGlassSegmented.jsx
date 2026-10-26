@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
 
 /**
  * 120fps Apple Liquid Glass Segmented Control
@@ -10,6 +11,7 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
  *   on the GPU at 120fps without triggering React re-renders during pointer scrubbing.
  * - Guarantees zero text/emoji clipping whether `fullWidth` is true or false, and whether
  *   labels are short ("All") or long ("☀️ Morning").
+ * - Features graceful mobile dropdown fallback for narrow screens when tabs would otherwise grow too crowded.
  */
 const LiquidGlassSegmented = memo(function LiquidGlassSegmented({
   options = [],
@@ -19,6 +21,11 @@ const LiquidGlassSegmented = memo(function LiquidGlassSegmented({
   fullWidth = true,
   equalColumns = false, // Force equal column widths even when fullWidth=false (great for 2-item toggles)
   ariaLabel = 'Segmented control',
+  dropdownBreakpoint = null, // screen width (px) below which to switch to dropdown (e.g. 520)
+  dropdownOnMobile = false,  // force dropdown on mobile (< 580px)
+  autoDropdownThreshold = 5, // auto-switch to dropdown on mobile (< 580px) if items >= threshold
+  asDropdown = false,        // force dropdown rendering regardless of screen size
+  dropdownLabel = null,      // optional leading text label in dropdown
   style = {},
   className = '',
 }) {
@@ -26,6 +33,33 @@ const LiquidGlassSegmented = memo(function LiquidGlassSegmented({
   const btnRefs = useRef([]);
   const metricsRef = useRef([]); // [{ left, width, center }]
   const trackRectRef = useRef(null);
+
+  const [isNarrowScreen, setIsNarrowScreen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const bp = dropdownBreakpoint || 580;
+    return window.innerWidth <= bp;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const bp = dropdownBreakpoint || 580;
+    const mql = window.matchMedia(`(max-width: ${bp}px)`);
+    const handler = (e) => setIsNarrowScreen(e.matches);
+    setIsNarrowScreen(mql.matches);
+    if (mql.addEventListener) {
+      mql.addEventListener('change', handler);
+      return () => mql.removeEventListener('change', handler);
+    } else if (mql.addListener) {
+      mql.addListener(handler);
+      return () => mql.removeListener(handler);
+    }
+  }, [dropdownBreakpoint]);
+
+  const shouldRenderDropdown =
+    asDropdown ||
+    (dropdownBreakpoint && isNarrowScreen) ||
+    (dropdownOnMobile && isNarrowScreen) ||
+    (options.length >= autoDropdownThreshold && isNarrowScreen);
 
   const numItems = options.length;
   const activeIndex = options.findIndex((o) => o.id === value);
@@ -332,6 +366,105 @@ const LiquidGlassSegmented = memo(function LiquidGlassSegmented({
     md: 13,
     lg: 14,
   };
+
+  if (shouldRenderDropdown) {
+    const activeOption = options.find((o) => o.id === value) || options[0];
+    const dropHeight = heightMap[size] || 40;
+    const dropFontSize = fontSizeMap[size] || 13;
+
+    return (
+      <div
+        className={`apple-liquid-dropdown-dock size-${size} ${fullWidth ? 'is-full' : 'is-fit'} ${className}`}
+        style={{
+          position: 'relative',
+          display: fullWidth ? 'flex' : 'inline-flex',
+          width: fullWidth ? '100%' : 'auto',
+          minWidth: 140,
+          maxWidth: '100%',
+          ...style,
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: dropHeight,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: size === 'sm' ? '0 12px' : '0 14px',
+            borderRadius: 9999,
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.12))',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.14)',
+            color: 'var(--text-primary, #ffffff)',
+            fontSize: dropFontSize,
+            fontWeight: 600,
+            gap: 10,
+            pointerEvents: 'none',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, overflow: 'hidden' }}>
+            {dropdownLabel && (
+              <span style={{ fontSize: dropFontSize - 1, color: 'var(--text-muted)', fontWeight: 500, marginRight: 2 }}>
+                {dropdownLabel}
+              </span>
+            )}
+            {activeOption?.icon && (
+              <activeOption.icon size={15} style={{ color: activeOption.color || 'var(--text-primary)', flexShrink: 0 }} />
+            )}
+            {activeOption?.emoji && (
+              <span style={{ fontSize: 14, flexShrink: 0 }}>{activeOption.emoji}</span>
+            )}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeOption?.label || value}
+            </span>
+            {activeOption?.badge && (
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 4,
+                background: 'rgba(168,85,247,0.18)', color: '#a855f7', fontWeight: 700, flexShrink: 0
+              }}>
+                {activeOption.badge}
+              </span>
+            )}
+            {activeOption?.count !== undefined && (
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 9999,
+                background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', fontWeight: 700, flexShrink: 0
+              }}>
+                {activeOption.count}
+              </span>
+            )}
+          </div>
+          <ChevronDown size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        </div>
+
+        <select
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          aria-label={ariaLabel}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            opacity: 0,
+            cursor: 'pointer',
+            zIndex: 3,
+            fontSize: 16,
+          }}
+        >
+          {options.map((opt) => (
+            <option key={opt.id} value={opt.id} style={{ background: '#18181b', color: '#ffffff' }}>
+              {opt.label || opt.id} {opt.badge ? `· ${opt.badge}` : ''} {opt.count !== undefined ? `(${opt.count})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
 
   return (
     <div
