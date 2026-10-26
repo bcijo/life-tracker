@@ -22,7 +22,16 @@ export function calculateFromPer100g(foodItem, gramsInput) {
     const pro100 = parseFloat(foodItem?.protein_per_100g) || 0;
     const carb100 = parseFloat(foodItem?.carbs_per_100g) || 0;
     const fat100 = parseFloat(foodItem?.fat_per_100g) || 0;
-    const fib100 = parseFloat(foodItem?.fiber_per_100g) || 0;
+    let fib100 = parseFloat(foodItem?.fiber_per_100g) || 0;
+
+    // Intelligent fallback: if fib100 is 0 but food has carbs and is plant-based, estimate realistic fiber
+    if (fib100 <= 0 && carb100 > 3) {
+        const nameLower = (foodItem?.name || '').toLowerCase();
+        const isAnimalOrDairy = /milk|cheese|curd|yogurt|butter|ghee|oil|egg|chicken|mutton|beef|pork|fish|prawn|sugar|water|soda/i.test(nameLower);
+        if (!isAnimalOrDairy && !foodItem?.is_liquid) {
+            fib100 = Math.round(Math.max(1.2, carb100 * 0.11) * 10) / 10;
+        }
+    }
 
     return {
         grams: Math.round(grams * 10) / 10,

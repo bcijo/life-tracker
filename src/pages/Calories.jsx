@@ -2214,6 +2214,16 @@ const Calories = () => {
                                         const isFood = !isWater && !isBurn;
                                         const Icon = isWater ? Droplets : isBurn ? Dumbbell : Utensils;
                                         const tint = isWater ? '#06b6d4' : isBurn ? AMBER : ACCENT;
+                                        const effectiveFiber = isFood
+                                            ? (Number(item.fiber_g) > 0
+                                                ? Number(item.fiber_g)
+                                                : (() => {
+                                                    const cat = foodCatalog.find(f => (f.normalized_name && item.name && f.normalized_name === normalizeFoodName(item.name)) || (f.name && item.name && f.name.toLowerCase() === item.name.toLowerCase()));
+                                                    if (cat && Number(cat.fiber_per_100g) > 0) return Math.round((Number(cat.fiber_per_100g) * (Number(item.grams) || 100) / 100) * 10) / 10;
+                                                    if (Number(item.carbs_g) > 3 && !isLiquidFood(item)) return Math.round(Math.max(1, Number(item.carbs_g) * 0.11) * 10) / 10;
+                                                    return 0;
+                                                })())
+                                            : 0;
                                         return (
                                             <motion.div
                                                 key={item.id}
@@ -2252,7 +2262,7 @@ const Calories = () => {
                                                             ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
                                                             : isBurn
                                                             ? `${item.duration_mins || '—'} min`
-                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}${item.fiber_g ? ` Fib${Math.round(item.fiber_g)}g` : ''}`}
+                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}${effectiveFiber > 0 ? ` Fib${Math.round(effectiveFiber)}g` : ''}`}
                                                     </div>
                                                 </div>
                                                 <span style={{
@@ -2749,7 +2759,21 @@ const Calories = () => {
                     const protein = Math.round((Number(item.protein_g) || 0) * 10) / 10;
                     const carbs = Math.round((Number(item.carbs_g) || 0) * 10) / 10;
                     const fat = Math.round((Number(item.fat_g) || 0) * 10) / 10;
-                    const fiber = Math.round((Number(item.fiber_g) || 0) * 10) / 10;
+                    
+                    let resolvedFiber = Number(item.fiber_g) || 0;
+                    if (resolvedFiber <= 0) {
+                        const cat = foodCatalog.find(f => (f.normalized_name && item.name && f.normalized_name === normalizeFoodName(item.name)) || (f.name && item.name && f.name.toLowerCase() === item.name.toLowerCase()));
+                        if (cat && Number(cat.fiber_per_100g) > 0) {
+                            resolvedFiber = (Number(cat.fiber_per_100g) * grams) / 100;
+                        } else if (carbs > 3 && !isLiquidFood(item)) {
+                            const nameLower = (item.name || '').toLowerCase();
+                            const isAnimalOrDairy = /milk|cheese|curd|yogurt|butter|ghee|oil|egg|chicken|mutton|beef|pork|fish|prawn|sugar|water|soda/i.test(nameLower);
+                            if (!isAnimalOrDairy) {
+                                resolvedFiber = Math.max(1.2, carbs * 0.11);
+                            }
+                        }
+                    }
+                    const fiber = Math.round(resolvedFiber * 10) / 10;
 
                     const proteinKcal = Math.round(protein * 4);
                     const carbsKcal = Math.round(carbs * 4);

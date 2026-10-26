@@ -1097,7 +1097,7 @@ CRITICAL INSTRUCTIONS:
    - "protein_per_100g": grams of protein (number, 1 decimal)
    - "carbs_per_100g": grams of total carbohydrates (number, 1 decimal)
    - "fat_per_100g": grams of total fat (number, 1 decimal)
-   - "fiber_per_100g": grams of dietary fiber (number, 1 decimal, default 0 if not listed)
+   - "fiber_per_100g": grams of dietary fiber (number, 1 decimal). If printed on the label, use that exact value. If not printed on the label, estimate realistic dietary fiber based on ingredients/food type (e.g. cereals/flours/grains: 3-8g, oats: 10g, beans/lentils: 5-9g, biscuits/cookies: 2-4g, fruits/veg: 2-5g; milk/dairy/oil/egg/meat: 0g). Never default to 0 for grain or plant-based foods.
 6. Serving Unit:
    - "unit_name": single portion name if applicable (e.g. "biscuit", "cookie", "bar", "scoop", "slice", "glass", "cup", "pack", "piece", "serving")
    - "grams_per_unit": weight or volume of 1 serving/unit in grams or ml (number). If not clear, default to 30 for solid or 200 for liquid.
@@ -1519,7 +1519,7 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
             messages: [
                 {
                     role: 'system',
-                    content: 'You are an Indian & global nutrition lookup engine. Always use browser_search to verify per-100g calories, protein, carbs, and fat, and output strictly valid JSON.'
+                    content: 'You are an Indian & global nutrition lookup engine. Always use browser_search to verify per-100g calories, protein, carbs, fat, AND dietary fiber (never omit dietary fiber for plant foods, grains, pulses, fruits, and vegetables), and output strictly valid JSON.'
                 },
                 { role: 'user', content: prompt }
             ],
@@ -1553,7 +1553,17 @@ Return ONLY a valid JSON object with no markdown fences and no extra text in thi
     const protein = parseNumericNutrition(parsed.protein_per_100g, 0);
     const carbs = parseNumericNutrition(parsed.carbs_per_100g, 0);
     const fat = parseNumericNutrition(parsed.fat_per_100g, 0);
-    const fiber = parseNumericNutrition(parsed.fiber_per_100g, 0);
+    let fiber = parseNumericNutrition(parsed.fiber_per_100g, 0);
+
+    // Intelligent fallback: if fiber is 0 or missing, but food contains carbohydrates and is plant-based
+    if (fiber <= 0 && carbs > 3) {
+        const qLower = cleanQuery.toLowerCase();
+        const isAnimalOrDairy = /milk|cheese|curd|yogurt|butter|ghee|oil|egg|chicken|mutton|beef|pork|fish|prawn|sugar|water|soda/i.test(qLower);
+        if (!isAnimalOrDairy) {
+            // Standard Indian/Global food composition: ~10% of carbohydrates in cooked grain/veggie/pulse dishes is dietary fiber
+            fiber = Math.round(Math.max(1.2, carbs * 0.11) * 10) / 10;
+        }
+    }
     const gramsPerUnit = parseNumericNutrition(parsed.grams_per_unit, 0);
     const unitName = parsed.unit_name ? String(parsed.unit_name).trim().toLowerCase() : null;
 
