@@ -3127,6 +3127,51 @@ const Calories = () => {
                     color: #fff;
                     background: linear-gradient(180deg, rgba(8,10,18,0.18) 0%, rgba(8,10,18,0.42) 100%);
                 }
+                /* Completely eliminate focus rectangles, outline rings, and box-shadows on overlay inputs */
+                .cal-scan-direct-overlay input,
+                .cal-scan-direct-overlay input:focus,
+                .cal-scan-direct-overlay input:focus-visible,
+                .cal-scan-direct-overlay input:active {
+                    outline: none !important;
+                    box-shadow: none !important;
+                }
+                .cal-scan-macro-input,
+                .cal-scan-macro-input:focus,
+                .cal-scan-macro-input:focus-visible,
+                .cal-scan-macro-input:active,
+                .cal-scan-kcal-input,
+                .cal-scan-kcal-input:focus,
+                .cal-scan-kcal-input:focus-visible,
+                .cal-scan-kcal-input:active {
+                    outline: none !important;
+                    border: none !important;
+                    border-color: transparent !important;
+                    box-shadow: none !important;
+                    background: transparent !important;
+                }
+                .cal-scan-name-input:focus,
+                .cal-scan-name-input:focus-visible {
+                    background: rgba(255, 255, 255, 0.13);
+                    border-color: rgba(56, 189, 248, 0.65) !important;
+                    box-shadow: none !important;
+                }
+                .cal-scan-sub-input:focus,
+                .cal-scan-sub-input:focus-visible {
+                    border-color: rgba(255, 255, 255, 0.35) !important;
+                    box-shadow: none !important;
+                }
+                .cal-scan-macro-cell {
+                    display: flex; flex-direction: column; align-items: center; gap: 6px;
+                    padding: 10px 6px; border-radius: 14px;
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.14);
+                    cursor: text;
+                    transition: border-color 0.15s ease, background 0.15s ease;
+                }
+                .cal-scan-macro-cell:focus-within {
+                    border-color: rgba(255, 255, 255, 0.32) !important;
+                    background: rgba(255, 255, 255, 0.12);
+                }
                 .cal-scan-top-row {
                     width: 100%;
                     display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -3204,13 +3249,6 @@ const Calories = () => {
                 .cal-scan-macro-grid {
                     width: 100%;
                     display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-                }
-                .cal-scan-macro-cell {
-                    display: flex; flex-direction: column; align-items: center; gap: 6px;
-                    padding: 10px 6px; border-radius: 14px;
-                    background: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(255, 255, 255, 0.14);
-                    cursor: text;
                 }
                 .cal-scan-macro-head {
                     display: flex; align-items: center; gap: 5px;
