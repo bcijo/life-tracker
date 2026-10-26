@@ -322,7 +322,7 @@ const Calories = () => {
     const labelCameraInputRef = useRef(null);
     const labelFileInputRef = useRef(null);
 
-    /* ── Full-screen scan overlay: { src, phase: 'scanning' | 'done' | 'error', result, error } ── */
+    /* ── Full-screen scan overlay: { src, source, phase: 'scanning' | 'done' | 'error', result, error } ── */
     const [scanOverlay, setScanOverlay] = useState(null);
     const closeScanOverlay = () => {
         setScanOverlay((prev) => {
@@ -331,10 +331,17 @@ const Calories = () => {
         });
     };
     const retakeFromOverlay = () => {
+        const srcType = scanOverlay?.source || 'upload';
         closeScanOverlay();
         setLabelImagePreview(null);
         setScanStatusNote('');
-        setTimeout(() => labelFileInputRef.current?.click(), 150);
+        setTimeout(() => {
+            if (srcType === 'camera') {
+                labelCameraInputRef.current?.click();
+            } else {
+                labelFileInputRef.current?.click();
+            }
+        }, 150);
     };
 
     const openManualFoodModal = (prefillName = '', triggerAction = null) => {
@@ -365,22 +372,22 @@ const Calories = () => {
         }
     };
 
-    const handleLabelImageFile = async (file) => {
+    const handleLabelImageFile = async (file, source = 'upload') => {
         if (!file) return;
         setManualFoodError('');
         setScanStatusNote('');
         setScanningLabel(true);
         const objectUrl = URL.createObjectURL(file);
-        setScanOverlay({ src: objectUrl, phase: 'scanning', result: null, error: '' });
+        setScanOverlay({ src: objectUrl, source, phase: 'scanning', result: null, error: '' });
         try {
             const compressedDataUrl = await compressImageFile(file, 1600, 0.85);
             setLabelImagePreview(compressedDataUrl);
 
-            const parsed = await parseNutritionLabelImage(compressedDataUrl, manualFoodForm.name || foodSearch);
+            const parsed = await parseNutritionLabelImage(compressedDataUrl, manualFoodForm.name);
 
             setManualFoodForm((prev) => ({
                 ...prev,
-                name: prev.name.trim() ? prev.name : (parsed.name || prev.name),
+                name: parsed.name ? parsed.name : prev.name,
                 calories_per_100g: parsed.calories_per_100g > 0 ? String(parsed.calories_per_100g) : prev.calories_per_100g,
                 protein_per_100g: parsed.protein_per_100g >= 0 ? String(parsed.protein_per_100g) : prev.protein_per_100g,
                 carbs_per_100g: parsed.carbs_per_100g >= 0 ? String(parsed.carbs_per_100g) : prev.carbs_per_100g,
@@ -2378,7 +2385,7 @@ const Calories = () => {
                             style={{ display: 'none' }}
                             onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                if (file) handleLabelImageFile(file);
+                                if (file) handleLabelImageFile(file, 'camera');
                                 e.target.value = '';
                             }}
                         />
@@ -2389,7 +2396,7 @@ const Calories = () => {
                             style={{ display: 'none' }}
                             onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                if (file) handleLabelImageFile(file);
+                                if (file) handleLabelImageFile(file, 'upload');
                                 e.target.value = '';
                             }}
                         />
@@ -2741,6 +2748,12 @@ const Calories = () => {
                             transition={{ duration: 0.25 }}
                             onClick={scanOverlay.phase !== 'scanning' ? closeScanOverlay : undefined}
                         >
+                            {/* Full-bleed ambient blurred background */}
+                            <div
+                                className="cal-scan-ambient"
+                                style={{ backgroundImage: `url(${scanOverlay.src})` }}
+                            />
+
                             {scanOverlay.phase !== 'scanning' && (
                                 <button
                                     type="button"
@@ -2752,6 +2765,7 @@ const Calories = () => {
                                 </button>
                             )}
 
+                            {/* Uncropped image frame */}
                             <motion.div
                                 className="cal-scan-frame"
                                 initial={{ scale: 0.96, opacity: 0 }}
@@ -2766,123 +2780,147 @@ const Calories = () => {
                                     style={{
                                         filter: scanOverlay.phase === 'scanning'
                                             ? 'none'
-                                            : 'blur(16px) brightness(0.4) saturate(0.9)',
-                                        transform: scanOverlay.phase === 'scanning' ? 'scale(1)' : 'scale(1.06)',
+                                            : 'blur(20px) brightness(0.38) saturate(0.95)',
                                     }}
                                 />
 
-                                {/* Scanning sweep */}
+                                {/* Scanning sweep & subtle corner ticks */}
                                 {scanOverlay.phase === 'scanning' && (
                                     <>
                                         <div className="cal-scan-tint" />
+                                        <span className="cal-scan-corner tl" />
+                                        <span className="cal-scan-corner tr" />
+                                        <span className="cal-scan-corner bl" />
+                                        <span className="cal-scan-corner br" />
                                         <motion.div
                                             className="cal-scan-line"
-                                            initial={{ top: '0%' }}
-                                            animate={{ top: ['0%', '100%', '0%'] }}
-                                            transition={{ duration: 3.2, ease: 'easeInOut', repeat: Infinity }}
+                                            initial={{ top: '2%' }}
+                                            animate={{ top: ['2%', '98%', '2%'] }}
+                                            transition={{ duration: 3.0, ease: 'easeInOut', repeat: Infinity }}
                                         />
                                     </>
                                 )}
-
-                                {/* Results */}
-                                {scanOverlay.phase === 'done' && scanOverlay.result && (() => {
-                                    const r = scanOverlay.result;
-                                    const unit = r.is_liquid ? 'ml' : 'g';
-                                    const rows = [
-                                        { label: 'Protein', value: r.protein_per_100g, color: '#6366f1' },
-                                        { label: 'Carbs', value: r.carbs_per_100g, color: GREEN },
-                                        { label: 'Fat', value: r.fat_per_100g, color: AMBER },
-                                        { label: 'Fiber', value: r.fiber_per_100g, color: FIBER_COLOR },
-                                    ];
-                                    return (
-                                        <motion.div
-                                            className="cal-scan-result"
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.2, duration: 0.35 }}
-                                        >
-                                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>
-                                                Per 100{unit}
-                                            </div>
-                                            {(r.name || manualFoodForm.name) && (
-                                                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', textAlign: 'center' }}>
-                                                    {manualFoodForm.name || r.name}
-                                                </div>
-                                            )}
-                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                                                <span style={{ fontFamily: MONO, fontSize: 44, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
-                                                    {Math.round(Number(r.calories_per_100g) || 0)}
-                                                </span>
-                                                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>kcal</span>
-                                            </div>
-                                            <div className="cal-scan-macros">
-                                                {rows.map((m) => (
-                                                    <div key={m.label} className="cal-scan-macro">
-                                                        <span style={{ width: 8, height: 8, borderRadius: 9999, background: m.color, boxShadow: `0 0 8px ${m.color}` }} />
-                                                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', flex: 1 }}>{m.label}</span>
-                                                        <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 700, color: '#fff' }}>
-                                                            {Math.round((Number(m.value) || 0) * 10) / 10}g
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {r.serving_size_text && (
-                                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>
-                                                    Label serving: {r.serving_size_text}
-                                                </div>
-                                            )}
-                                            <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 4 }}>
-                                                <button type="button" onClick={retakeFromOverlay} className="cal-scan-btn-ghost">
-                                                    Retake
-                                                </button>
-                                                <button type="button" onClick={closeScanOverlay} className="btn-primary" style={{ flex: 1, padding: '11px 16px', fontSize: 14 }}>
-                                                    <Check size={15} style={{ marginRight: 6, verticalAlign: '-2px' }} />
-                                                    Use values
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })()}
-
-                                {/* Error */}
-                                {scanOverlay.phase === 'error' && (
-                                    <motion.div
-                                        className="cal-scan-result"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.15, duration: 0.3 }}
-                                    >
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Couldn't read this label</div>
-                                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: 280 }}>
-                                            {scanOverlay.error}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 4 }}>
-                                            <button type="button" onClick={closeScanOverlay} className="cal-scan-btn-ghost">
-                                                Close
-                                            </button>
-                                            <button type="button" onClick={retakeFromOverlay} className="btn-primary" style={{ flex: 1, padding: '11px 16px', fontSize: 14 }}>
-                                                Try another photo
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
                             </motion.div>
 
-                            {/* Minimal status caption */}
+                            {/* Minimal status caption while scanning */}
                             {scanOverlay.phase === 'scanning' && (
                                 <motion.div
                                     className="cal-scan-caption"
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 }}
+                                    transition={{ delay: 0.15 }}
                                 >
                                     <motion.span
-                                        style={{ width: 6, height: 6, borderRadius: 9999, background: '#a5f3fc', display: 'inline-block' }}
-                                        animate={{ opacity: [0.3, 1, 0.3] }}
+                                        style={{ width: 6, height: 6, borderRadius: 9999, background: '#38bdf8', boxShadow: '0 0 8px #38bdf8', display: 'inline-block' }}
+                                        animate={{ opacity: [0.35, 1, 0.35] }}
                                         transition={{ duration: 1.4, repeat: Infinity }}
                                     />
-                                    Reading label
+                                    Reading label…
                                 </motion.div>
+                            )}
+
+                            {/* Viewport-centered results stage (never clipped by image dimensions) */}
+                            {scanOverlay.phase === 'done' && scanOverlay.result && (() => {
+                                const r = scanOverlay.result;
+                                const unit = r.is_liquid ? 'ml' : 'g';
+                                const displayName = r.name || manualFoodForm.name;
+                                const macros = [
+                                    { label: 'Protein', value: r.protein_per_100g, color: '#818cf8' },
+                                    { label: 'Carbs', value: r.carbs_per_100g, color: GREEN },
+                                    { label: 'Fat', value: r.fat_per_100g, color: AMBER },
+                                    { label: 'Fiber', value: r.fiber_per_100g, color: FIBER_COLOR },
+                                ];
+                                return (
+                                    <div className="cal-scan-result-stage">
+                                        <motion.div
+                                            className="cal-scan-result-card"
+                                            initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            transition={{ delay: 0.12, duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <div className="cal-scan-badge">
+                                                <Sparkles size={11} style={{ color: '#38bdf8' }} />
+                                                <span>Scanned · Per 100{unit}</span>
+                                            </div>
+
+                                            {displayName && (
+                                                <div className="cal-scan-title">
+                                                    {displayName}
+                                                </div>
+                                            )}
+
+                                            <div className="cal-scan-kcal-row">
+                                                <span className="cal-scan-kcal-num">
+                                                    {Math.round(Number(r.calories_per_100g) || 0)}
+                                                </span>
+                                                <span className="cal-scan-kcal-unit">kcal</span>
+                                            </div>
+
+                                            <div className="cal-scan-macro-grid">
+                                                {macros.map((m) => (
+                                                    <div key={m.label} className="cal-scan-macro-cell">
+                                                        <div className="cal-scan-macro-head">
+                                                            <span
+                                                                className="cal-scan-macro-dot"
+                                                                style={{ background: m.color, boxShadow: `0 0 8px ${m.color}` }}
+                                                            />
+                                                            <span className="cal-scan-macro-label">{m.label}</span>
+                                                        </div>
+                                                        <div className="cal-scan-macro-val">
+                                                            {Math.round((Number(m.value) || 0) * 10) / 10}
+                                                            <span className="cal-scan-macro-g">g</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {r.serving_size_text && (
+                                                <div className="cal-scan-serving">
+                                                    Label serving: {r.serving_size_text}
+                                                </div>
+                                            )}
+
+                                            <div className="cal-scan-actions">
+                                                <button type="button" onClick={retakeFromOverlay} className="cal-scan-btn-ghost">
+                                                    Retake
+                                                </button>
+                                                <button type="button" onClick={closeScanOverlay} className="cal-scan-btn-primary">
+                                                    <Check size={16} strokeWidth={2.5} />
+                                                    <span>Use values</span>
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Viewport-centered error stage */}
+                            {scanOverlay.phase === 'error' && (
+                                <div className="cal-scan-result-stage">
+                                    <motion.div
+                                        className="cal-scan-result-card"
+                                        initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        transition={{ delay: 0.1, duration: 0.28 }}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', textAlign: 'center' }}>
+                                            Couldn't read this label
+                                        </div>
+                                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', textAlign: 'center', lineHeight: 1.5 }}>
+                                            {scanOverlay.error}
+                                        </div>
+                                        <div className="cal-scan-actions" style={{ marginTop: 4 }}>
+                                            <button type="button" onClick={closeScanOverlay} className="cal-scan-btn-ghost">
+                                                Close
+                                            </button>
+                                            <button type="button" onClick={retakeFromOverlay} className="cal-scan-btn-primary">
+                                                <span>Try another photo</span>
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </div>
                             )}
                         </motion.div>
                     )}
@@ -2931,77 +2969,177 @@ const Calories = () => {
                 /* ── Full-screen label scan overlay ── */
                 .cal-scan-overlay {
                     position: fixed; inset: 0; z-index: 10050;
-                    background: rgba(5, 6, 12, 0.94);
-                    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+                    background: rgba(6, 7, 14, 0.94);
+                    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
-                    gap: 18px;
-                    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+                    gap: 16px;
+                    padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px));
+                    overflow: hidden;
+                }
+                .cal-scan-ambient {
+                    position: absolute; inset: -40px;
+                    background-size: cover; background-position: center;
+                    filter: blur(56px) brightness(0.24) saturate(1.2);
+                    pointer-events: none; z-index: 0;
                 }
                 .cal-scan-close {
-                    position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px;
-                    width: 38px; height: 38px; border-radius: 50%;
-                    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+                    position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); right: 18px;
+                    width: 40px; height: 40px; border-radius: 50%;
+                    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.16);
                     color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
-                    z-index: 2;
+                    z-index: 6;
+                    transition: background 0.15s ease, transform 0.15s ease;
                 }
+                .cal-scan-close:hover { background: rgba(255,255,255,0.18); transform: scale(1.04); }
                 .cal-scan-frame {
-                    position: relative; overflow: hidden; border-radius: 18px;
-                    display: inline-flex; max-width: 100%;
-                    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08);
+                    position: relative; z-index: 1;
+                    overflow: hidden; border-radius: 18px;
+                    display: inline-flex; align-items: center; justify-content: center;
+                    max-width: 92vw; max-height: 78vh;
+                    box-shadow: 0 28px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12);
+                    background: rgba(12, 14, 24, 0.5);
                 }
                 .cal-scan-img {
                     display: block;
-                    max-width: min(94vw, 900px);
-                    max-height: calc(100vh - 120px);
-                    min-width: min(320px, 90vw);
-                    min-height: 380px;
-                    object-fit: cover;
-                    transition: filter 0.7s ease, transform 0.9s ease;
+                    width: auto; height: auto;
+                    max-width: min(92vw, 760px);
+                    max-height: 78vh;
+                    object-fit: contain;
+                    transition: filter 0.65s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 .cal-scan-tint {
                     position: absolute; inset: 0; pointer-events: none;
-                    background: linear-gradient(180deg, rgba(6,182,212,0.04), rgba(168,85,247,0.05));
+                    background: linear-gradient(180deg, rgba(56,189,248,0.04), rgba(168,85,247,0.05));
                 }
+                .cal-scan-corner {
+                    position: absolute; width: 18px; height: 18px;
+                    border-color: rgba(165, 243, 252, 0.75); border-style: solid;
+                    pointer-events: none; z-index: 2;
+                }
+                .cal-scan-corner.tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; border-top-left-radius: 6px; }
+                .cal-scan-corner.tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; border-top-right-radius: 6px; }
+                .cal-scan-corner.bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; border-bottom-left-radius: 6px; }
+                .cal-scan-corner.br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; border-bottom-right-radius: 6px; }
                 .cal-scan-line {
-                    position: absolute; left: 0; right: 0; height: 90px;
+                    position: absolute; left: 0; right: 0; height: 72px;
                     transform: translateY(-50%);
-                    pointer-events: none;
+                    pointer-events: none; z-index: 2;
                     background: linear-gradient(180deg,
-                        rgba(165,243,252,0) 0%,
-                        rgba(165,243,252,0.10) 45%,
-                        rgba(165,243,252,0.85) 50%,
-                        rgba(165,243,252,0.10) 55%,
-                        rgba(165,243,252,0) 100%);
+                        rgba(56,189,248,0) 0%,
+                        rgba(56,189,248,0.12) 44%,
+                        rgba(186,230,253,0.92) 50%,
+                        rgba(56,189,248,0.12) 56%,
+                        rgba(56,189,248,0) 100%);
                     mix-blend-mode: screen;
                 }
                 .cal-scan-caption {
+                    position: relative; z-index: 2;
                     display: inline-flex; align-items: center; gap: 8px;
-                    font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
-                    color: rgba(255,255,255,0.75);
-                }
-                .cal-scan-result {
-                    position: absolute; inset: 0;
-                    display: flex; flex-direction: column; align-items: center; justify-content: center;
-                    gap: 14px; padding: 24px;
-                    text-shadow: 0 1px 12px rgba(0,0,0,0.45);
-                }
-                .cal-scan-macros {
-                    width: 100%; max-width: 300px;
-                    display: flex; flex-direction: column; gap: 2px;
-                    padding: 10px 14px; border-radius: 14px;
+                    padding: 7px 14px; border-radius: 9999px;
                     background: rgba(255,255,255,0.06);
-                    border: 1px solid rgba(255,255,255,0.10);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    font-size: 13px; font-weight: 500; letter-spacing: 0.01em;
+                    color: rgba(255,255,255,0.82);
                 }
-                .cal-scan-macro {
-                    display: flex; align-items: center; gap: 10px; padding: 7px 0;
-                    border-bottom: 1px solid rgba(255,255,255,0.07);
+                .cal-scan-result-stage {
+                    position: fixed; inset: 0; z-index: 4;
+                    display: flex; align-items: center; justify-content: center;
+                    padding: 20px;
+                    overflow-y: auto;
                 }
-                .cal-scan-macro:last-child { border-bottom: none; }
-                .cal-scan-result > div:last-child { max-width: 300px; }
+                .cal-scan-result-card {
+                    width: 100%; max-width: 390px;
+                    display: flex; flex-direction: column; align-items: center;
+                    gap: 16px; padding: 26px 22px 22px;
+                    border-radius: 24px;
+                    background: rgba(14, 16, 28, 0.62);
+                    backdrop-filter: blur(24px) saturate(1.3);
+                    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+                    border: 1px solid rgba(255, 255, 255, 0.14);
+                    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+                    color: #fff;
+                }
+                .cal-scan-badge {
+                    display: inline-flex; align-items: center; gap: 6px;
+                    padding: 4px 11px; border-radius: 9999px;
+                    background: rgba(56, 189, 248, 0.12);
+                    border: 1px solid rgba(56, 189, 248, 0.28);
+                    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+                    text-transform: uppercase; color: #bae6fd;
+                }
+                .cal-scan-title {
+                    font-size: 20px; font-weight: 800; color: #ffffff;
+                    letter-spacing: -0.02em; text-align: center;
+                    line-height: 1.25; margin-top: -4px;
+                }
+                .cal-scan-kcal-row {
+                    display: flex; align-items: baseline; justify-content: center; gap: 6px;
+                    margin: -2px 0 2px;
+                }
+                .cal-scan-kcal-num {
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 48px; font-weight: 800; color: #ffffff;
+                    line-height: 1; letter-spacing: -0.03em;
+                }
+                .cal-scan-kcal-unit {
+                    font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, 0.68);
+                }
+                .cal-scan-macro-grid {
+                    width: 100%;
+                    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+                }
+                .cal-scan-macro-cell {
+                    display: flex; flex-direction: column; align-items: center; gap: 6px;
+                    padding: 11px 6px; border-radius: 14px;
+                    background: rgba(255, 255, 255, 0.055);
+                    border: 1px solid rgba(255, 255, 255, 0.09);
+                }
+                .cal-scan-macro-head {
+                    display: flex; align-items: center; gap: 5px;
+                }
+                .cal-scan-macro-dot {
+                    width: 6px; height: 6px; border-radius: 9999px; flex-shrink: 0;
+                }
+                .cal-scan-macro-label {
+                    font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.68);
+                }
+                .cal-scan-macro-val {
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 15px; font-weight: 800; color: #ffffff; line-height: 1.1;
+                }
+                .cal-scan-macro-g {
+                    font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.6); margin-left: 1px;
+                }
+                .cal-scan-serving {
+                    font-size: 12px; color: rgba(255, 255, 255, 0.6);
+                    text-align: center; margin-top: -2px;
+                }
+                .cal-scan-actions {
+                    display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 2px;
+                }
                 .cal-scan-btn-ghost {
-                    padding: 11px 16px; border-radius: 12px; font-size: 14px; font-weight: 600;
-                    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16);
-                    color: #fff; cursor: pointer;
+                    height: 44px; padding: 0 18px; border-radius: 12px;
+                    font-size: 14px; font-weight: 600;
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    color: #ffffff; cursor: pointer;
+                    display: inline-flex; align-items: center; justify-content: center;
+                    transition: background 0.15s ease;
+                }
+                .cal-scan-btn-ghost:hover { background: rgba(255, 255, 255, 0.14); }
+                .cal-scan-btn-primary {
+                    flex: 1; height: 44px; padding: 0 18px; border-radius: 12px;
+                    font-size: 14px; font-weight: 700;
+                    background: var(--accent-gradient, linear-gradient(135deg, #a855f7 0%, #ec4899 100%));
+                    border: 1px solid rgba(255, 255, 255, 0.22);
+                    color: #ffffff; cursor: pointer;
+                    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+                    box-shadow: 0 8px 20px rgba(168, 85, 247, 0.35);
+                    transition: transform 0.15s ease, box-shadow 0.15s ease;
+                }
+                .cal-scan-btn-primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.5);
                 }
                 @media (min-width: 768px) {
                     .fab-add-calorie {
