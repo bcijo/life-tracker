@@ -121,48 +121,64 @@ export default function useCalories(selectedDateStr = null) {
 
     // 3. BMR & Body Settings
     const [localSettings, setLocalSettings] = useState(() => {
+        let initialWaterGoal = 3000;
+        try {
+            const wg = localStorage.getItem('cal_water_goal_ml');
+            if (wg && Number(wg) > 0) initialWaterGoal = Number(wg);
+        } catch {}
+
         try {
             const cached = localStorage.getItem(SETTINGS_CACHE_KEY);
-            return cached ? JSON.parse(cached) : {
-                weight_kg: 70,
-                height_cm: 175,
-                age: 24,
-                gender: 'male',
-                bmr_override: null,
-                calorie_goal: null,
-                water_goal_ml: 3000,
-            };
-        } catch {
-            return {
-                weight_kg: 70,
-                height_cm: 175,
-                age: 24,
-                gender: 'male',
-                bmr_override: null,
-                calorie_goal: null,
-                water_goal_ml: 3000,
-            };
-        }
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                return {
+                    ...parsed,
+                    water_goal_ml: Number(parsed.water_goal_ml) || initialWaterGoal,
+                };
+            }
+        } catch {}
+
+        return {
+            weight_kg: 70,
+            height_cm: 175,
+            age: 24,
+            gender: 'male',
+            bmr_override: null,
+            calorie_goal: null,
+            water_goal_ml: initialWaterGoal,
+        };
     });
 
-    // Sync settings from profile when loaded
+    // Sync settings from profile when loaded (safely preserving water_goal_ml)
     useEffect(() => {
         if (!profile) return;
         const hasProfileMetrics =
-            profile.weight_kg || profile.height_cm || profile.age || profile.bmr_override || profile.calorie_goal;
+            profile.weight_kg || profile.height_cm || profile.age || profile.bmr_override || profile.calorie_goal || profile.water_goal_ml;
         if (hasProfileMetrics) {
-            const merged = {
-                weight_kg: Number(profile.weight_kg) || localSettings.weight_kg || 70,
-                height_cm: Number(profile.height_cm) || localSettings.height_cm || 175,
-                age: Number(profile.age) || localSettings.age || 24,
-                gender: profile.gender || localSettings.gender || 'male',
-                bmr_override: profile.bmr_override ? Number(profile.bmr_override) : localSettings.bmr_override,
-                calorie_goal: profile.calorie_goal ? Number(profile.calorie_goal) : localSettings.calorie_goal,
-            };
-            setLocalSettings(merged);
-            try {
-                localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(merged));
-            } catch {}
+            setLocalSettings(prev => {
+                let savedWater = prev?.water_goal_ml;
+                if (!savedWater || savedWater === 3000) {
+                    try {
+                        const ls = localStorage.getItem('cal_water_goal_ml');
+                        if (ls && Number(ls) > 0) savedWater = Number(ls);
+                    } catch {}
+                }
+
+                const merged = {
+                    ...prev,
+                    weight_kg: Number(profile.weight_kg) || prev.weight_kg || 70,
+                    height_cm: Number(profile.height_cm) || prev.height_cm || 175,
+                    age: Number(profile.age) || prev.age || 24,
+                    gender: profile.gender || prev.gender || 'male',
+                    bmr_override: profile.bmr_override ? Number(profile.bmr_override) : prev.bmr_override,
+                    calorie_goal: profile.calorie_goal ? Number(profile.calorie_goal) : prev.calorie_goal,
+                    water_goal_ml: Number(profile.water_goal_ml) || savedWater || 3000,
+                };
+                try {
+                    localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(merged));
+                } catch {}
+                return merged;
+            });
         }
     }, [profile]);
 
@@ -931,6 +947,11 @@ export default function useCalories(selectedDateStr = null) {
      * Save BMR & Body Settings
      */
     const saveBmrSettings = useCallback(async (newSettings) => {
+        const waterGoal = newSettings.water_goal_ml ? Number(newSettings.water_goal_ml) : (localSettings.water_goal_ml || 3000);
+        try {
+            localStorage.setItem('cal_water_goal_ml', String(waterGoal));
+        } catch {}
+
         const updated = {
             ...localSettings,
             weight_kg: Number(newSettings.weight_kg) || 70,
@@ -939,7 +960,7 @@ export default function useCalories(selectedDateStr = null) {
             gender: newSettings.gender || 'male',
             bmr_override: newSettings.bmr_override ? Number(newSettings.bmr_override) : null,
             calorie_goal: newSettings.calorie_goal ? Number(newSettings.calorie_goal) : null,
-            water_goal_ml: newSettings.water_goal_ml ? Number(newSettings.water_goal_ml) : (localSettings.water_goal_ml || 3000),
+            water_goal_ml: waterGoal,
         };
 
         setLocalSettings(updated);
@@ -947,14 +968,46 @@ export default function useCalories(selectedDateStr = null) {
             localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(updated));
         } catch {}
 
+        // Separate core profile columns to prevent "column profiles.water_goal_ml does not exist" error rollback
+        const profilePayload = {
+            weight_kg: updated.weight_kg,
+            height_cm: updated.height_cm,
+            age: updated.age,
+            gender: updated.gender,
+            bmr_override: updated.bmr_override,
+            calorie_goal: updated.calorie_goal,
+        };
+
         try {
-            await updateProfile(updated);
+            await updateProfile(profilePayload);
         } catch (err) {
             console.warn('[useCalories] Saved BMR settings locally:', err.message);
         }
 
         return updated;
     }, [localSettings, updateProfile]);
+
+    /**
+     * Directly update daily water goal
+     */
+    const saveWaterGoal = useCallback(async (newGoalMl) => {
+        const goal = Math.max(250, Math.min(10000, Number(newGoalMl) || 3000));
+        try {
+            localStorage.setItem('cal_water_goal_ml', String(goal));
+        } catch {}
+
+        const updated = {
+            ...localSettings,
+            water_goal_ml: goal,
+        };
+
+        setLocalSettings(updated);
+        try {
+            localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(updated));
+        } catch {}
+
+        return updated;
+    }, [localSettings]);
 
     // Expected Daily BMR
     const expectedBmr = useMemo(() => calculateMifflinBmr(localSettings), [localSettings]);
@@ -1115,6 +1168,7 @@ export default function useCalories(selectedDateStr = null) {
         logDailyWeight,
         deleteDailyWeight,
         saveBmrSettings,
+        saveWaterGoal,
         estimateExerciseBurn,
     };
 }

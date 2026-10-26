@@ -191,6 +191,7 @@ const Calories = () => {
         logDailyWeight,
         deleteDailyWeight,
         saveBmrSettings,
+        saveWaterGoal,
     } = useCalories(selectedDate);
 
     /* ── Food logger state ── */
@@ -253,6 +254,18 @@ const Calories = () => {
     const [customWaterInput, setCustomWaterInput] = useState('');
     const [showCustomWater, setShowCustomWater] = useState(false);
     const [waterFeedback, setWaterFeedback] = useState('');
+    const [showEditWaterGoal, setShowEditWaterGoal] = useState(false);
+    const [waterGoalInput, setWaterGoalInput] = useState('3000');
+
+    const handleSaveWaterGoalDirectly = async (goalMl) => {
+        const ml = parseInt(goalMl !== undefined ? goalMl : waterGoalInput, 10);
+        if (ml >= 250 && ml <= 10000) {
+            await saveWaterGoal(ml);
+            setShowEditWaterGoal(false);
+            setWaterFeedback(`Goal updated to ${(ml / 1000).toFixed(1)} L`);
+            setTimeout(() => setWaterFeedback(''), 2000);
+        }
+    };
 
     const handleQuickWater = async (ml) => {
         const res = await addWater(ml);
@@ -1189,9 +1202,32 @@ const Calories = () => {
                                             <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 800, color: '#06b6d4', lineHeight: 1 }}>
                                                 {(totalWaterMl / 1000).toFixed(1)}
                                             </span>
-                                            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setWaterGoalInput(String(waterGoalMl));
+                                                    setShowEditWaterGoal(true);
+                                                }}
+                                                title="Edit daily water goal"
+                                                style={{
+                                                    background: 'rgba(6, 182, 212, 0.08)',
+                                                    border: '1px solid rgba(6, 182, 212, 0.22)',
+                                                    borderRadius: 8,
+                                                    padding: '2px 6px',
+                                                    fontSize: 12,
+                                                    color: 'var(--text-secondary)',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    transition: 'all 0.15s ease',
+                                                }}
+                                                className="cal-goal-btn"
+                                            >
                                                 / {(waterGoalMl / 1000).toFixed(1)} L
-                                            </span>
+                                                <Settings2 size={11} style={{ color: '#06b6d4', opacity: 0.8 }} />
+                                            </button>
                                         </div>
                                         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, display: 'block', marginTop: 2 }}>
                                             {totalWaterMl.toLocaleString()} / {waterGoalMl.toLocaleString()} ml
@@ -2562,6 +2598,93 @@ const Calories = () => {
                     <button type="submit" className="btn-primary" style={{ padding: 12, fontSize: 14 }}>
                         Save
                     </button>
+                </form>
+            </Modal>
+
+            {/* Direct Water Goal Modal */}
+            <Modal isOpen={showEditWaterGoal} onClose={() => setShowEditWaterGoal(false)} title="Daily Water Goal">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSaveWaterGoalDirectly();
+                    }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+                >
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                        Select or enter your daily hydration target:
+                    </span>
+
+                    {/* Quick Presets */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        {[2000, 2500, 3000, 3500].map((presetMl) => (
+                            <button
+                                key={presetMl}
+                                type="button"
+                                onClick={() => {
+                                    setWaterGoalInput(String(presetMl));
+                                }}
+                                style={{
+                                    padding: '10px 6px',
+                                    borderRadius: 12,
+                                    fontSize: 13,
+                                    fontFamily: MONO,
+                                    fontWeight: 700,
+                                    background: waterGoalInput === String(presetMl) ? 'rgba(6,182,212,0.2)' : 'var(--surface-input)',
+                                    border: waterGoalInput === String(presetMl) ? '1px solid #06b6d4' : '1px solid var(--border-subtle)',
+                                    color: waterGoalInput === String(presetMl) ? '#06b6d4' : 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                }}
+                            >
+                                {(presetMl / 1000).toFixed(1)} L
+                            </button>
+                        ))}
+                    </div>
+
+                    <div>
+                        <Label style={{ display: 'block', marginBottom: 6 }}>Target in Milliliters (ml)</Label>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type="number"
+                                min="500"
+                                max="10000"
+                                step="100"
+                                placeholder="3000"
+                                value={waterGoalInput}
+                                onChange={(e) => setWaterGoalInput(e.target.value)}
+                                autoFocus
+                                className="surface-input"
+                                style={{ ...inputStyle, fontFamily: MONO, padding: '11px 45px 11px 14px' }}
+                            />
+                            <span style={{
+                                position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                                fontSize: 12, color: 'var(--text-muted)', fontFamily: MONO, pointerEvents: 'none',
+                            }}>
+                                ml
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditWaterGoal(false)}
+                            style={{
+                                flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 600,
+                                background: 'transparent', border: '1px solid var(--border-subtle)',
+                                color: 'var(--text-secondary)', cursor: 'pointer',
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn-primary"
+                            style={{ flex: 1, padding: 12, fontSize: 14, background: '#06b6d4' }}
+                        >
+                            Save Goal
+                        </button>
+                    </div>
                 </form>
             </Modal>
 
