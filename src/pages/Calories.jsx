@@ -2137,21 +2137,7 @@ const Calories = () => {
                         transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 25 }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Today's Log</h2>
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => { setMode('food'); setShowAddModal(true); }}
-                                    style={{
-                                        height: 28, padding: '0 10px', borderRadius: 8, display: 'flex',
-                                        alignItems: 'center', gap: 4, cursor: 'pointer',
-                                        background: 'rgba(168,85,247,0.14)', border: '1px solid rgba(168,85,247,0.3)',
-                                        color: ACCENT, fontSize: 12, fontWeight: 700,
-                                    }}
-                                >
-                                    <Plus size={14} strokeWidth={2.5} /> Add
-                                </motion.button>
-                            </div>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Today's Log</h2>
                             <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)' }}>
                                 {fmt(totalIntake)} in · {fmt(exerciseBurn)} out
                             </span>
