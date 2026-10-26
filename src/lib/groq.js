@@ -7,7 +7,7 @@ import { APP_KNOWLEDGE_BASE } from './appKnowledge';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const PRIMARY_MODEL = 'openai/gpt-oss-120b';
 const FALLBACK_MODEL = 'openai/gpt-oss-20b';
-const VISION_MODEL_NAME = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const VISION_MODEL_NAME = 'qwen/qwen3.8-27b';
 
 /**
  * Converts a raw SQL query into a human-understandable activity phrase
@@ -896,7 +896,7 @@ export async function generateReport(type, periodStart, periodEnd, fullData) {
     }
 }
 
-// 3. Bill Splitting — Direct Vision Parser (Groq Qwen 3.6 27B)
+// 3. Bill Splitting — Direct Vision Parser (Groq Qwen 3.8 27B)
 export async function parseBillImage(base64ImageDataUrl) {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error('VITE_GROQ_API_KEY is missing');
@@ -1077,7 +1077,7 @@ Return ONLY a valid JSON object with NO markdown fences and NO extra commentary 
   "serving_size_text": "1 biscuit (12g)"
 }`;
 
-    const candidateModels = [VISION_MODEL_NAME, 'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'];
+    const candidateModels = [VISION_MODEL_NAME];
     let lastError = null;
 
     for (const model of candidateModels) {

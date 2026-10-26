@@ -53,6 +53,46 @@ const MEALS = [
     { id: 'dinner', label: 'Dinner', emoji: '🌙' },
 ];
 
+const renderVesselSvg = (vessel) => {
+    switch (vessel) {
+        case 'glass':
+            return (
+                <svg width="22" height="26" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 2L5.2 20.2C5.4 21.3 6.3 22 7.4 22H12.6C13.7 22 14.6 21.3 14.8 20.2L17 2H3Z" stroke="#06b6d4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4.5 12C6.5 11.2 8.5 12.8 11 12C13.5 11.2 14.5 12.5 15.5 12" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" />
+                    <path d="M5.5 20H14.5" stroke="#06b6d4" strokeWidth="1.2" strokeOpacity="0.4" />
+                </svg>
+            );
+        case 'bottle':
+            return (
+                <svg width="20" height="26" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="7" y="1" width="6" height="2.5" rx="1" stroke="#06b6d4" strokeWidth="1.5" />
+                    <path d="M8 3.5V5.5C5.8 7 4.5 9.2 4.5 11.8V19.8C4.5 21 5.4 22 6.6 22H13.4C14.6 22 15.5 21 15.5 19.8V11.8C15.5 9.2 14.2 7 12 5.5V3.5" stroke="#06b6d4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4.8 14C7 13.2 9 14.8 11.5 14C13.5 13.4 14.5 14.2 15.2 14" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+            );
+        case 'sipper':
+            return (
+                <svg width="20" height="26" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 1H9C8.4 1 8 1.4 8 2V3.5H12V2C12 1.4 11.6 1 11 1Z" fill="#06b6d4" />
+                    <rect x="5.5" y="3.5" width="9" height="2.5" rx="1" stroke="#06b6d4" strokeWidth="1.5" />
+                    <path d="M6 6L4.8 9.5C4.6 10.2 4.5 10.8 4.5 11.5V19.8C4.5 21 5.4 22 6.6 22H13.4C14.6 22 15.5 21 15.5 19.8V11.5C15.5 10.8 15.4 10.2 15.2 9.5L14 6" stroke="#06b6d4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4.6 15C7 14.2 9 15.8 11.5 15C13.5 14.4 14.5 15.2 15.4 15" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+            );
+        case 'flask':
+        default:
+            return (
+                <svg width="22" height="26" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="7" y="1.5" width="6" height="2.5" rx="1" stroke="#06b6d4" strokeWidth="1.5" />
+                    <path d="M7 2C5.3 2 4 3.3 4 5V8C4 8.8 4.7 9.5 5.5 9.5" stroke="#06b6d4" strokeWidth="1.4" strokeLinecap="round" />
+                    <path d="M5.5 6C5.5 5 6.4 4 7.5 4H12.5C13.6 4 14.5 5 14.5 6V19.8C14.5 21 13.6 22 12.5 22H7.5C6.4 22 5.5 21 5.5 19.8V6Z" stroke="#06b6d4" strokeWidth="1.6" strokeLinejoin="round" />
+                    <path d="M5.8 14.5C8 13.8 10 15.2 12.2 14.5C13.4 14.1 14 14.6 14.3 14.5" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+            );
+    }
+};
+
 const card = {
     background: 'var(--surface-elevated-translucent, rgba(20, 20, 35, 0.68))',
     backdropFilter: 'blur(20px)',
@@ -1095,174 +1135,295 @@ const Calories = () => {
                     </motion.section>
 
                     {/* Water Intake Tracker */}
-                    <motion.section
-                        className="gradient-border glow-cyan cal-card-water"
-                        style={{ ...card, display: 'flex', flexDirection: 'column', gap: 14 }}
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.12, type: 'spring', stiffness: 300, damping: 25 }}
-                    >
-                        {/* Header */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                    width: 36, height: 36, borderRadius: 10,
-                                    background: 'rgba(6,182,212,0.14)', color: '#06b6d4',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                    <Droplets size={18} />
-                                </div>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Water Intake</h3>
-                                        <span style={{
-                                            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
-                                            background: dailySummary.waterPct >= 100 ? 'rgba(34,197,94,0.12)' : 'rgba(6,182,212,0.12)',
-                                            color: dailySummary.waterPct >= 100 ? GREEN : '#06b6d4',
+                    {(() => {
+                        const waterGoalMl = dailySummary.waterGoalMl || 3000;
+                        const totalWaterMl = dailySummary.totalWaterMl || 0;
+                        const waterRemainingMl = Math.max(0, waterGoalMl - totalWaterMl);
+                        const isGoalMet = dailySummary.waterPct >= 100;
+
+                        return (
+                            <motion.section
+                                className="gradient-border glow-cyan cal-card-water"
+                                style={{ ...card, display: 'flex', flexDirection: 'column', gap: 15 }}
+                                initial={{ opacity: 0, y: 14 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.12, type: 'spring', stiffness: 300, damping: 25 }}
+                            >
+                                {/* Header */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{
+                                            width: 40, height: 40, borderRadius: 12,
+                                            background: 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(59,130,246,0.12) 100%)',
+                                            border: '1px solid rgba(6,182,212,0.3)',
+                                            color: '#06b6d4',
+                                            boxShadow: '0 0 16px rgba(6,182,212,0.18)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
-                                            {dailySummary.waterPct}%
+                                            <Droplets size={20} />
+                                        </div>
+                                        <div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                                                    Water Intake
+                                                </h3>
+                                                <span style={{
+                                                    fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
+                                                    background: isGoalMet ? 'rgba(34,197,94,0.14)' : 'rgba(6,182,212,0.14)',
+                                                    color: isGoalMet ? GREEN : '#06b6d4',
+                                                    border: `1px solid ${isGoalMet ? 'rgba(34,197,94,0.3)' : 'rgba(6,182,212,0.3)'}`,
+                                                }}>
+                                                    {isGoalMet ? '🎉 100% Goal Met' : `${dailySummary.waterPct}%`}
+                                                </span>
+                                            </div>
+                                            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
+                                                {isGoalMet
+                                                    ? 'Target achieved! Keep staying hydrated.'
+                                                    : `${dailySummary.waterLogs?.length || 0} drink${dailySummary.waterLogs?.length === 1 ? '' : 's'} logged · ${waterRemainingMl.toLocaleString()} ml remaining`}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent: 'flex-end' }}>
+                                            <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 800, color: '#06b6d4', lineHeight: 1 }}>
+                                                {(totalWaterMl / 1000).toFixed(1)}
+                                            </span>
+                                            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                                / {(waterGoalMl / 1000).toFixed(1)} L
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, display: 'block', marginTop: 2 }}>
+                                            {totalWaterMl.toLocaleString()} / {waterGoalMl.toLocaleString()} ml
                                         </span>
                                     </div>
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                        {dailySummary.waterLogs?.length || 0} bottle{dailySummary.waterLogs?.length === 1 ? '' : 's'} logged today
-                                    </span>
                                 </div>
-                            </div>
 
-                            <div style={{ textAlign: 'right' }}>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent: 'flex-end' }}>
-                                    <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 800, color: '#06b6d4', lineHeight: 1 }}>
-                                        {(dailySummary.totalWaterMl / 1000).toFixed(1)}
-                                    </span>
-                                    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
-                                        / {(dailySummary.waterGoalMl / 1000).toFixed(1)} L
-                                    </span>
-                                </div>
-                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                    {dailySummary.totalWaterMl} / {dailySummary.waterGoalMl} ml
-                                </span>
-                            </div>
-                        </div>
+                                {/* Liquid Glass Capsule Track */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <div style={{
+                                        position: 'relative', width: '100%', height: 12, borderRadius: 9999,
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.06)',
+                                        overflow: 'hidden',
+                                    }}>
+                                        {/* Milestone tick notches */}
+                                        <div style={{ position: 'absolute', left: '33.3%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.08)', zIndex: 2 }} />
+                                        <div style={{ position: 'absolute', left: '66.6%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.08)', zIndex: 2 }} />
 
-                        {/* Progress Bar */}
-                        <div style={{
-                            width: '100%', height: 8, borderRadius: 9999, overflow: 'hidden',
-                            background: 'var(--border-subtle)', position: 'relative',
-                        }}>
-                            <div style={{
-                                width: `${Math.min(100, dailySummary.waterPct)}%`,
-                                height: '100%',
-                                background: 'linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%)',
-                                borderRadius: 9999,
-                                transition: 'width .35s ease',
-                            }} />
-                        </div>
+                                        {/* Liquid Stream */}
+                                        <div style={{
+                                            width: `${Math.min(100, dailySummary.waterPct)}%`,
+                                            height: '100%',
+                                            background: isGoalMet
+                                                ? 'linear-gradient(90deg, #06b6d4 0%, #10b981 100%)'
+                                                : 'linear-gradient(90deg, #06b6d4 0%, #38bdf8 55%, #3b82f6 100%)',
+                                            borderRadius: 9999,
+                                            boxShadow: '0 0 14px rgba(6, 182, 212, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.45)',
+                                            transition: 'width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                            position: 'relative',
+                                        }} />
+                                    </div>
 
-                        {/* Quick Presets: 250ml, 500ml, 750ml, 1L */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                            {[
-                                { ml: 250, label: '250 ml', sub: 'Glass' },
-                                { ml: 500, label: '500 ml', sub: 'Bottle' },
-                                { ml: 750, label: '750 ml', sub: 'Bottle' },
-                                { ml: 1000, label: '1 L', sub: 'Flask' },
-                            ].map((preset) => (
-                                <button
-                                    key={preset.ml}
-                                    type="button"
-                                    onClick={() => handleQuickWater(preset.ml)}
-                                    className="cal-water-btn"
-                                    style={{
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                        gap: 3, padding: '10px 6px', borderRadius: 12,
-                                        background: 'rgba(6,182,212,0.06)',
-                                        border: '1px solid rgba(6,182,212,0.22)',
-                                        cursor: 'pointer', transition: 'all .15s ease',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <Droplets size={13} style={{ color: '#06b6d4' }} />
-                                        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
-                                            +{preset.label}
+                                    {/* Milestone Labels */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, padding: '0 2px' }}>
+                                        <span>0L</span>
+                                        <span>{((waterGoalMl * 0.33) / 1000).toFixed(1)}L</span>
+                                        <span>{((waterGoalMl * 0.66) / 1000).toFixed(1)}L</span>
+                                        <span style={{ color: isGoalMet ? GREEN : 'var(--text-muted)', fontWeight: 600 }}>
+                                            {(waterGoalMl / 1000).toFixed(1)}L Goal
                                         </span>
                                     </div>
-                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
-                                        {preset.sub}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
+                                </div>
 
-                        {/* Actions & Feedback */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 4 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <button
-                                    type="button"
-                                    onClick={() => undoLastWater()}
-                                    disabled={!dailySummary.waterLogs || dailySummary.waterLogs.length === 0}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 5,
-                                        padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                                        background: 'transparent', border: '1px solid var(--border-subtle)',
-                                        color: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 'var(--text-muted)' : 'var(--text-secondary)',
-                                        cursor: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 'not-allowed' : 'pointer',
-                                        opacity: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 0.4 : 1,
-                                    }}
-                                >
-                                    <RotateCcw size={12} /> Undo
-                                </button>
+                                {/* Quick Presets Grid: Glass, Bottle, Sipper, Flask */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                                    {[
+                                        { ml: 250, label: '+250 ml', name: 'Glass', vessel: 'glass' },
+                                        { ml: 500, label: '+500 ml', name: 'Bottle', vessel: 'bottle' },
+                                        { ml: 750, label: '+750 ml', name: 'Sipper', vessel: 'sipper' },
+                                        { ml: 1000, label: '+1 L', name: 'Flask', vessel: 'flask' },
+                                    ].map((preset) => (
+                                        <motion.button
+                                            key={preset.ml}
+                                            type="button"
+                                            onClick={() => handleQuickWater(preset.ml)}
+                                            whileHover={{ y: -2, scale: 1.02 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className="cal-water-btn"
+                                            style={{
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                gap: 5, padding: '12px 6px', borderRadius: 14,
+                                                background: 'rgba(6, 182, 212, 0.05)',
+                                                border: '1px solid rgba(6, 182, 212, 0.2)',
+                                                cursor: 'pointer', outline: 'none',
+                                            }}
+                                        >
+                                            {/* Vessel Graphic */}
+                                            <div style={{ height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {renderVesselSvg(preset.vessel)}
+                                            </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCustomWater(!showCustomWater)}
-                                    style={{
-                                        padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                                        background: showCustomWater ? 'rgba(6,182,212,0.12)' : 'transparent',
-                                        border: '1px solid var(--border-subtle)',
-                                        color: showCustomWater ? '#06b6d4' : 'var(--text-secondary)',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {showCustomWater ? 'Cancel' : '+ Custom ml'}
-                                </button>
-                            </div>
+                                            {/* Amount */}
+                                            <span style={{
+                                                fontFamily: MONO,
+                                                fontSize: 12.5,
+                                                fontWeight: 800,
+                                                color: 'var(--text-primary)',
+                                                letterSpacing: '-0.02em',
+                                                lineHeight: 1.1,
+                                            }}>
+                                                {preset.label}
+                                            </span>
 
-                            {waterFeedback && (
-                                <motion.span
-                                    initial={{ opacity: 0, x: 6 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    style={{ fontSize: 12, fontWeight: 700, color: '#06b6d4' }}
-                                >
-                                    {waterFeedback}
-                                </motion.span>
-                            )}
-                        </div>
+                                            {/* Label */}
+                                            <span style={{
+                                                fontSize: 10,
+                                                color: 'var(--text-muted)',
+                                                fontWeight: 600,
+                                                lineHeight: 1,
+                                            }}>
+                                                {preset.name}
+                                            </span>
+                                        </motion.button>
+                                    ))}
+                                </div>
 
-                        {/* Custom ml input dropdown form */}
-                        {showCustomWater && (
-                            <form onSubmit={handleCustomWaterSubmit} style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="5000"
-                                    step="10"
-                                    placeholder="Enter ml (e.g. 350)"
-                                    value={customWaterInput}
-                                    onChange={(e) => setCustomWaterInput(e.target.value)}
-                                    autoFocus
-                                    className="surface-input"
-                                    style={{ ...inputStyle, padding: '8px 12px', fontSize: 13, fontFamily: MONO, flex: 1 }}
-                                />
-                                <button
-                                    type="submit"
-                                    className="btn-primary"
-                                    style={{ padding: '8px 16px', fontSize: 13, background: '#06b6d4' }}
-                                >
-                                    Add
-                                </button>
-                            </form>
-                        )}
-                    </motion.section>
+                                {/* Actions & Feedback Footer */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 2 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => undoLastWater()}
+                                            disabled={!dailySummary.waterLogs || dailySummary.waterLogs.length === 0}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                padding: '6px 12px', borderRadius: 9, fontSize: 11, fontWeight: 600,
+                                                background: 'rgba(255, 255, 255, 0.04)',
+                                                border: '1px solid var(--border-subtle)',
+                                                color: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 'var(--text-muted)' : 'var(--text-secondary)',
+                                                cursor: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 'not-allowed' : 'pointer',
+                                                opacity: (!dailySummary.waterLogs || dailySummary.waterLogs.length === 0) ? 0.35 : 1,
+                                                transition: 'all 0.15s ease',
+                                            }}
+                                        >
+                                            <RotateCcw size={12} /> Undo
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCustomWater(!showCustomWater)}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                padding: '6px 12px', borderRadius: 9, fontSize: 11, fontWeight: 600,
+                                                background: showCustomWater ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                                                border: showCustomWater ? '1px solid rgba(6, 182, 212, 0.35)' : '1px solid var(--border-subtle)',
+                                                color: showCustomWater ? '#06b6d4' : 'var(--text-secondary)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease',
+                                            }}
+                                        >
+                                            <Plus size={12} /> {showCustomWater ? 'Close' : 'Custom ml'}
+                                        </button>
+                                    </div>
+
+                                    {waterFeedback ? (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.9, y: 3 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            style={{
+                                                fontSize: 11, fontWeight: 700, color: '#06b6d4',
+                                                background: 'rgba(6, 182, 212, 0.12)',
+                                                border: '1px solid rgba(6, 182, 212, 0.25)',
+                                                padding: '4px 10px', borderRadius: 9999,
+                                                display: 'flex', alignItems: 'center', gap: 4,
+                                            }}
+                                        >
+                                            <Droplets size={11} /> {waterFeedback}
+                                        </motion.div>
+                                    ) : (
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                            {waterRemainingMl > 0 ? `${waterRemainingMl} ml to goal` : 'Goal met!'}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Custom ml expanded drawer */}
+                                <AnimatePresence>
+                                    {showCustomWater && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            style={{ overflow: 'hidden' }}
+                                        >
+                                            <div style={{
+                                                padding: 12, borderRadius: 14,
+                                                background: 'rgba(6, 182, 212, 0.04)',
+                                                border: '1px solid rgba(6, 182, 212, 0.18)',
+                                                display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4,
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Quick:</span>
+                                                    {[150, 300, 400, 600].map((quickMl) => (
+                                                        <button
+                                                            key={quickMl}
+                                                            type="button"
+                                                            onClick={() => setCustomWaterInput(String(quickMl))}
+                                                            style={{
+                                                                padding: '3px 8px', borderRadius: 6, fontSize: 11, fontFamily: MONO,
+                                                                background: customWaterInput === String(quickMl) ? 'rgba(6,182,212,0.22)' : 'rgba(255,255,255,0.05)',
+                                                                border: customWaterInput === String(quickMl) ? '1px solid rgba(6,182,212,0.4)' : '1px solid var(--border-subtle)',
+                                                                color: customWaterInput === String(quickMl) ? '#06b6d4' : 'var(--text-secondary)',
+                                                                cursor: 'pointer',
+                                                            }}
+                                                        >
+                                                            +{quickMl}ml
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <form onSubmit={handleCustomWaterSubmit} style={{ display: 'flex', gap: 8 }}>
+                                                    <div style={{ position: 'relative', flex: 1 }}>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="5000"
+                                                            step="10"
+                                                            placeholder="Enter exact ml (e.g. 350)"
+                                                            value={customWaterInput}
+                                                            onChange={(e) => setCustomWaterInput(e.target.value)}
+                                                            autoFocus
+                                                            className="surface-input"
+                                                            style={{ ...inputStyle, padding: '8px 45px 8px 12px', fontSize: 13, fontFamily: MONO }}
+                                                        />
+                                                        <span style={{
+                                                            position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                                                            fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, pointerEvents: 'none',
+                                                        }}>
+                                                            ml
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={!customWaterInput || parseInt(customWaterInput, 10) <= 0}
+                                                        className="btn-primary"
+                                                        style={{
+                                                            padding: '8px 16px', fontSize: 13, fontWeight: 700,
+                                                            background: '#06b6d4', opacity: (!customWaterInput || parseInt(customWaterInput, 10) <= 0) ? 0.5 : 1,
+                                                        }}
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.section>
+                        );
+                    })()}
                 </div>
 
                 {/* ───────── RIGHT COLUMN ───────── */}
@@ -2445,13 +2606,31 @@ const Calories = () => {
                 }
                 .cal-del:hover { color: var(--danger); background: var(--danger-bg); }
 
+                .cal-water-btn {
+                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .cal-water-btn::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.2), transparent 70%);
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    pointer-events: none;
+                }
+                .cal-water-btn:hover::before {
+                    opacity: 1;
+                }
                 .cal-water-btn:hover {
-                    background: rgba(6, 182, 212, 0.14) !important;
+                    background: rgba(6, 182, 212, 0.12) !important;
                     border-color: rgba(6, 182, 212, 0.45) !important;
-                    transform: translateY(-1px);
+                    box-shadow: 0 8px 24px -4px rgba(6, 182, 212, 0.22) !important;
+                    transform: translateY(-2px);
                 }
                 .cal-water-btn:active {
-                    transform: translateY(0px) scale(0.98);
+                    transform: translateY(0px) scale(0.96) !important;
                 }
 
                 @media (max-width: 520px) {
