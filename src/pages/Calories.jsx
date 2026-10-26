@@ -12,11 +12,14 @@ import {
     Plus,
     X,
     Check,
+    Scale,
 } from 'lucide-react';
 import {
     ResponsiveContainer,
     BarChart,
     Bar,
+    AreaChart,
+    Area,
     XAxis,
     YAxis,
     Tooltip,
@@ -113,8 +116,9 @@ const Label = ({ children, style }) => (
 const Calories = () => {
     const narrow = useIsNarrow(520);
     const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
-    const [mode, setMode] = useState('food'); // 'food' | 'exercise'
+    const [mode, setMode] = useState('food'); // 'food' | 'exercise' | 'weight'
     const [logFilter, setLogFilter] = useState('all');
+    const [chartTab, setChartTab] = useState('calories'); // 'calories' | 'weight'
 
     const {
         foodCatalog,
@@ -122,11 +126,17 @@ const Calories = () => {
         expectedBmr,
         dailySummary,
         weeklyTrend,
+        weightLogs,
+        todayWeightLog,
+        currentWeight,
+        weekWeightStats,
         searchFoodDatabase,
         lookupAndCacheFood,
         addFoodIntake,
         addExerciseBurn,
         deleteCalorieLog,
+        logDailyWeight,
+        deleteDailyWeight,
         saveBmrSettings,
     } = useCalories(selectedDate);
 
@@ -151,6 +161,20 @@ const Calories = () => {
     const [exerciseType, setExerciseType] = useState(COMMON_EXERCISES[0].name);
     const [exerciseDuration, setExerciseDuration] = useState('30');
     const [manualCalories, setManualCalories] = useState(null);
+
+    /* ── Weight logger state ── */
+    const [weightInput, setWeightInput] = useState(() => String(todayWeightLog?.weight_kg || currentWeight || '70'));
+    const [weightSaving, setWeightSaving] = useState(false);
+    const [weightFeedback, setWeightFeedback] = useState('');
+
+    useEffect(() => {
+        if (todayWeightLog) {
+            setWeightInput(String(todayWeightLog.weight_kg));
+        } else if (currentWeight) {
+            setWeightInput(String(currentWeight));
+        }
+        setWeightFeedback('');
+    }, [selectedDate, todayWeightLog, currentWeight]);
 
     /* ── BMR modal ── */
     const [showBmr, setShowBmr] = useState(false);
@@ -305,6 +329,26 @@ const Calories = () => {
         setManualCalories(null);
     };
 
+    const handleWeightSubmit = async (e) => {
+        e.preventDefault();
+        const val = parseFloat(weightInput);
+        if (!val || val < 20 || val > 300) return;
+        setWeightSaving(true);
+        const res = await logDailyWeight({ weight_kg: val, date: selectedDate });
+        setWeightSaving(false);
+        if (!res?.error) {
+            setWeightFeedback(`Logged ${val} kg for ${selectedDate === format(new Date(), 'yyyy-MM-dd') ? 'today' : selectedDate}`);
+        }
+    };
+
+    const handleStepWeight = (delta) => {
+        const cur = parseFloat(weightInput) || currentWeight || 70;
+        const next = Math.round((cur + delta) * 10) / 10;
+        if (next >= 20 && next <= 300) {
+            setWeightInput(String(next));
+        }
+    };
+
     const openBmr = () => {
         setBmrForm({
             weight_kg: bmrSettings.weight_kg || 70,
@@ -330,12 +374,15 @@ const Calories = () => {
         fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
     };
 
+    const heightM = (Number(bmrSettings.height_cm) || 175) / 100;
+    const enteredBmi = heightM > 0 && parseFloat(weightInput) > 0 ? (parseFloat(weightInput) / (heightM * heightM)).toFixed(1) : null;
+
     /* ═══════════════ RENDER ═══════════════ */
     return (
         <div className="page-container cal-page" style={{ maxWidth: 1080, margin: '0 auto', width: '100%' }}>
             {/* Header */}
             <motion.header
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 12, flexWrap: 'wrap' }}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -346,25 +393,46 @@ const Calories = () => {
                         Calories
                     </h1>
                     <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
-                        Intake, burn & macros
+                        Intake, burn, weight & macros
                     </span>
                 </div>
-                <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    onClick={openBmr}
-                    aria-label="Edit BMR settings"
-                    style={{
-                        height: 36, padding: '0 12px', borderRadius: 12, display: 'flex',
-                        alignItems: 'center', gap: 7, cursor: 'pointer',
-                        background: 'var(--surface-input, rgba(255,255,255,0.04))',
-                        border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
-                        fontSize: 12, fontWeight: 700,
-                    }}
-                >
-                    <Settings2 size={15} />
-                    <span style={{ fontFamily: MONO }}>{fmt(expectedBmr)}</span>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>BMR</span>
-                </motion.button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => setMode('weight')}
+                        aria-label="Track weight"
+                        style={{
+                            height: 36, padding: '0 12px', borderRadius: 12, display: 'flex',
+                            alignItems: 'center', gap: 6, cursor: 'pointer',
+                            background: mode === 'weight' ? 'rgba(59,130,246,0.18)' : 'var(--surface-input, rgba(255,255,255,0.04))',
+                            border: mode === 'weight' ? '1px solid #3b82f6' : '1px solid var(--border-subtle)',
+                            color: mode === 'weight' ? '#3b82f6' : 'var(--text-secondary)',
+                            fontSize: 12, fontWeight: 700,
+                        }}
+                    >
+                        <Scale size={15} />
+                        <span style={{ fontFamily: MONO }}>
+                            {todayWeightLog ? todayWeightLog.weight_kg : currentWeight}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>kg</span>
+                    </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={openBmr}
+                        aria-label="Edit BMR settings"
+                        style={{
+                            height: 36, padding: '0 12px', borderRadius: 12, display: 'flex',
+                            alignItems: 'center', gap: 7, cursor: 'pointer',
+                            background: 'var(--surface-input, rgba(255,255,255,0.04))',
+                            border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                            fontSize: 12, fontWeight: 700,
+                        }}
+                    >
+                        <Settings2 size={15} />
+                        <span style={{ fontFamily: MONO }}>{fmt(expectedBmr)}</span>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>BMR</span>
+                    </motion.button>
+                </div>
             </motion.header>
 
             {/* Glass date strip */}
@@ -488,6 +556,7 @@ const Calories = () => {
                             options={[
                                 { id: 'food', label: 'Food', icon: Utensils, color: ACCENT },
                                 { id: 'exercise', label: 'Exercise', icon: Dumbbell, color: AMBER },
+                                { id: 'weight', label: 'Weight', icon: Scale, color: '#3b82f6' },
                             ]}
                             value={mode}
                             onChange={setMode}
@@ -777,7 +846,7 @@ const Calories = () => {
                                     )}
                                 </AnimatePresence>
                             </form>
-                        ) : (
+                        ) : mode === 'exercise' ? (
                             <form onSubmit={handleExerciseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 <LiquidGlassSegmented
                                     options={exerciseOptions}
@@ -833,6 +902,149 @@ const Calories = () => {
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 20px', fontSize: 14 }}
                                     >
                                         <Plus size={16} /> Add
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleWeightSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '10px 14px', borderRadius: 14,
+                                    background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                        <div style={{
+                                            width: 30, height: 30, borderRadius: 9, display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            background: 'rgba(59,130,246,0.15)', color: '#3b82f6',
+                                        }}>
+                                            <Scale size={16} />
+                                        </div>
+                                        <div>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                {selectedDate === format(new Date(), 'yyyy-MM-dd') ? "Today's Weigh-in" : `Weigh-in for ${selectedDate}`}
+                                            </span>
+                                            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                                {todayWeightLog ? `Logged: ${todayWeightLog.weight_kg} kg` : `Current: ${currentWeight} kg`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {todayWeightLog && (
+                                        <button
+                                            type="button"
+                                            onClick={() => deleteDailyWeight(selectedDate)}
+                                            style={{
+                                                background: 'transparent', border: 'none', color: 'var(--text-muted)',
+                                                fontSize: 11, cursor: 'pointer', padding: '4px 6px',
+                                            }}
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '8px 0' }}>
+                                    <Label>Weight</Label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleStepWeight(-0.5)}
+                                            style={{
+                                                padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                            }}
+                                        >
+                                            -0.5
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleStepWeight(-0.1)}
+                                            style={{
+                                                padding: '8px 9px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                            }}
+                                        >
+                                            -0.1
+                                        </button>
+                                        <div style={{ position: 'relative', width: 130 }}>
+                                            <input
+                                                type="number"
+                                                min="20"
+                                                max="300"
+                                                step="0.1"
+                                                inputMode="decimal"
+                                                value={weightInput}
+                                                onChange={(e) => setWeightInput(e.target.value)}
+                                                className="surface-input"
+                                                style={{
+                                                    ...inputStyle, padding: '10px 36px 10px 12px',
+                                                    fontFamily: MONO, fontSize: 22, fontWeight: 800, textAlign: 'center',
+                                                }}
+                                            />
+                                            <span style={{
+                                                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                                                fontSize: 12, color: 'var(--text-muted)', fontWeight: 700,
+                                            }}>
+                                                kg
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleStepWeight(0.1)}
+                                            style={{
+                                                padding: '8px 9px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                            }}
+                                        >
+                                            +0.1
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleStepWeight(0.5)}
+                                            style={{
+                                                padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                            }}
+                                        >
+                                            +0.5
+                                        </button>
+                                    </div>
+
+                                    {enteredBmi && (
+                                        <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                            <span>BMI: <strong style={{ color: 'var(--text-primary)', fontFamily: MONO }}>{enteredBmi}</strong></span>
+                                            <span>·</span>
+                                            <span>Auto-syncs to BMR & calorie burn</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {weightFeedback && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: GREEN, justifyContent: 'center' }}>
+                                        <Check size={14} /> {weightFeedback}
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                        Consistent morning weigh-ins recommended.
+                                    </span>
+                                    <button
+                                        type="submit"
+                                        disabled={weightSaving}
+                                        className="btn-primary cal-add-btn"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            gap: 7, padding: '11px 22px', fontSize: 14,
+                                            background: '#3b82f6',
+                                        }}
+                                    >
+                                        <Scale size={16} />
+                                        {weightSaving ? 'Saving…' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
                                     </button>
                                 </div>
                             </form>
@@ -929,34 +1141,129 @@ const Calories = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.25, type: 'spring', stiffness: 300, damping: 25 }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>This week</h2>
-                            <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 3, background: ACCENT }} /> In
-                                </span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 3, background: AMBER }} /> Out
-                                </span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10, flexWrap: 'wrap' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>This week</h2>
+                                {chartTab === 'weight' && weekWeightStats.count > 0 && (
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
+                                        {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
+                                    </span>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {chartTab === 'calories' ? (
+                                    <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <span style={{ width: 8, height: 8, borderRadius: 3, background: ACCENT }} /> In
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <span style={{ width: 8, height: 8, borderRadius: 3, background: AMBER }} /> Out
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} /> kg
+                                        </span>
+                                    </div>
+                                )}
+                                <div style={{ width: narrow ? 150 : 168 }}>
+                                    <LiquidGlassSegmented
+                                        options={[
+                                            { id: 'calories', label: 'Calories' },
+                                            { id: 'weight', label: 'Weight' },
+                                        ]}
+                                        value={chartTab}
+                                        onChange={setChartTab}
+                                        size="sm"
+                                        fullWidth
+                                        ariaLabel="Chart view"
+                                    />
+                                </div>
                             </div>
                         </div>
+
                         <div style={{ width: '100%', height: 170 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={weeklyTrend} margin={{ top: 4, right: 0, left: -26, bottom: 0 }} barGap={3}>
-                                    <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                                    <Tooltip
-                                        cursor={{ fill: 'var(--border-subtle)' }}
-                                        contentStyle={{
-                                            background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)',
-                                            borderRadius: 10, fontSize: 12,
+                            {chartTab === 'calories' ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={weeklyTrend} margin={{ top: 4, right: 0, left: -26, bottom: 0 }} barGap={3}>
+                                        <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                        <Tooltip
+                                            cursor={{ fill: 'var(--border-subtle)' }}
+                                            contentStyle={{
+                                                background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)',
+                                                borderRadius: 10, fontSize: 12,
+                                            }}
+                                            formatter={(val, name) => [`${val} kcal`, name]}
+                                        />
+                                        <Bar dataKey="intake" name="Intake" fill={ACCENT} radius={[5, 5, 0, 0]} />
+                                        <Bar dataKey="totalBurn" name="Burn" fill={AMBER} radius={[5, 5, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : weekWeightStats.count === 0 ? (
+                                <div style={{
+                                    height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                    justifyContent: 'center', gap: 8, textAlign: 'center', padding: '0 16px',
+                                }}>
+                                    <Scale size={24} style={{ color: '#3b82f6', opacity: 0.8 }} />
+                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                        No weigh-ins recorded for this 7-day period.
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMode('weight')}
+                                        style={{
+                                            padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                            background: 'rgba(59,130,246,0.15)', color: '#3b82f6',
+                                            border: '1px solid rgba(59,130,246,0.3)', cursor: 'pointer',
                                         }}
-                                        formatter={(val, name) => [`${val} kcal`, name]}
-                                    />
-                                    <Bar dataKey="intake" name="Intake" fill={ACCENT} radius={[5, 5, 0, 0]} />
-                                    <Bar dataKey="totalBurn" name="Burn" fill={AMBER} radius={[5, 5, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                                    >
+                                        Log weight
+                                    </button>
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={weeklyTrend} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="weightAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                        <YAxis
+                                            stroke="var(--text-muted)"
+                                            fontSize={10}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            domain={[
+                                                (dataMin) => Math.floor(Math.max(0, (dataMin || currentWeight) - 1)),
+                                                (dataMax) => Math.ceil((dataMax || currentWeight) + 1),
+                                            ]}
+                                        />
+                                        <Tooltip
+                                            cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
+                                            contentStyle={{
+                                                background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)',
+                                                borderRadius: 10, fontSize: 12,
+                                            }}
+                                            formatter={(val) => (val ? [`${val} kg`, 'Weight'] : ['Not logged', 'Weight'])}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="weight"
+                                            stroke="#3b82f6"
+                                            strokeWidth={2.5}
+                                            fill="url(#weightAreaGrad)"
+                                            connectNulls={true}
+                                            dot={{ r: 4, fill: '#3b82f6', stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
+                                            activeDot={{ r: 6, fill: '#60a5fa' }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </motion.section>
                 </div>

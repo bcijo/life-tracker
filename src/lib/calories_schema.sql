@@ -71,3 +71,24 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS age INTEGER;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS gender TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bmr_override INTEGER;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS calorie_goal INTEGER;
+
+-- 4. User Daily Weight Logs
+CREATE TABLE IF NOT EXISTS weight_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    date TEXT NOT NULL, -- YYYY-MM-DD local date
+    weight_kg DECIMAL(5, 2) NOT NULL,
+    note TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_weight_logs_user_date ON weight_logs(user_id, date);
+
+ALTER TABLE weight_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage own weight_logs" ON weight_logs;
+CREATE POLICY "Users can manage own weight_logs" ON weight_logs
+    FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+

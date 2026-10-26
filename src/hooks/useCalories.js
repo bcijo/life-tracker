@@ -8,6 +8,7 @@ import { useProfile } from './useProfile';
 const LOGS_CACHE_KEY = 'supa_cache_calorie_logs';
 const CATALOG_CACHE_KEY = 'supa_cache_food_catalog';
 const SETTINGS_CACHE_KEY = 'lifetracker_calorie_settings';
+const WEIGHT_LOGS_CACHE_KEY = 'supa_cache_weight_logs';
 
 /**
  * Pure per-100g multiplier calculator
@@ -83,7 +84,17 @@ export default function useCalories(selectedDateStr = null) {
     });
     const [loadingLogs, setLoadingLogs] = useState(true);
 
-    // 2. Food Catalog State (Seed + LocalStorage + Supabase `food_catalog`)
+    // 2. Weight Logs State
+    const [weightLogs, setWeightLogs] = useState(() => {
+        try {
+            const cached = localStorage.getItem(WEIGHT_LOGS_CACHE_KEY);
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // 3. Food Catalog State (Seed + LocalStorage + Supabase `food_catalog`)
     const [customCatalog, setCustomCatalog] = useState(() => {
         try {
             const cached = localStorage.getItem(CATALOG_CACHE_KEY);
@@ -194,6 +205,30 @@ export default function useCalories(selectedDateStr = null) {
                             } catch {}
                             return mergedLogs;
                         });
+                    }
+
+                    // C. Fetch user's weight_logs
+                    try {
+                        const { data: weightData, error: weightErr } = await supabase
+                            .from('weight_logs')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('date', { ascending: false });
+
+                        if (!weightErr && Array.isArray(weightData) && !cancelled) {
+                            setWeightLogs(prev => {
+                                const localOnly = prev.filter(item => String(item.id).startsWith('local-'));
+                                const byDate = new Map();
+                                [...localOnly, ...weightData].forEach(w => byDate.set(w.date, w));
+                                const mergedWeights = Array.from(byDate.values()).sort((a, b) => b.date.localeCompare(a.date));
+                                try {
+                                    localStorage.setItem(WEIGHT_LOGS_CACHE_KEY, JSON.stringify(mergedWeights));
+                                } catch {}
+                                return mergedWeights;
+                            });
+                        }
+                    } catch (wErr) {
+                        console.warn('[useCalories] Using local weight logs:', wErr.message);
                     }
                 }
             } catch (err) {
@@ -528,6 +563,100 @@ export default function useCalories(selectedDateStr = null) {
     }, []);
 
     /**
+     * Log or update daily body weight
+     */
+    const logDailyWeight = useCallback(async ({ weight_kg, date = activeDate, note = '' }) => {
+        const num = Math.round(parseFloat(weight_kg) * 10) / 10;
+        if (!num || num < 20 || num > 300) {
+            return { error: 'Please enter a valid weight between 20 and 300 kg' };
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
+        const tempId = 'local-' + Date.now();
+        const newEntry = {
+            id: tempId,
+            user_id: userId,
+            date,
+            weight_kg: num,
+            note: note || null,
+            created_at: new Date().toISOString(),
+        };
+
+        // Optimistically update weightLogs
+        setWeightLogs(prev => {
+            const filtered = prev.filter(w => w.date !== date);
+            const next = [newEntry, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
+            try {
+                localStorage.setItem(WEIGHT_LOGS_CACHE_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+        });
+
+        // Also update current profile & BMR settings if this log is for today or the most recent date
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        if (date >= todayStr || !localSettings.weight_kg) {
+            const updatedSettings = { ...localSettings, weight_kg: num };
+            setLocalSettings(updatedSettings);
+            try {
+                localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(updatedSettings));
+                updateProfile({ weight_kg: num });
+            } catch {}
+        }
+
+        // Persist to Supabase weight_logs
+        if (userId) {
+            try {
+                const { id, ...dbPayload } = newEntry;
+                const { data: inserted, error } = await supabase
+                    .from('weight_logs')
+                    .upsert([dbPayload], { onConflict: 'user_id,date' })
+                    .select()
+                    .single();
+
+                if (!error && inserted) {
+                    setWeightLogs(prev => {
+                        const next = prev.map(w => (w.date === date ? inserted : w));
+                        try {
+                            localStorage.setItem(WEIGHT_LOGS_CACHE_KEY, JSON.stringify(next));
+                        } catch {}
+                        return next;
+                    });
+                    return { data: inserted, error: null };
+                }
+            } catch (err) {
+                console.warn('[useCalories] Saved weight locally (run calories_schema.sql to sync in Supabase):', err.message);
+            }
+        }
+
+        return { data: newEntry, error: null };
+    }, [activeDate, localSettings, updateProfile]);
+
+    /**
+     * Delete a daily weight entry
+     */
+    const deleteDailyWeight = useCallback(async (date) => {
+        setWeightLogs(prev => {
+            const next = prev.filter(w => w.date !== date);
+            try {
+                localStorage.setItem(WEIGHT_LOGS_CACHE_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+        });
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+            if (userId) {
+                await supabase.from('weight_logs').delete().match({ user_id: userId, date });
+            }
+        } catch (err) {
+            console.warn('[useCalories] Error deleting remote weight log:', err.message);
+        }
+    }, []);
+
+    /**
      * Save BMR & Body Settings
      */
     const saveBmrSettings = useCallback(async (newSettings) => {
@@ -557,6 +686,16 @@ export default function useCalories(selectedDateStr = null) {
 
     // Expected Daily BMR
     const expectedBmr = useMemo(() => calculateMifflinBmr(localSettings), [localSettings]);
+
+    // Active day's logged weight & most recent weight
+    const todayWeightLog = useMemo(() => {
+        return weightLogs.find(w => w.date === activeDate) || null;
+    }, [weightLogs, activeDate]);
+
+    const currentWeight = useMemo(() => {
+        if (weightLogs.length > 0) return Number(weightLogs[0].weight_kg);
+        return Number(localSettings.weight_kg) || 70;
+    }, [weightLogs, localSettings]);
 
     // Summary for the active selected date
     const dailySummary = useMemo(() => {
@@ -601,13 +740,15 @@ export default function useCalories(selectedDateStr = null) {
         };
     }, [logs, activeDate, expectedBmr]);
 
-    // 7-day trend data for charts
+    // 7-day trend data for charts (Calories + Weight)
     const weeklyTrend = useMemo(() => {
         const days = [];
         for (let i = 6; i >= 0; i--) {
             const d = subDays(new Date(), i);
             const dStr = format(d, 'yyyy-MM-dd');
             const dayLogs = logs.filter(l => l.date === dStr);
+            const dayWeight = weightLogs.find(w => w.date === dStr);
+
             const intake = Math.round(
                 dayLogs.filter(l => l.type === 'intake').reduce((s, l) => s + (parseFloat(l.calories) || 0), 0)
             );
@@ -618,15 +759,47 @@ export default function useCalories(selectedDateStr = null) {
             days.push({
                 date: dStr,
                 dayLabel: format(d, 'EEE'),
+                dayNumber: format(d, 'd'),
                 intake,
                 exerciseBurn: exBurn,
                 bmr: expectedBmr,
                 totalBurn,
                 net: intake - totalBurn,
+                weight: dayWeight ? Number(dayWeight.weight_kg) : null,
+                hasWeight: Boolean(dayWeight),
             });
         }
         return days;
-    }, [logs, expectedBmr]);
+    }, [logs, weightLogs, expectedBmr]);
+
+    // 7-day weight statistics (change, min, max)
+    const weekWeightStats = useMemo(() => {
+        const loggedInWeek = weeklyTrend.filter(d => d.weight !== null);
+        if (loggedInWeek.length === 0) {
+            return {
+                count: 0,
+                startWeight: null,
+                latestWeight: null,
+                change: 0,
+                min: null,
+                max: null,
+            };
+        }
+        const weights = loggedInWeek.map(d => d.weight);
+        const startWeight = loggedInWeek[0].weight;
+        const latestWeight = loggedInWeek[loggedInWeek.length - 1].weight;
+        const change = Math.round((latestWeight - startWeight) * 10) / 10;
+        const min = Math.min(...weights);
+        const max = Math.max(...weights);
+        return {
+            count: loggedInWeek.length,
+            startWeight,
+            latestWeight,
+            change,
+            min,
+            max,
+        };
+    }, [weeklyTrend]);
 
     return {
         logs,
@@ -636,11 +809,17 @@ export default function useCalories(selectedDateStr = null) {
         expectedBmr,
         dailySummary,
         weeklyTrend,
+        weightLogs,
+        todayWeightLog,
+        currentWeight,
+        weekWeightStats,
         searchFoodDatabase,
         lookupAndCacheFood,
         addFoodIntake,
         addExerciseBurn,
         deleteCalorieLog,
+        logDailyWeight,
+        deleteDailyWeight,
         saveBmrSettings,
         estimateExerciseBurn,
     };

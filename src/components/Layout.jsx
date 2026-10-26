@@ -18,16 +18,16 @@ const Layout = () => {
   const desktopNavItems = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/habits', label: 'Habits', icon: Activity },
-    { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
     { to: '/calories', label: 'Calories', icon: Flame },
+    { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
     { to: '/friends', label: 'Friends', icon: Users },
   ];
 
   const mobileNavItems = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/habits', label: 'Habits', icon: Activity },
-    { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
     { to: '/calories', label: 'Calories', icon: Flame },
+    { to: '/finances', label: 'Finances', icon: Wallet, matchPrefix: '/finances' },
     { to: '/friends', label: 'Friends', icon: Users },
   ];
 
