@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth = '400px' }) => {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -43,7 +43,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                     boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                     padding: '24px',
                     width: '100%',
-                    maxWidth: '400px',
+                    maxWidth: maxWidth,
                     position: 'relative',
                     maxHeight: '90vh',
                     overflowY: 'auto',

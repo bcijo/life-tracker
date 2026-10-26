@@ -222,6 +222,16 @@ const Calories = () => {
     const [weightSaving, setWeightSaving] = useState(false);
     const [weightFeedback, setWeightFeedback] = useState('');
 
+    /* ── Add Entry Modal state (Food / Exercise / Weight) ── */
+    const [showAddModal, setShowAddModal] = useState(false);
+    const closeAddModal = () => {
+        setShowAddModal(false);
+        setSelectedFood(null);
+        setFoodSearch('');
+        setLookupError('');
+        setFeedback('');
+    };
+
     useEffect(() => {
         if (todayWeightLog) {
             setWeightInput(String(todayWeightLog.weight_kg));
@@ -393,6 +403,7 @@ const Calories = () => {
             const saved = await addCustomFood(manualFoodForm);
             setShowManualFoodModal(false);
             selectFoodItem(saved);
+            setShowAddModal(true);
             setFeedback(`Saved "${saved.name}" to your database`);
             setTimeout(() => setFeedback(''), 2500);
         } catch (err) {
@@ -610,6 +621,7 @@ const Calories = () => {
         setSelectedFood(null);
         setFoodSearch('');
         setFeedback('');
+        setShowAddModal(false);
     };
 
     const handleExerciseSubmit = async (e) => {
@@ -623,6 +635,7 @@ const Calories = () => {
             date: selectedDate,
         });
         setManualCalories(null);
+        setShowAddModal(false);
     };
 
     const handleWeightSubmit = async (e) => {
@@ -634,6 +647,9 @@ const Calories = () => {
         setWeightSaving(false);
         if (!res?.error) {
             setWeightFeedback(`Logged ${val} kg for ${selectedDate === format(new Date(), 'yyyy-MM-dd') ? 'today' : selectedDate}`);
+            setTimeout(() => {
+                setShowAddModal(false);
+            }, 600);
         }
     };
 
@@ -900,6 +916,7 @@ const Calories = () => {
                             onClick={() => {
                                 if (inModal) setShowAnalytics(false);
                                 setMode('weight');
+                                setShowAddModal(true);
                             }}
                             style={{
                                 padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
@@ -956,6 +973,677 @@ const Calories = () => {
     );
 };
 
+    /* ── Add Entry Logger (Rendered inside Add Modal) ── */
+    const renderLogger = () => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <LiquidGlassSegmented
+                options={[
+                    { id: 'food', label: 'Food', icon: Utensils, color: ACCENT },
+                    { id: 'exercise', label: 'Exercise', icon: Dumbbell, color: AMBER },
+                    { id: 'weight', label: 'Weight', icon: Scale, color: '#3b82f6' },
+                ]}
+                value={mode}
+                onChange={setMode}
+                size="md"
+                fullWidth
+                ariaLabel="Log type"
+            />
+
+            {mode === 'food' ? (
+                <form onSubmit={handleFoodSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <LiquidGlassSegmented
+                        options={mealOptions}
+                        value={mealType}
+                        onChange={setMealType}
+                        size="sm"
+                        fullWidth
+                        ariaLabel="Meal"
+                    />
+
+                    <div style={{ position: 'relative' }}>
+                        <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <input
+                            type="text"
+                            value={foodSearch}
+                            onChange={(e) => {
+                                setFoodSearch(e.target.value);
+                                if (selectedFood && e.target.value !== selectedFood.name) setSelectedFood(null);
+                                setLookupError('');
+                                setFeedback('');
+                            }}
+                            placeholder="Search food or count, e.g. 2 roti, boiled egg"
+                            className="surface-input"
+                            style={{ ...inputStyle, paddingLeft: 40, paddingRight: 38 }}
+                        />
+                        {foodSearch && (
+                            <button
+                                type="button"
+                                onClick={() => { setFoodSearch(''); setSelectedFood(null); setFeedback(''); }}
+                                aria-label="Clear"
+                                style={{
+                                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                                    background: 'transparent', border: 'none', color: 'var(--text-muted)',
+                                    cursor: 'pointer', display: 'flex', padding: 4,
+                                }}
+                            >
+                                <X size={15} />
+                            </button>
+                        )}
+                    </div>
+
+                    {!foodSearch.trim() && !selectedFood && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: -4 }}>
+                            <button
+                                type="button"
+                                onClick={() => openManualFoodModal('', 'camera')}
+                                style={{
+                                    background: 'transparent', border: 'none', color: '#10b981',
+                                    fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                    padding: '2px 4px',
+                                }}
+                            >
+                                <Camera size={12} /> Scan label
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => openManualFoodModal('')}
+                                style={{
+                                    background: 'transparent', border: 'none', color: 'var(--text-muted)',
+                                    fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                    padding: '2px 4px',
+                                }}
+                            >
+                                <Plus size={12} /> Add manually
+                            </button>
+                        </div>
+                    )}
+
+                    {feedback && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: GREEN }}>
+                            <Check size={14} /> {feedback}
+                        </div>
+                    )}
+                    {lookupError && (
+                        <div style={{ fontSize: 12, color: 'var(--danger)' }}>{lookupError}</div>
+                    )}
+
+                    <AnimatePresence mode="wait" initial={false}>
+                        {!selectedFood ? (
+                            foodSearch.trim() ? (
+                                <motion.div
+                                    key="results"
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                >
+                                    {dbSearch.results.length > 0 ? (
+                                        <div style={{ maxHeight: 250, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
+                                            <Label style={{ display: 'block', margin: '2px 0 6px' }}>
+                                                Database suggestions ({dbSearch.results.length})
+                                            </Label>
+                                            {dbSearch.results.slice(0, 8).map((item) => {
+                                                const itemUnit = resolveFoodUnit(item);
+                                                const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
+                                                return (
+                                                    <button
+                                                        key={item.id || item.normalized_name}
+                                                        type="button"
+                                                        onClick={() => { selectFoodItem(item); setFeedback(''); }}
+                                                        className="cal-row-btn"
+                                                    >
+                                                        <span style={{ minWidth: 0, textAlign: 'left' }}>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                                                                {getSourceChip(item.source)}
+                                                            </span>
+                                                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                                                {itemUnit.isCountable
+                                                                    ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
+                                                                    : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}${item.fiber_per_100g ? ` · Fib ${item.fiber_per_100g}g` : ''}`}
+                                                            </span>
+                                                        </span>
+                                                        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
+                                                            {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
+                                                            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                                                {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
+                                                            </span>
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-subtle)',
+                                                flexWrap: 'wrap',
+                                            }}>
+                                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Not in suggestions?</span>
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openManualFoodModal(foodSearch, 'camera')}
+                                                        style={{
+                                                            padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                                            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
+                                                            color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                        }}
+                                                    >
+                                                        <Camera size={12} /> Scan
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleWebSearch(foodSearch)}
+                                                        disabled={searchingWeb}
+                                                        style={{
+                                                            padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                                            background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
+                                                            color: '#06b6d4', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                        }}
+                                                    >
+                                                        {searchingWeb ? <Loader2 size={12} className="spin" /> : <Globe size={12} />}
+                                                        {searchingWeb ? 'Searching…' : 'Web lookup'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openManualFoodModal(foodSearch)}
+                                                        style={{
+                                                            padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                                            background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
+                                                            color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                                                        }}
+                                                    >
+                                                        <Plus size={12} /> Add manually
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            display: 'flex', flexDirection: 'column', gap: 10, padding: '14px', borderRadius: 14,
+                                            background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                        }}>
+                                            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                "{foodSearch.trim()}" is not in your database yet.
+                                            </span>
+                                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openManualFoodModal(foodSearch, 'camera')}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                        padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
+                                                        background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
+                                                        color: '#10b981', borderRadius: 12, fontWeight: 700, cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    <Camera size={14} /> Scan label
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleWebSearch(foodSearch)}
+                                                    disabled={searchingWeb}
+                                                    className="btn-primary"
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                                        padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 140,
+                                                    }}
+                                                >
+                                                    {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
+                                                    {searchingWeb ? 'Searching…' : 'Search web & save'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openManualFoodModal(foodSearch)}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                        padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
+                                                        background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.35)',
+                                                        color: ACCENT, borderRadius: 12, fontWeight: 700, cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    <Plus size={14} /> Add manually
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            ) : null
+                        ) : (
+                            <motion.div
+                                key="selected"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.18 }}
+                                style={{
+                                    padding: 14, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 12,
+                                    background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedFood.name}</span>
+                                            {getSourceChip(selectedFood.source)}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
+                                            {unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood)
+                                                ? (portionMode === 'unit'
+                                                    ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}ml · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
+                                                    : `${Math.round(selectedFood.calories_per_100g)} kcal / 100ml`)
+                                                : (portionMode === 'unit'
+                                                    ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
+                                                    : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`)}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setSelectedFood(null); setFeedback(''); }}
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: 0, flexShrink: 0 }}
+                                    >
+                                        Change
+                                    </button>
+                                </div>
+
+                                {(() => {
+                                    const isLiquid = Boolean(unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood));
+                                    const portionOptions = isLiquid
+                                        ? [
+                                            { id: 'ml', label: 'Milliliters (ml)' },
+                                            ...(unitInfo.isCountable
+                                                ? [{ id: 'unit', label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}ml)` }]
+                                                : []),
+                                            { id: 'grams', label: 'Grams (g)' },
+                                        ]
+                                        : [
+                                            ...(unitInfo.isCountable
+                                                ? [{ id: 'unit', label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}g)` }]
+                                                : []),
+                                            { id: 'grams', label: 'Grams (g)' },
+                                        ];
+
+                                    return (
+                                        <>
+                                            <LiquidGlassSegmented
+                                                options={portionOptions}
+                                                value={portionMode}
+                                                dropdownBreakpoint={380}
+                                                dropdownLabel="Unit:"
+                                                onChange={(nextMode) => {
+                                                    setPortionMode(nextMode);
+                                                    if (nextMode === 'ml') {
+                                                        const mlVal = portionMode === 'unit'
+                                                            ? Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit)
+                                                            : Math.round(parseFloat(gramsInput) || 200);
+                                                        setMlInput(String(mlVal || 200));
+                                                    } else if (nextMode === 'grams') {
+                                                        const g = portionMode === 'unit'
+                                                            ? Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit)
+                                                            : Math.round(parseFloat(mlInput) || 150);
+                                                        setGramsInput(String(g || 150));
+                                                    } else if (nextMode === 'unit') {
+                                                        const base = portionMode === 'ml'
+                                                            ? (parseFloat(mlInput) || unitInfo.gramsPerUnit)
+                                                            : (parseFloat(gramsInput) || unitInfo.gramsPerUnit);
+                                                        const c = Math.max(0.5, Math.round((base / (unitInfo.gramsPerUnit || 100)) * 2) / 2);
+                                                        setCountInput(String(c));
+                                                    }
+                                                }}
+                                                size="sm"
+                                                fullWidth
+                                                ariaLabel="Portion unit mode"
+                                            />
+
+                                            {portionMode === 'ml' ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <div style={{ position: 'relative', width: 112 }}>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="5000"
+                                                            step="any"
+                                                            inputMode="decimal"
+                                                            value={mlInput}
+                                                            onChange={(e) => setMlInput(e.target.value)}
+                                                            className="surface-input"
+                                                            style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                        />
+                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>ml</span>
+                                                    </div>
+                                                    {ML_PRESETS.map((m) => {
+                                                        const on = Number(mlInput) === m;
+                                                        return (
+                                                            <button
+                                                                key={m}
+                                                                type="button"
+                                                                onClick={() => setMlInput(String(m))}
+                                                                style={{
+                                                                    padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                    fontFamily: MONO, cursor: 'pointer',
+                                                                    background: on ? `${ACCENT}22` : 'transparent',
+                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                    color: on ? ACCENT : 'var(--text-muted)',
+                                                                }}
+                                                            >
+                                                                {m}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : portionMode === 'unit' ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <div style={{ position: 'relative', width: 104 }}>
+                                                        <input
+                                                            type="number"
+                                                            min="0.25"
+                                                            max="50"
+                                                            step="any"
+                                                            inputMode="decimal"
+                                                            value={countInput}
+                                                            onChange={(e) => setCountInput(e.target.value)}
+                                                            className="surface-input"
+                                                            style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                        />
+                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
+                                                            ×
+                                                        </span>
+                                                    </div>
+                                                    {COUNT_PRESETS.map((c) => {
+                                                        const on = Number(countInput) === c;
+                                                        return (
+                                                            <button
+                                                                key={c}
+                                                                type="button"
+                                                                onClick={() => setCountInput(String(c))}
+                                                                style={{
+                                                                    padding: '6px 12px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                    fontFamily: MONO, cursor: 'pointer',
+                                                                    background: on ? `${ACCENT}22` : 'transparent',
+                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                    color: on ? ACCENT : 'var(--text-muted)',
+                                                                }}
+                                                            >
+                                                                {c}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginLeft: 'auto' }}>
+                                                        = {Math.round(effectiveGrams)}{isLiquid ? 'ml' : 'g'}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <div style={{ position: 'relative', width: 112 }}>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="5000"
+                                                            step="any"
+                                                            inputMode="decimal"
+                                                            value={gramsInput}
+                                                            onChange={(e) => setGramsInput(e.target.value)}
+                                                            className="surface-input"
+                                                            style={{ ...inputStyle, padding: '9px 28px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
+                                                        />
+                                                        <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>g</span>
+                                                    </div>
+                                                    {GRAM_PRESETS.map((g) => {
+                                                        const on = Number(gramsInput) === g;
+                                                        return (
+                                                            <button
+                                                                key={g}
+                                                                type="button"
+                                                                onClick={() => setGramsInput(String(g))}
+                                                                style={{
+                                                                    padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                                                                    fontFamily: MONO, cursor: 'pointer',
+                                                                    background: on ? `${ACCENT}22` : 'transparent',
+                                                                    border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
+                                                                    color: on ? ACCENT : 'var(--text-muted)',
+                                                                }}
+                                                            >
+                                                                {g}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    gap: 12, flexWrap: 'wrap', paddingTop: 12, borderTop: '1px solid var(--border-subtle)',
+                                }}>
+                                    <div>
+                                        <span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 800, color: ACCENT }}>
+                                            {livePreview?.calories || 0}
+                                        </span>
+                                        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>kcal</span>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
+                                            P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}{livePreview?.fiber_g ? ` · Fib ${livePreview.fiber_g}g` : ''}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="btn-primary cal-add-btn"
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 20px', fontSize: 14 }}
+                                    >
+                                        <Plus size={16} /> Add
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </form>
+            ) : mode === 'exercise' ? (
+                <form onSubmit={handleExerciseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <LiquidGlassSegmented
+                        options={exerciseOptions}
+                        value={exerciseType}
+                        onChange={(v) => { setExerciseType(v); setManualCalories(null); }}
+                        size="sm"
+                        fullWidth
+                        ariaLabel="Exercise"
+                    />
+
+                    <div className="cal-ex-grid">
+                        <div>
+                            <Label style={{ display: 'block', marginBottom: 6 }}>Duration</Label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="600"
+                                    inputMode="numeric"
+                                    value={exerciseDuration}
+                                    onChange={(e) => { setExerciseDuration(e.target.value); setManualCalories(null); }}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, paddingRight: 46, fontFamily: MONO, fontWeight: 700 }}
+                                />
+                                <span style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>min</span>
+                            </div>
+                        </div>
+                        <div>
+                            <Label style={{ display: 'block', marginBottom: 6 }}>Burned</Label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="5000"
+                                    inputMode="numeric"
+                                    value={caloriesValue}
+                                    onChange={(e) => setManualCalories(e.target.value)}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, paddingRight: 46, fontFamily: MONO, fontWeight: 700 }}
+                                />
+                                <span style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>kcal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            Estimated for {weight} kg. Edit to override.
+                        </span>
+                        <button
+                            type="submit"
+                            className="btn-primary cal-add-btn"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 20px', fontSize: 14 }}
+                        >
+                            <Plus size={16} /> Add
+                        </button>
+                    </div>
+                </form>
+            ) : (
+                <form onSubmit={handleWeightSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', borderRadius: 14,
+                        background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                            <div style={{
+                                width: 30, height: 30, borderRadius: 9, display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(59,130,246,0.15)', color: '#3b82f6',
+                            }}>
+                                <Scale size={16} />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    {selectedDate === format(new Date(), 'yyyy-MM-dd') ? "Today's Weigh-in" : `Weigh-in for ${selectedDate}`}
+                                </span>
+                                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                    {todayWeightLog ? `Logged: ${todayWeightLog.weight_kg} kg` : `Current: ${currentWeight} kg`}
+                                </span>
+                            </div>
+                        </div>
+                        {todayWeightLog && (
+                            <button
+                                type="button"
+                                onClick={() => deleteDailyWeight(selectedDate)}
+                                style={{
+                                    background: 'transparent', border: 'none', color: 'var(--text-muted)',
+                                    fontSize: 11, cursor: 'pointer', padding: '4px 6px',
+                                }}
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '8px 0' }}>
+                        <Label>Weight</Label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button
+                                type="button"
+                                onClick={() => handleStepWeight(-0.5)}
+                                style={{
+                                    padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                    fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                    border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                }}
+                            >
+                                -0.5
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleStepWeight(-0.1)}
+                                style={{
+                                    padding: '8px 9px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                    fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                    border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                }}
+                            >
+                                -0.1
+                            </button>
+                            <div style={{ position: 'relative', width: 130 }}>
+                                <input
+                                    type="number"
+                                    min="20"
+                                    max="300"
+                                    step="0.1"
+                                    inputMode="decimal"
+                                    value={weightInput}
+                                    onChange={(e) => setWeightInput(e.target.value)}
+                                    className="surface-input"
+                                    style={{
+                                        ...inputStyle, padding: '10px 36px 10px 12px',
+                                        fontFamily: MONO, fontSize: 22, fontWeight: 800, textAlign: 'center',
+                                    }}
+                                />
+                                <span style={{
+                                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                                    fontSize: 12, color: 'var(--text-muted)', fontWeight: 700,
+                                }}>
+                                    kg
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleStepWeight(0.1)}
+                                style={{
+                                    padding: '8px 9px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                    fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                    border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                }}
+                            >
+                                +0.1
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleStepWeight(0.5)}
+                                style={{
+                                    padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                    fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
+                                    border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
+                                }}
+                            >
+                                +0.5
+                            </button>
+                        </div>
+
+                        {enteredBmi && (
+                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                <span>BMI: <strong style={{ color: 'var(--text-primary)', fontFamily: MONO }}>{enteredBmi}</strong></span>
+                                <span>·</span>
+                                <span>Auto-syncs to BMR & calorie burn</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {weightFeedback && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: GREEN, justifyContent: 'center' }}>
+                            <Check size={14} /> {weightFeedback}
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            Consistent morning weigh-ins recommended.
+                        </span>
+                        <button
+                            type="submit"
+                            disabled={weightSaving}
+                            className="btn-primary cal-add-btn"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                gap: 7, padding: '11px 22px', fontSize: 14,
+                                background: '#3b82f6',
+                            }}
+                        >
+                            <Scale size={16} />
+                            {weightSaving ? 'Saving…' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
+                        </button>
+                    </div>
+                </form>
+            )}
+        </div>
+    );
+
     /* ═══════════════ RENDER ═══════════════ */
     return (
         <div className="page-container cal-page" style={{ maxWidth: 1080, margin: '0 auto', width: '100%' }}>
@@ -978,7 +1666,7 @@ const Calories = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <motion.button
                         whileTap={{ scale: 0.92 }}
-                        onClick={() => setMode('weight')}
+                        onClick={() => { setMode('weight'); setShowAddModal(true); }}
                         aria-label="Track weight"
                         style={{
                             height: 36, padding: '0 12px', borderRadius: 12, display: 'flex',
@@ -1026,6 +1714,20 @@ const Calories = () => {
                     >
                         <TrendingUp size={15} style={{ color: ACCENT }} />
                         <span>Analytics</span>
+                    </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => { setMode('food'); setShowAddModal(true); }}
+                        className="btn-primary"
+                        style={{
+                            height: 36, padding: '0 14px', borderRadius: 12, display: 'flex',
+                            alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13,
+                            fontWeight: 700,
+                        }}
+                    >
+                        <Plus size={16} strokeWidth={2.6} />
+                        <span>Add</span>
                     </motion.button>
                 </div>
             </motion.header>
@@ -1454,691 +2156,30 @@ const Calories = () => {
 
                 {/* ───────── RIGHT COLUMN ───────── */}
                 <div className="cal-col cal-col-right">
-                    {/* Logger */}
-                    <motion.section
-                        className="cal-card-logger"
-                        style={{ ...card, display: 'flex', flexDirection: 'column', gap: 14 }}
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 25 }}
-                    >
-                        <LiquidGlassSegmented
-                            options={[
-                                { id: 'food', label: 'Food', icon: Utensils, color: ACCENT },
-                                { id: 'exercise', label: 'Exercise', icon: Dumbbell, color: AMBER },
-                                { id: 'weight', label: 'Weight', icon: Scale, color: '#3b82f6' },
-                            ]}
-                            value={mode}
-                            onChange={setMode}
-                            size="md"
-                            fullWidth
-                            ariaLabel="Log type"
-                        />
-
-                        {mode === 'food' ? (
-                            <form onSubmit={handleFoodSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                <LiquidGlassSegmented
-                                    options={mealOptions}
-                                    value={mealType}
-                                    onChange={setMealType}
-                                    size="sm"
-                                    fullWidth
-                                    ariaLabel="Meal"
-                                />
-
-                                <div style={{ position: 'relative' }}>
-                                    <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                    <input
-                                        type="text"
-                                        value={foodSearch}
-                                        onChange={(e) => {
-                                            setFoodSearch(e.target.value);
-                                            if (selectedFood && e.target.value !== selectedFood.name) setSelectedFood(null);
-                                            setLookupError('');
-                                            setFeedback('');
-                                        }}
-                                        placeholder="Search food or count, e.g. 2 roti, boiled egg"
-                                        className="surface-input"
-                                        style={{ ...inputStyle, paddingLeft: 40, paddingRight: 38 }}
-                                    />
-                                    {foodSearch && (
-                                        <button
-                                            type="button"
-                                            onClick={() => { setFoodSearch(''); setSelectedFood(null); setFeedback(''); }}
-                                            aria-label="Clear"
-                                            style={{
-                                                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                                                background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                                                cursor: 'pointer', display: 'flex', padding: 4,
-                                            }}
-                                        >
-                                            <X size={15} />
-                                        </button>
-                                    )}
-                                </div>
-
-                                {!foodSearch.trim() && !selectedFood && (
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: -4 }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => openManualFoodModal('', 'camera')}
-                                            style={{
-                                                background: 'transparent', border: 'none', color: '#10b981',
-                                                fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                padding: '2px 4px',
-                                            }}
-                                        >
-                                            <Camera size={12} /> Scan label
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => openManualFoodModal('')}
-                                            style={{
-                                                background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                                                fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                padding: '2px 4px',
-                                            }}
-                                        >
-                                            <Plus size={12} /> Add manually
-                                        </button>
-                                    </div>
-                                )}
-
-                                {feedback && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: GREEN }}>
-                                        <Check size={14} /> {feedback}
-                                    </div>
-                                )}
-                                {lookupError && (
-                                    <div style={{ fontSize: 12, color: 'var(--danger)' }}>{lookupError}</div>
-                                )}
-
-                                <AnimatePresence mode="wait" initial={false}>
-                                    {!selectedFood ? (
-                                        foodSearch.trim() ? (
-                                            <motion.div
-                                                key="results"
-                                                initial={{ opacity: 0, y: 4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                transition={{ duration: 0.15 }}
-                                            >
-                                                {dbSearch.results.length > 0 ? (
-                                                    <div style={{ maxHeight: 250, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
-                                                        <Label style={{ display: 'block', margin: '2px 0 6px' }}>
-                                                            Database suggestions ({dbSearch.results.length})
-                                                        </Label>
-                                                        {dbSearch.results.slice(0, 8).map((item) => {
-                                                            const itemUnit = resolveFoodUnit(item);
-                                                            const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
-                                                            return (
-                                                                <button
-                                                                    key={item.id || item.normalized_name}
-                                                                    type="button"
-                                                                    onClick={() => { selectFoodItem(item); setFeedback(''); }}
-                                                                    className="cal-row-btn"
-                                                                >
-                                                                    <span style={{ minWidth: 0, textAlign: 'left' }}>
-                                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
-                                                                            {getSourceChip(item.source)}
-                                                                        </span>
-                                                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                                                            {itemUnit.isCountable
-                                                                                ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
-                                                                                : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}${item.fiber_per_100g ? ` · Fib ${item.fiber_per_100g}g` : ''}`}
-                                                                        </span>
-                                                                    </span>
-                                                                    <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
-                                                                        {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
-                                                                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
-                                                                            {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
-                                                                        </span>
-                                                                    </span>
-                                                                </button>
-                                                            );
-                                                        })}
-
-                                                        <div style={{
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                            gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-subtle)',
-                                                            flexWrap: 'wrap',
-                                                        }}>
-                                                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Not in suggestions?</span>
-                                                            <div style={{ display: 'flex', gap: 6 }}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openManualFoodModal(foodSearch, 'camera')}
-                                                                    style={{
-                                                                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                                                        background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
-                                                                        color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                                    }}
-                                                                >
-                                                                    <Camera size={12} /> Scan
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleWebSearch(foodSearch)}
-                                                                    disabled={searchingWeb}
-                                                                    style={{
-                                                                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                                                        background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
-                                                                        color: '#06b6d4', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                                    }}
-                                                                >
-                                                                    {searchingWeb ? <Loader2 size={12} className="spin" /> : <Globe size={12} />}
-                                                                    {searchingWeb ? 'Searching…' : 'Web lookup'}
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openManualFoodModal(foodSearch)}
-                                                                    style={{
-                                                                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                                                        background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
-                                                                        color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                                    }}
-                                                                >
-                                                                    <Plus size={12} /> Add manually
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div style={{
-                                                        display: 'flex', flexDirection: 'column', gap: 10, padding: '14px', borderRadius: 14,
-                                                        background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                                    }}>
-                                                        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                                            "{foodSearch.trim()}" is not in your database yet.
-                                                        </span>
-                                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => openManualFoodModal(foodSearch, 'camera')}
-                                                                style={{
-                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                                    padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
-                                                                    background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
-                                                                    color: '#10b981', borderRadius: 12, fontWeight: 700, cursor: 'pointer',
-                                                                }}
-                                                            >
-                                                                <Camera size={14} /> Scan label
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleWebSearch(foodSearch)}
-                                                                disabled={searchingWeb}
-                                                                className="btn-primary"
-                                                                style={{
-                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                                                                    padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 140,
-                                                                }}
-                                                            >
-                                                                {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
-                                                                {searchingWeb ? 'Searching…' : 'Search web & save'}
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => openManualFoodModal(foodSearch)}
-                                                                style={{
-                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                                    padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
-                                                                    background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.35)',
-                                                                    color: ACCENT, borderRadius: 12, fontWeight: 700, cursor: 'pointer',
-                                                                }}
-                                                            >
-                                                                <Plus size={14} /> Add manually
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </motion.div>
-                                        ) : null
-                                    ) : (
-                                        <motion.div
-                                            key="selected"
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.18 }}
-                                            style={{
-                                                padding: 14, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 12,
-                                                background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                                                <div style={{ minWidth: 0 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedFood.name}</span>
-                                                        {getSourceChip(selectedFood.source)}
-                                                    </div>
-                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                                        {unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood)
-                                                            ? (portionMode === 'unit'
-                                                                ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}ml · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
-                                                                : `${Math.round(selectedFood.calories_per_100g)} kcal / 100ml`)
-                                                            : (portionMode === 'unit'
-                                                                ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
-                                                                : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`)}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setSelectedFood(null); setFeedback(''); }}
-                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: 0, flexShrink: 0 }}
-                                                >
-                                                    Change
-                                                </button>
-                                            </div>
-
-                                            {(() => {
-                                                const isLiquid = Boolean(unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood));
-                                                const portionOptions = isLiquid
-                                                    ? [
-                                                        { id: 'ml', label: 'Milliliters (ml)' },
-                                                        ...(unitInfo.isCountable
-                                                            ? [{ id: 'unit', label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}ml)` }]
-                                                            : []),
-                                                        { id: 'grams', label: 'Grams (g)' },
-                                                    ]
-                                                    : [
-                                                        ...(unitInfo.isCountable
-                                                            ? [{ id: 'unit', label: `${unitInfo.unitName.charAt(0).toUpperCase() + unitInfo.unitName.slice(1)} (${unitInfo.gramsPerUnit}g)` }]
-                                                            : []),
-                                                        { id: 'grams', label: 'Grams (g)' },
-                                                    ];
-
-                                                return (
-                                                    <>
-                                                        <LiquidGlassSegmented
-                                                            options={portionOptions}
-                                                            value={portionMode}
-                                                            dropdownBreakpoint={380}
-                                                            dropdownLabel="Unit:"
-                                                            onChange={(nextMode) => {
-                                                                setPortionMode(nextMode);
-                                                                if (nextMode === 'ml') {
-                                                                    const mlVal = portionMode === 'unit'
-                                                                        ? Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit)
-                                                                        : Math.round(parseFloat(gramsInput) || 200);
-                                                                    setMlInput(String(mlVal || 200));
-                                                                } else if (nextMode === 'grams') {
-                                                                    const g = portionMode === 'unit'
-                                                                        ? Math.round((parseFloat(countInput) || 1) * unitInfo.gramsPerUnit)
-                                                                        : Math.round(parseFloat(mlInput) || 150);
-                                                                    setGramsInput(String(g || 150));
-                                                                } else if (nextMode === 'unit') {
-                                                                    const base = portionMode === 'ml'
-                                                                        ? (parseFloat(mlInput) || unitInfo.gramsPerUnit)
-                                                                        : (parseFloat(gramsInput) || unitInfo.gramsPerUnit);
-                                                                    const c = Math.max(0.5, Math.round((base / (unitInfo.gramsPerUnit || 100)) * 2) / 2);
-                                                                    setCountInput(String(c));
-                                                                }
-                                                            }}
-                                                            size="sm"
-                                                            fullWidth
-                                                            ariaLabel="Portion unit mode"
-                                                        />
-
-                                                        {portionMode === 'ml' ? (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                                <div style={{ position: 'relative', width: 112 }}>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="1"
-                                                                        max="5000"
-                                                                        step="any"
-                                                                        inputMode="decimal"
-                                                                        value={mlInput}
-                                                                        onChange={(e) => setMlInput(e.target.value)}
-                                                                        className="surface-input"
-                                                                        style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
-                                                                    />
-                                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>ml</span>
-                                                                </div>
-                                                                {ML_PRESETS.map((m) => {
-                                                                    const on = Number(mlInput) === m;
-                                                                    return (
-                                                                        <button
-                                                                            key={m}
-                                                                            type="button"
-                                                                            onClick={() => setMlInput(String(m))}
-                                                                            style={{
-                                                                                padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
-                                                                                fontFamily: MONO, cursor: 'pointer',
-                                                                                background: on ? `${ACCENT}22` : 'transparent',
-                                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
-                                                                                color: on ? ACCENT : 'var(--text-muted)',
-                                                                            }}
-                                                                        >
-                                                                            {m}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        ) : portionMode === 'unit' ? (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                                <div style={{ position: 'relative', width: 104 }}>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0.25"
-                                                                        max="50"
-                                                                        step="any"
-                                                                        inputMode="decimal"
-                                                                        value={countInput}
-                                                                        onChange={(e) => setCountInput(e.target.value)}
-                                                                        className="surface-input"
-                                                                        style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
-                                                                    />
-                                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
-                                                                        ×
-                                                                    </span>
-                                                                </div>
-                                                                {COUNT_PRESETS.map((c) => {
-                                                                    const on = Number(countInput) === c;
-                                                                    return (
-                                                                        <button
-                                                                            key={c}
-                                                                            type="button"
-                                                                            onClick={() => setCountInput(String(c))}
-                                                                            style={{
-                                                                                padding: '6px 12px', borderRadius: 9, fontSize: 12, fontWeight: 700,
-                                                                                fontFamily: MONO, cursor: 'pointer',
-                                                                                background: on ? `${ACCENT}22` : 'transparent',
-                                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
-                                                                                color: on ? ACCENT : 'var(--text-muted)',
-                                                                            }}
-                                                                        >
-                                                                            {c}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginLeft: 'auto' }}>
-                                                                    = {Math.round(effectiveGrams)}{isLiquid ? 'ml' : 'g'}
-                                                                </span>
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                                <div style={{ position: 'relative', width: 112 }}>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="1"
-                                                                        max="5000"
-                                                                        step="any"
-                                                                        inputMode="decimal"
-                                                                        value={gramsInput}
-                                                                        onChange={(e) => setGramsInput(e.target.value)}
-                                                                        className="surface-input"
-                                                                        style={{ ...inputStyle, padding: '9px 28px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
-                                                                    />
-                                                                    <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>g</span>
-                                                                </div>
-                                                                {GRAM_PRESETS.map((g) => {
-                                                                    const on = Number(gramsInput) === g;
-                                                                    return (
-                                                                        <button
-                                                                            key={g}
-                                                                            type="button"
-                                                                            onClick={() => setGramsInput(String(g))}
-                                                                            style={{
-                                                                                padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 700,
-                                                                                fontFamily: MONO, cursor: 'pointer',
-                                                                                background: on ? `${ACCENT}22` : 'transparent',
-                                                                                border: on ? `1px solid ${ACCENT}` : '1px solid var(--border-subtle)',
-                                                                                color: on ? ACCENT : 'var(--text-muted)',
-                                                                            }}
-                                                                        >
-                                                                            {g}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                );
-                                            })()}
-
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                gap: 12, flexWrap: 'wrap', paddingTop: 12, borderTop: '1px solid var(--border-subtle)',
-                                            }}>
-                                                <div>
-                                                    <span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 800, color: ACCENT }}>
-                                                        {livePreview?.calories || 0}
-                                                    </span>
-                                                    <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>kcal</span>
-                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                                        P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}{livePreview?.fiber_g ? ` · Fib ${livePreview.fiber_g}g` : ''}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="submit"
-                                                    className="btn-primary cal-add-btn"
-                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 20px', fontSize: 14 }}
-                                                >
-                                                    <Plus size={16} /> Add
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </form>
-                        ) : mode === 'exercise' ? (
-                            <form onSubmit={handleExerciseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                <LiquidGlassSegmented
-                                    options={exerciseOptions}
-                                    value={exerciseType}
-                                    onChange={(v) => { setExerciseType(v); setManualCalories(null); }}
-                                    size="sm"
-                                    fullWidth
-                                    ariaLabel="Exercise"
-                                />
-
-                                <div className="cal-ex-grid">
-                                    <div>
-                                        <Label style={{ display: 'block', marginBottom: 6 }}>Duration</Label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="600"
-                                                inputMode="numeric"
-                                                value={exerciseDuration}
-                                                onChange={(e) => { setExerciseDuration(e.target.value); setManualCalories(null); }}
-                                                className="surface-input"
-                                                style={{ ...inputStyle, paddingRight: 46, fontFamily: MONO, fontWeight: 700 }}
-                                            />
-                                            <span style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>min</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <Label style={{ display: 'block', marginBottom: 6 }}>Burned</Label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="5000"
-                                                inputMode="numeric"
-                                                value={caloriesValue}
-                                                onChange={(e) => setManualCalories(e.target.value)}
-                                                className="surface-input"
-                                                style={{ ...inputStyle, paddingRight: 46, fontFamily: MONO, fontWeight: 700 }}
-                                            />
-                                            <span style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>kcal</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                        Estimated for {weight} kg. Edit to override.
-                                    </span>
-                                    <button
-                                        type="submit"
-                                        className="btn-primary cal-add-btn"
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 20px', fontSize: 14 }}
-                                    >
-                                        <Plus size={16} /> Add
-                                    </button>
-                                </div>
-                            </form>
-                        ) : (
-                            <form onSubmit={handleWeightSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                                <div style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                    padding: '10px 14px', borderRadius: 14,
-                                    background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                                        <div style={{
-                                            width: 30, height: 30, borderRadius: 9, display: 'flex',
-                                            alignItems: 'center', justifyContent: 'center',
-                                            background: 'rgba(59,130,246,0.15)', color: '#3b82f6',
-                                        }}>
-                                            <Scale size={16} />
-                                        </div>
-                                        <div>
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                                                {selectedDate === format(new Date(), 'yyyy-MM-dd') ? "Today's Weigh-in" : `Weigh-in for ${selectedDate}`}
-                                            </span>
-                                            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                                {todayWeightLog ? `Logged: ${todayWeightLog.weight_kg} kg` : `Current: ${currentWeight} kg`}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {todayWeightLog && (
-                                        <button
-                                            type="button"
-                                            onClick={() => deleteDailyWeight(selectedDate)}
-                                            style={{
-                                                background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                                                fontSize: 11, cursor: 'pointer', padding: '4px 6px',
-                                            }}
-                                        >
-                                            Clear
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '8px 0' }}>
-                                    <Label>Weight</Label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleStepWeight(-0.5)}
-                                            style={{
-                                                padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
-                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
-                                            }}
-                                        >
-                                            -0.5
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleStepWeight(-0.1)}
-                                            style={{
-                                                padding: '8px 9px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
-                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
-                                            }}
-                                        >
-                                            -0.1
-                                        </button>
-                                        <div style={{ position: 'relative', width: 130 }}>
-                                            <input
-                                                type="number"
-                                                min="20"
-                                                max="300"
-                                                step="0.1"
-                                                inputMode="decimal"
-                                                value={weightInput}
-                                                onChange={(e) => setWeightInput(e.target.value)}
-                                                className="surface-input"
-                                                style={{
-                                                    ...inputStyle, padding: '10px 36px 10px 12px',
-                                                    fontFamily: MONO, fontSize: 22, fontWeight: 800, textAlign: 'center',
-                                                }}
-                                            />
-                                            <span style={{
-                                                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                                                fontSize: 12, color: 'var(--text-muted)', fontWeight: 700,
-                                            }}>
-                                                kg
-                                            </span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleStepWeight(0.1)}
-                                            style={{
-                                                padding: '8px 9px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
-                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
-                                            }}
-                                        >
-                                            +0.1
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleStepWeight(0.5)}
-                                            style={{
-                                                padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                                                fontFamily: MONO, cursor: 'pointer', background: 'var(--surface-input)',
-                                                border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)',
-                                            }}
-                                        >
-                                            +0.5
-                                        </button>
-                                    </div>
-
-                                    {enteredBmi && (
-                                        <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                                            <span>BMI: <strong style={{ color: 'var(--text-primary)', fontFamily: MONO }}>{enteredBmi}</strong></span>
-                                            <span>·</span>
-                                            <span>Auto-syncs to BMR & calorie burn</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {weightFeedback && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: GREEN, justifyContent: 'center' }}>
-                                        <Check size={14} /> {weightFeedback}
-                                    </div>
-                                )}
-
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                        Consistent morning weigh-ins recommended.
-                                    </span>
-                                    <button
-                                        type="submit"
-                                        disabled={weightSaving}
-                                        className="btn-primary cal-add-btn"
-                                        style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            gap: 7, padding: '11px 22px', fontSize: 14,
-                                            background: '#3b82f6',
-                                        }}
-                                    >
-                                        <Scale size={16} />
-                                        {weightSaving ? 'Saving…' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </motion.section>
-
                     {/* Log */}
                     <motion.section
                         className="cal-card-log"
                         style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}
                         initial={{ opacity: 0, y: 14 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2, type: 'spring', stiffness: 300, damping: 25 }}
+                        transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 25 }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Log</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Today's Log</h2>
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => { setMode('food'); setShowAddModal(true); }}
+                                    style={{
+                                        height: 28, padding: '0 10px', borderRadius: 8, display: 'flex',
+                                        alignItems: 'center', gap: 4, cursor: 'pointer',
+                                        background: 'rgba(168,85,247,0.14)', border: '1px solid rgba(168,85,247,0.3)',
+                                        color: ACCENT, fontSize: 12, fontWeight: 700,
+                                    }}
+                                >
+                                    <Plus size={14} strokeWidth={2.5} /> Add
+                                </motion.button>
+                            </div>
                             <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)' }}>
                                 {fmt(totalIntake)} in · {fmt(exerciseBurn)} out
                             </span>
@@ -2156,9 +2197,19 @@ const Calories = () => {
                         />
 
                         {visibleLogs.length === 0 ? (
-                            <p style={{ margin: 0, padding: '22px 0', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
-                                Nothing logged for this day.
-                            </p>
+                            <div style={{ margin: 0, padding: '36px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                                    Nothing logged for this day.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => { setMode('food'); setShowAddModal(true); }}
+                                    className="btn-primary"
+                                    style={{ padding: '8px 18px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                >
+                                    <Plus size={15} /> Add Food, Exercise or Weight
+                                </button>
+                            </div>
                         ) : (
                             <div>
                                 <AnimatePresence initial={false}>
@@ -2222,6 +2273,16 @@ const Calories = () => {
                     </motion.section>
                 </div>
             </div>
+
+            {/* Add Food / Exercise / Weight Modal */}
+            <Modal
+                isOpen={showAddModal}
+                onClose={closeAddModal}
+                title={mode === 'food' ? 'Add Food Intake' : mode === 'exercise' ? 'Log Exercise' : 'Record Weight'}
+                maxWidth="520px"
+            >
+                {renderLogger()}
+            </Modal>
 
             {/* Weekly Analytics Modal */}
             <Modal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} title="Weekly Analytics">
@@ -2688,9 +2749,51 @@ const Calories = () => {
                 </form>
             </Modal>
 
+            {/* Circular Floating Add Action Button */}
+            <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setShowAddModal(true)}
+                title="Add Food, Exercise, or Weight"
+                aria-label="Add Log Entry"
+                className="fab-add-calorie"
+            >
+                <Plus size={26} strokeWidth={2.8} />
+            </motion.button>
+
             <style>{`
                 .spin { animation: cal-spin 1s linear infinite; }
                 @keyframes cal-spin { to { transform: rotate(360deg); } }
+
+                .fab-add-calorie {
+                    position: fixed;
+                    bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+                    right: calc(20px + env(safe-area-inset-right, 0px));
+                    width: 54px;
+                    height: 54px;
+                    border-radius: 50%;
+                    background: var(--accent-gradient, linear-gradient(135deg, #a855f7 0%, #ec4899 100%));
+                    color: #ffffff;
+                    border: 1.5px solid rgba(255, 255, 255, 0.25);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    z-index: 95;
+                    box-shadow: 0 8px 24px rgba(168, 85, 247, 0.45);
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .fab-add-calorie:hover {
+                    box-shadow: 0 12px 30px rgba(124, 58, 237, 0.6);
+                }
+                @media (min-width: 768px) {
+                    .fab-add-calorie {
+                        bottom: 36px;
+                        right: 36px;
+                        width: 58px;
+                        height: 58px;
+                    }
+                }
 
                 /* Mobile & Tablet: ergonomic single column ordering */
                 .cal-layout { display: flex; flex-direction: column; gap: 14px; }
@@ -2753,9 +2856,8 @@ const Calories = () => {
                 @media (max-width: 1099px) {
                     .cal-col-left, .cal-col-right { display: contents; }
                     .cal-card-nutrition { order: 1; }
-                    .cal-card-logger { order: 2; }
+                    .cal-card-water { order: 2; }
                     .cal-card-log { order: 3; }
-                    .cal-card-water { order: 4; }
                 }
 
                 /* Desktop: two balanced columns */
