@@ -384,7 +384,7 @@ const Calories = () => {
         const objectUrl = URL.createObjectURL(file);
         setScanOverlay({ src: objectUrl, source, phase: 'scanning', result: null, error: '' });
         try {
-            const compressedDataUrl = await compressImageFile(file, 1600, 0.85);
+            const compressedDataUrl = await compressImageFile(file, 1100, 0.80);
             setLabelImagePreview(compressedDataUrl);
 
             const parsed = await parseNutritionLabelImage(compressedDataUrl, manualFoodForm.name);

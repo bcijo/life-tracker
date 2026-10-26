@@ -587,14 +587,55 @@ async function fetchGroqWithRetry(payload, apiKey, maxRetries = 2) {
             });
 
             if (response.status === 429) {
-                console.warn(`[Groq Rate Limit 429] Waiting 2s before retry (attempt ${attempt + 1}/${maxRetries})...`);
-                await new Promise(r => setTimeout(r, 2000));
-                continue;
+                let waitMs = 3000;
+                const retryAfter = response.headers.get('retry-after');
+                const resetTokens = response.headers.get('x-ratelimit-reset-tokens');
+                if (retryAfter && !isNaN(parseFloat(retryAfter))) {
+                    waitMs = Math.min(Math.max(parseFloat(retryAfter) * 1000, 2000), 10000);
+                } else if (resetTokens) {
+                    const sec = parseFloat(resetTokens.replace('s', ''));
+                    if (!isNaN(sec) && sec > 0) {
+                        waitMs = Math.min(Math.max(Math.ceil(sec * 1000) + 500, 2500), 10000);
+                    }
+                } else {
+                    waitMs = 2500 * (attempt + 1);
+                }
+
+                let rateLimitMsg = "Groq rate limit reached (429). Please wait a few seconds and try again.";
+                try {
+                    const errJson = await response.json();
+                    if (errJson?.error?.message) {
+                        rateLimitMsg = errJson.error.message;
+                    }
+                } catch {
+                    // ignore json parse failure
+                }
+
+                lastError = new Error(rateLimitMsg);
+                console.warn(`[Groq Rate Limit 429] Waiting ${waitMs}ms before retry (attempt ${attempt + 1}/${maxRetries})...:`, rateLimitMsg);
+
+                if (attempt < maxRetries) {
+                    await new Promise(r => setTimeout(r, waitMs));
+                    continue;
+                } else {
+                    throw lastError;
+                }
             }
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Groq API error ${response.status}: ${errorText}`);
+                let errorMsg = `Groq API error (${response.status})`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson?.error?.message) {
+                        errorMsg = errJson.error.message;
+                    } else if (typeof errJson === 'object') {
+                        errorMsg = JSON.stringify(errJson);
+                    }
+                } catch {
+                    const errText = await response.text().catch(() => '');
+                    if (errText) errorMsg = `Groq API error ${response.status}: ${errText}`;
+                }
+                throw new Error(errorMsg);
             }
 
             return await response.json();
@@ -606,7 +647,7 @@ async function fetchGroqWithRetry(payload, apiKey, maxRetries = 2) {
         }
     }
 
-    throw lastError || new Error("Failed to communicate with Groq");
+    throw lastError || new Error("Failed to communicate with Groq. Please check your internet connection.");
 }
 
 async function runSQLTool(queryText) {
@@ -995,7 +1036,7 @@ Return only valid JSON, no markdown fences, no extra text. Example structure:
 /**
  * Compresses and resizes an image file to a base64 Data URL to fit within Vision LLM limits.
  */
-export function compressImageFile(file, maxDimension = 1600, quality = 0.85) {
+export function compressImageFile(file, maxDimension = 1100, quality = 0.80) {
     return new Promise((resolve, reject) => {
         if (!file) return reject(new Error('No file provided'));
         const reader = new FileReader();
@@ -1094,11 +1135,11 @@ Return ONLY a valid JSON object with NO markdown fences and NO extra commentary 
                     }
                 ],
                 temperature: 0.1,
-                max_tokens: 1024,
+                max_tokens: 600,
                 response_format: { type: 'json_object' }
             };
 
-            const data = await fetchGroqWithRetry(payload, apiKey, 1);
+            const data = await fetchGroqWithRetry(payload, apiKey, 2);
             const content = data.choices[0]?.message?.content;
             if (!content) continue;
 
