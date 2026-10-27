@@ -32,7 +32,7 @@ import {
     ReferenceLine,
 } from 'recharts';
 import useCalories, { calculateFromPer100g, calculateMifflinBmr } from '../hooks/useCalories';
-import { COMMON_EXERCISES, resolveFoodUnit, isLiquidFood } from '../lib/indianFoodCatalog';
+import { COMMON_EXERCISES, resolveFoodUnit, isLiquidFood, normalizeFoodName } from '../lib/indianFoodCatalog';
 import { parseNutritionLabelImage, compressImageFile } from '../lib/groq';
 import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import DateDisplay from '../components/common/DateDisplay';
