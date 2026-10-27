@@ -1752,20 +1752,6 @@ const Calories = () => {
                         <TrendingUp size={15} style={{ color: ACCENT }} />
                         <span>Analytics</span>
                     </motion.button>
-                    <motion.button
-                        whileTap={{ scale: 0.92 }}
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => { setMode('food'); setShowAddModal(true); }}
-                        className="btn-primary"
-                        style={{
-                            height: 36, padding: '0 14px', borderRadius: 12, display: 'flex',
-                            alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13,
-                            fontWeight: 700,
-                        }}
-                    >
-                        <Plus size={16} strokeWidth={2.6} />
-                        <span>Add</span>
-                    </motion.button>
                 </div>
             </motion.header>
 
