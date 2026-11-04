@@ -38,6 +38,7 @@ import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import DateDisplay from '../components/common/DateDisplay';
 import Modal from '../components/Modal';
 import SavedFoodsTab from '../components/calories/SavedFoodsTab';
+import FoodDetailCard from '../components/calories/FoodDetailCard';
 
 const MONO = "'JetBrains Mono', monospace";
 const ACCENT = '#a855f7';
@@ -51,10 +52,10 @@ const ML_PRESETS = [100, 150, 200, 250, 500];
 const COUNT_PRESETS = [1, 2, 3, 4];
 
 const MEALS = [
-    { id: 'breakfast', label: 'Breakfast', emoji: '🌅' },
-    { id: 'lunch', label: 'Lunch', emoji: '☀️' },
-    { id: 'snack', label: 'Snack', emoji: '☕' },
-    { id: 'dinner', label: 'Dinner', emoji: '🌙' },
+    { id: 'breakfast', label: 'Breakfast', emoji: 'Ã°Å¸Å’â€¦' },
+    { id: 'lunch', label: 'Lunch', emoji: 'Ã¢Ëœâ‚¬Ã¯Â¸Â' },
+    { id: 'snack', label: 'Snack', emoji: 'Ã¢Ëœâ€¢' },
+    { id: 'dinner', label: 'Dinner', emoji: 'Ã°Å¸Å’â„¢' },
 ];
 
 const renderVesselSvg = (vessel) => {
@@ -200,7 +201,7 @@ const Calories = () => {
         saveWaterGoal,
     } = useCalories(selectedDate);
 
-    /* ── Food logger state ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Food logger state Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [mealType, setMealType] = useState(() => {
         const hr = new Date().getHours();
         if (hr < 11) return 'breakfast';
@@ -218,17 +219,17 @@ const Calories = () => {
     const [feedback, setFeedback] = useState('');
     const [lookupError, setLookupError] = useState('');
 
-    /* ── Exercise logger state ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Exercise logger state Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [exerciseType, setExerciseType] = useState(COMMON_EXERCISES[0].name);
     const [exerciseDuration, setExerciseDuration] = useState('30');
     const [manualCalories, setManualCalories] = useState(null);
 
-    /* ── Weight logger state ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Weight logger state Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [weightInput, setWeightInput] = useState(() => String(todayWeightLog?.weight_kg || currentWeight || '70'));
     const [weightSaving, setWeightSaving] = useState(false);
     const [weightFeedback, setWeightFeedback] = useState('');
 
-    /* ── Add Entry Modal state (Food / Exercise / Weight) ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Add Entry Modal state (Food / Exercise / Weight) Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [showAddModal, setShowAddModal] = useState(false);
     const closeAddModal = () => {
         setShowAddModal(false);
@@ -247,7 +248,7 @@ const Calories = () => {
         setWeightFeedback('');
     }, [selectedDate, todayWeightLog, currentWeight]);
 
-    /* ── Weekly analytics modal & averages ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Weekly analytics modal & averages Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [foodNutrientTab, setFoodNutrientTab] = useState('protein'); // 'protein' | 'sugar' | 'carbs' | 'fat' | 'fiber'
     const avgWeekIntake = useMemo(
@@ -287,11 +288,11 @@ const Calories = () => {
         [weeklyTrend]
     );
 
-    /* ── BMR modal ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ BMR modal Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [showBmr, setShowBmr] = useState(false);
     const [bmrForm, setBmrForm] = useState(bmrSettings);
 
-    /* ── Water tracker state ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Water tracker state Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [customWaterInput, setCustomWaterInput] = useState('');
     const [showCustomWater, setShowCustomWater] = useState(false);
     const [waterFeedback, setWaterFeedback] = useState('');
@@ -330,7 +331,7 @@ const Calories = () => {
         }
     };
 
-    /* ── Manual Food modal state ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Manual Food modal state Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [showManualFoodModal, setShowManualFoodModal] = useState(false);
     const [manualFoodForm, setManualFoodForm] = useState({
         name: '',
@@ -353,10 +354,10 @@ const Calories = () => {
     const labelCameraInputRef = useRef(null);
     const labelFileInputRef = useRef(null);
 
-    /* ── Clicked food log detail card modal ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Clicked food log detail card modal Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [selectedFoodLog, setSelectedFoodLog] = useState(null);
 
-    /* ── Full-screen scan overlay: { src, source, phase: 'scanning' | 'done' | 'error', result, error } ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Full-screen scan overlay: { src, source, phase: 'scanning' | 'done' | 'error', result, error } Ã¢â€â‚¬Ã¢â€â‚¬ */
     const [scanOverlay, setScanOverlay] = useState(null);
     const closeScanOverlay = () => {
         setScanOverlay((prev) => {
@@ -543,7 +544,7 @@ const Calories = () => {
     const autoCalories = Math.round(activeExercise.met * weight * ((parseFloat(exerciseDuration) || 0) / 60));
     const caloriesValue = manualCalories !== null ? manualCalories : String(autoCalories || '');
 
-    /* ── Date strip: last 7 days as a glass segmented control ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Date strip: last 7 days as a glass segmented control Ã¢â€â‚¬Ã¢â€â‚¬ */
     const dateOptions = useMemo(() => {
         const days = [];
         const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -569,7 +570,7 @@ const Calories = () => {
         []
     );
 
-    /* ── Derived numbers ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Derived numbers Ã¢â€â‚¬Ã¢â€â‚¬ */
     const { totalIntake, totalBurn, netBalance, isDeficit, exerciseBurn } = dailySummary;
     const ringPct = totalBurn > 0 ? totalIntake / totalBurn : 0;
     const ringColor = isDeficit ? ACCENT : AMBER;
@@ -605,7 +606,7 @@ const Calories = () => {
         { id: 'water', label: 'Water', count: (dailySummary.waterLogs || []).length },
     ];
 
-    /* ── Handlers ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Handlers Ã¢â€â‚¬Ã¢â€â‚¬ */
     const selectFoodItem = (food, queryOverride = null) => {
         if (!food) return;
         const info = resolveFoodUnit(food);
@@ -775,7 +776,7 @@ const Calories = () => {
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* ── Key Focus Highlight Header: Net Calories, Protein & Sugar ── */}
+                {/* Ã¢â€â‚¬Ã¢â€â‚¬ Key Focus Highlight Header: Net Calories, Protein & Sugar Ã¢â€â‚¬Ã¢â€â‚¬ */}
                 <div style={{
                     display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
                     padding: '12px 14px', borderRadius: 14,
@@ -800,7 +801,7 @@ const Calories = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 6px #818cf8' }} />
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>★ Protein</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ã¢Ëœâ€¦ Protein</span>
                         </div>
                         <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
                             {avgWeekProtein}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
@@ -814,7 +815,7 @@ const Calories = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUGAR_COLOR, boxShadow: `0 0 6px ${SUGAR_COLOR}` }} />
-                            <span style={{ fontSize: 10, fontWeight: 700, color: SUGAR_COLOR, textTransform: 'uppercase', letterSpacing: '0.04em' }}>★ Sugar</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: SUGAR_COLOR, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ã¢Ëœâ€¦ Sugar</span>
                         </div>
                         <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
                             {avgWeekSugar}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
@@ -825,12 +826,12 @@ const Calories = () => {
                     </div>
                 </div>
 
-                {/* ── Main Category Selector ── */}
+                {/* Ã¢â€â‚¬Ã¢â€â‚¬ Main Category Selector Ã¢â€â‚¬Ã¢â€â‚¬ */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                     <div>
                         {chartTab === 'calories' && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                7d Avg: {fmt(avgWeekIntake)} in · {fmt(avgWeekBurn)} out
+                                7d Avg: {fmt(avgWeekIntake)} in Ã‚Â· {fmt(avgWeekBurn)} out
                             </span>
                         )}
                         {chartTab === 'food' && (
@@ -850,7 +851,7 @@ const Calories = () => {
                         )}
                         {chartTab === 'weight' && weekWeightStats.count > 0 && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
+                                {weekWeightStats.latestWeight} kg Ã‚Â· {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
                             </span>
                         )}
                     </div>
@@ -872,7 +873,7 @@ const Calories = () => {
                     </div>
                 </div>
 
-                {/* ── Food / Nutrient Secondary Tab Bar ── */}
+                {/* Ã¢â€â‚¬Ã¢â€â‚¬ Food / Nutrient Secondary Tab Bar Ã¢â€â‚¬Ã¢â€â‚¬ */}
                 {chartTab === 'food' && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', paddingBottom: 2,
@@ -905,7 +906,7 @@ const Calories = () => {
                                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: tab.color }} />
                                     <span>{tab.label}</span>
                                     {tab.isPrimary && (
-                                        <span style={{ fontSize: 9, opacity: 0.85 }}>★</span>
+                                        <span style={{ fontSize: 9, opacity: 0.85 }}>Ã¢Ëœâ€¦</span>
                                     )}
                                     <span style={{ fontFamily: MONO, fontSize: 10, opacity: 0.8, marginLeft: 2 }}>{tab.val}g</span>
                                 </button>
@@ -1000,7 +1001,7 @@ const Calories = () => {
 
                                                 {/* Carbs, Fat, Fiber */}
                                                 <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 4, textAlign: 'center' }}>
-                                                    C {Math.round(dayData.carbs || 0)}g · F {Math.round(dayData.fat || 0)}g · Fib {Math.round(dayData.fiber || 0)}g
+                                                    C {Math.round(dayData.carbs || 0)}g Ã‚Â· F {Math.round(dayData.fat || 0)}g Ã‚Â· Fib {Math.round(dayData.fiber || 0)}g
                                                 </div>
                                             </div>
                                         );
@@ -1132,7 +1133,7 @@ const Calories = () => {
                                                     fontSize: 11,
                                                     color: waterVal >= waterGoalL ? GREEN : 'var(--text-muted)',
                                                 }}>
-                                                    {pct}% of {waterGoalL}L goal {waterVal >= waterGoalL ? '✓' : ''}
+                                                    {pct}% of {waterGoalL}L goal {waterVal >= waterGoalL ? 'Ã¢Å“â€œ' : ''}
                                                 </div>
                                             </div>
                                         );
@@ -1228,7 +1229,7 @@ const Calories = () => {
     );
 };
 
-    /* ── Add Entry Logger (Rendered inside Add Modal) ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Add Entry Logger (Rendered inside Add Modal) Ã¢â€â‚¬Ã¢â€â‚¬ */
     const renderLogger = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <LiquidGlassSegmented
@@ -1354,8 +1355,8 @@ const Calories = () => {
                                                             </span>
                                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
                                                                 {itemUnit.isCountable
-                                                                    ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
-                                                                    : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
+                                                                    ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) Ã‚Â· ${Math.round(item.calories_per_100g)}/100g`
+                                                                    : `P ${item.protein_per_100g} Ã‚Â· C ${item.carbs_per_100g} Ã‚Â· F ${item.fat_per_100g}`}
                                                             </span>
                                                         </span>
                                                         <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
@@ -1397,7 +1398,7 @@ const Calories = () => {
                                                         }}
                                                     >
                                                         {searchingWeb ? <Loader2 size={12} className="spin" /> : <Globe size={12} />}
-                                                        {searchingWeb ? 'Searching…' : 'Web lookup'}
+                                                        {searchingWeb ? 'SearchingÃ¢â‚¬Â¦' : 'Web lookup'}
                                                     </button>
                                                     <button
                                                         type="button"
@@ -1445,7 +1446,7 @@ const Calories = () => {
                                                     }}
                                                 >
                                                     {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
-                                                    {searchingWeb ? 'Searching…' : 'Search web & save'}
+                                                    {searchingWeb ? 'SearchingÃ¢â‚¬Â¦' : 'Search web & save'}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -1485,10 +1486,10 @@ const Calories = () => {
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
                                             {unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood)
                                                 ? (portionMode === 'unit'
-                                                    ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}ml · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
+                                                    ? `1 ${unitInfo.unitName} Ã¢â€°Ë† ${unitInfo.gramsPerUnit}ml Ã‚Â· ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
                                                     : `${Math.round(selectedFood.calories_per_100g)} kcal / 100ml`)
                                                 : (portionMode === 'unit'
-                                                    ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
+                                                    ? `1 ${unitInfo.unitName} Ã¢â€°Ë† ${unitInfo.gramsPerUnit}g Ã‚Â· ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
                                                     : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`)}
                                         </div>
                                     </div>
@@ -1601,7 +1602,7 @@ const Calories = () => {
                                                             style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
                                                         />
                                                         <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
-                                                            ×
+                                                            Ãƒâ€”
                                                         </span>
                                                     </div>
                                                     {COUNT_PRESETS.map((c) => {
@@ -1678,7 +1679,7 @@ const Calories = () => {
                                         </span>
                                         <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>kcal</span>
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                            P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}
+                                            P {livePreview?.protein_g || 0} Ã‚Â· C {livePreview?.carbs_g || 0} Ã‚Â· F {livePreview?.fat_g || 0}
                                         </div>
                                     </div>
                                     <button
@@ -1864,7 +1865,7 @@ const Calories = () => {
                         {enteredBmi && (
                             <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                                 <span>BMI: <strong style={{ color: 'var(--text-primary)', fontFamily: MONO }}>{enteredBmi}</strong></span>
-                                <span>·</span>
+                                <span>Ã‚Â·</span>
                                 <span>Auto-syncs to BMR & calorie burn</span>
                             </div>
                         )}
@@ -1891,7 +1892,7 @@ const Calories = () => {
                             }}
                         >
                             <Scale size={16} />
-                            {weightSaving ? 'Saving…' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
+                            {weightSaving ? 'SavingÃ¢â‚¬Â¦' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
                         </button>
                     </div>
                 </form>
@@ -1899,7 +1900,7 @@ const Calories = () => {
         </div>
     );
 
-    /* ═══════════════ RENDER ═══════════════ */
+    /* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â RENDER Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
     return (
         <div className="page-container cal-page" style={{ maxWidth: 1080, margin: '0 auto', width: '100%' }}>
             {/* Header */}
@@ -2011,7 +2012,7 @@ const Calories = () => {
             </div>
 
             <div className="cal-layout" style={{ display: view === 'saved' ? 'none' : undefined }}>
-                {/* ───────── LEFT COLUMN ───────── */}
+                {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ LEFT COLUMN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
                 <div className="cal-col cal-col-left">
                     {/* Unified Daily Nutrition: Hero & Macros */}
                     <motion.section
@@ -2149,7 +2150,7 @@ const Calories = () => {
                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
                                                 {isGoalMet
                                                     ? 'Target achieved! Keep staying hydrated.'
-                                                    : `${dailySummary.waterLogs?.length || 0} drink${dailySummary.waterLogs?.length === 1 ? '' : 's'} logged · ${waterRemainingMl.toLocaleString()} ml remaining`}
+                                                    : `${dailySummary.waterLogs?.length || 0} drink${dailySummary.waterLogs?.length === 1 ? '' : 's'} logged Ã‚Â· ${waterRemainingMl.toLocaleString()} ml remaining`}
                                             </span>
                                         </div>
                                     </div>
@@ -2391,7 +2392,7 @@ const Calories = () => {
                     })()}
                 </div>
 
-                {/* ───────── RIGHT COLUMN ───────── */}
+                {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ RIGHT COLUMN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
                 <div className="cal-col cal-col-right">
                     {/* Log */}
                     <motion.section
@@ -2404,7 +2405,7 @@ const Calories = () => {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Today's Log</h2>
                             <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)' }}>
-                                {fmt(totalIntake)} in · {fmt(exerciseBurn)} out
+                                {fmt(totalIntake)} in Ã‚Â· {fmt(exerciseBurn)} out
                             </span>
                         </div>
 
@@ -2479,8 +2480,8 @@ const Calories = () => {
                                                         {isWater
                                                             ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
                                                             : isBurn
-                                                            ? `${item.duration_mins || '—'} min`
-                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
+                                                            ? `${item.duration_mins || 'Ã¢â‚¬â€'} min`
+                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} Ã‚Â· ${item.meal_type} Ã‚Â· P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
                                                     </div>
                                                 </div>
                                                 <span style={{
@@ -2802,7 +2803,7 @@ const Calories = () => {
                             className="btn-primary"
                             style={{ padding: '10px 20px', fontSize: 13 }}
                         >
-                            {manualFoodSaving ? 'Saving to Database…' : 'Save to Database'}
+                            {manualFoodSaving ? 'Saving to DatabaseÃ¢â‚¬Â¦' : 'Save to Database'}
                         </button>
                     </div>
                 </form>
@@ -2981,247 +2982,16 @@ const Calories = () => {
                 onClose={() => setSelectedFoodLog(null)}
                 maxWidth="440px"
             >
-                {selectedFoodLog && (() => {
-                    const item = selectedFoodLog;
-                    const unit = item.unit || (isLiquidFood(item) ? 'ml' : 'g');
-                    const grams = Number(item.grams) || 0;
-                    const calories = Math.round(Number(item.calories) || 0);
-                    const protein = Math.round((Number(item.protein_g) || 0) * 10) / 10;
-                    const carbs = Math.round((Number(item.carbs_g) || 0) * 10) / 10;
-                    const fat = Math.round((Number(item.fat_g) || 0) * 10) / 10;
-                    
-                    let resolvedFiber = Number(item.fiber_g) || 0;
-                    if (resolvedFiber <= 0) {
-                        const cat = foodCatalog.find(f => (f.normalized_name && item.name && f.normalized_name === normalizeFoodName(item.name)) || (f.name && item.name && f.name.toLowerCase() === item.name.toLowerCase()));
-                        if (cat && Number(cat.fiber_per_100g) > 0) {
-                            resolvedFiber = (Number(cat.fiber_per_100g) * grams) / 100;
-                        } else if (carbs > 3 && !isLiquidFood(item)) {
-                            const nameLower = (item.name || '').toLowerCase();
-                            const isAnimalOrDairy = /milk|cheese|curd|yogurt|butter|ghee|oil|egg|chicken|mutton|beef|pork|fish|prawn|sugar|water|soda/i.test(nameLower);
-                            if (!isAnimalOrDairy) {
-                                resolvedFiber = Math.max(1.2, carbs * 0.11);
-                            }
-                        }
-                    }
-                    const fiber = Math.round(resolvedFiber * 10) / 10;
-
-                    let resolvedSugar = Number(item.sugar_g) || 0;
-                    if (resolvedSugar <= 0) {
-                        const cat = foodCatalog.find(f => (f.normalized_name && item.name && f.normalized_name === normalizeFoodName(item.name)) || (f.name && item.name && f.name.toLowerCase() === item.name.toLowerCase()));
-                        if (cat && Number(cat.sugar_per_100g) > 0) {
-                            resolvedSugar = (Number(cat.sugar_per_100g) * grams) / 100;
-                        } else if (carbs > 0) {
-                            const nameLower = (item.name || '').toLowerCase();
-                            if (/fruit|banana|apple|mango|orange|grape|chikoo|papaya|juice/i.test(nameLower)) {
-                                resolvedSugar = carbs * 0.65;
-                            } else if (/sweet|mithai|halwa|laddu|ladoo|gulab jamun|jalebi|sugar|cake|pastry|ice cream|chocolate|cookie|biscuit/i.test(nameLower)) {
-                                resolvedSugar = carbs * 0.70;
-                            } else if (/milk|curd|dahi|tea|chai|coffee|lassi/i.test(nameLower)) {
-                                resolvedSugar = Math.min(carbs, (grams / 100) * 4.8);
-                            } else if (carbs > 5) {
-                                resolvedSugar = carbs * 0.05;
-                            }
-                        }
-                    }
-                    const sugar = Math.round(resolvedSugar * 10) / 10;
-
-                    const proteinKcal = Math.round(protein * 4);
-                    const carbsKcal = Math.round(carbs * 4);
-                    const fatKcal = Math.round(fat * 9);
-                    const totalMacroKcal = (proteinKcal + carbsKcal + fatKcal) || calories || 1;
-
-                    const proteinPct = Math.round((proteinKcal / totalMacroKcal) * 100);
-                    const carbsPct = Math.round((carbsKcal / totalMacroKcal) * 100);
-                    const fatPct = Math.max(0, 100 - proteinPct - carbsPct);
-
-                    const factor100 = grams > 0 ? (100 / grams) : 1;
-                    const cal100 = Math.round(item.calories_per_100g || (calories * factor100));
-                    const protein100 = Math.round((protein * factor100) * 10) / 10;
-                    const carbs100 = Math.round((carbs * factor100) * 10) / 10;
-                    const fat100 = Math.round((fat * factor100) * 10) / 10;
-                    const fiber100 = Math.round((fiber * factor100) * 10) / 10;
-                    const sugar100 = Math.round((sugar * factor100) * 10) / 10;
-
-                    const timeString = item.created_at
-                        ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : null;
-
-                    const mealColors = {
-                        Breakfast: '#f59e0b',
-                        Lunch: '#10b981',
-                        Dinner: '#8b5cf6',
-                        Snacks: '#06b6d4',
-                    };
-                    const mealColor = mealColors[item.meal_type] || ACCENT;
-
-                    return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {/* Header */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingRight: 28 }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                        <span style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: 5,
-                                            padding: '3px 9px', borderRadius: 9999,
-                                            fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-                                            textTransform: 'uppercase',
-                                            background: `${mealColor}22`, color: mealColor,
-                                            border: `1px solid ${mealColor}44`,
-                                        }}>
-                                            <Utensils size={10} />
-                                            {item.meal_type || 'Food'}
-                                        </span>
-                                        {timeString && (
-                                            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                                <Clock size={11} /> {timeString}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
-                                        {item.name}
-                                    </h3>
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        <span style={{
-                                            padding: '2px 8px', borderRadius: 8,
-                                            background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                            fontSize: 12, fontWeight: 700, fontFamily: MONO, color: 'var(--text-primary)',
-                                        }}>
-                                            {grams} {unit}
-                                        </span>
-                                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                            logged portion
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Hero Total Calories & Macro Split Card */}
-                            <div style={{
-                                padding: '16px 18px', borderRadius: 16,
-                                background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(236,72,153,0.08) 100%)',
-                                border: '1px solid rgba(168,85,247,0.22)',
-                                display: 'flex', flexDirection: 'column', gap: 12,
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                                    <div>
-                                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                                            Total Energy
-                                        </span>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
-                                            <span style={{ fontFamily: MONO, fontSize: 36, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
-                                                {calories}
-                                            </span>
-                                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                                kcal
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
-                                            Calorie Ratio
-                                        </span>
-                                        <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-secondary)' }}>
-                                            P {proteinPct}% · C {carbsPct}% · F {fatPct}%
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Macro Split Bar */}
-                                <div style={{
-                                    height: 7, width: '100%', borderRadius: 9999, overflow: 'hidden',
-                                    display: 'flex', background: 'rgba(255,255,255,0.08)',
-                                }}>
-                                    <div style={{ width: `${proteinPct}%`, background: '#818cf8', transition: 'width 0.3s ease' }} title={`Protein: ${proteinPct}%`} />
-                                    <div style={{ width: `${carbsPct}%`, background: GREEN, transition: 'width 0.3s ease' }} title={`Carbs: ${carbsPct}%`} />
-                                    <div style={{ width: `${fatPct}%`, background: AMBER, transition: 'width 0.3s ease' }} title={`Fat: ${fatPct}%`} />
-                                </div>
-                            </div>
-
-                            {/* Macro & Nutrient Cards */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-                                {[
-                                    { label: 'Protein', value: protein, color: '#818cf8', kcal: proteinKcal },
-                                    { label: 'Carbs', value: carbs, color: GREEN, kcal: carbsKcal },
-                                    { label: 'Fat', value: fat, color: AMBER, kcal: fatKcal },
-                                    { label: 'Fiber', value: fiber, color: FIBER_COLOR, kcal: null },
-                                    { label: 'Sugar', value: sugar, color: SUGAR_COLOR, kcal: null },
-                                ].map((m) => (
-                                    <div
-                                        key={m.label}
-                                        style={{
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                                            padding: '10px 2px', borderRadius: 12,
-                                            background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <span style={{ width: 6, height: 6, borderRadius: 9999, background: m.color }} />
-                                            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{m.label}</span>
-                                        </div>
-                                        <div style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
-                                            {m.value}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
-                                        </div>
-                                        {m.kcal !== null ? (
-                                            <span style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                                {m.kcal} kcal
-                                            </span>
-                                        ) : (
-                                            <span style={{ fontSize: 9, color: 'var(--text-muted)', opacity: 0.6 }}>
-                                                —
-                                            </span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Serving vs Per 100 Comparison Table */}
-                            <div style={{
-                                borderRadius: 14, overflow: 'hidden',
-                                border: '1px solid var(--border-subtle)',
-                                background: 'var(--surface-input)',
-                            }}>
-                                <div style={{
-                                    display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr',
-                                    padding: '9px 12px', background: 'rgba(255,255,255,0.03)',
-                                    borderBottom: '1px solid var(--border-subtle)',
-                                    fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-                                    textTransform: 'uppercase', color: 'var(--text-muted)',
-                                }}>
-                                    <span>Nutrient</span>
-                                    <span style={{ textAlign: 'right' }}>Portion ({grams}{unit})</span>
-                                    <span style={{ textAlign: 'right' }}>Per 100{unit}</span>
-                                </div>
-
-                                {[
-                                    { name: 'Energy', portion: `${calories} kcal`, per100: `${cal100} kcal` },
-                                    { name: 'Protein', portion: `${protein} g`, per100: `${protein100} g` },
-                                    { name: 'Carbs', portion: `${carbs} g`, per100: `${carbs100} g` },
-                                    { name: 'Sugar', portion: `${sugar} g`, per100: `${sugar100} g` },
-                                    { name: 'Total Fat', portion: `${fat} g`, per100: `${fat100} g` },
-                                    { name: 'Dietary Fiber', portion: `${fiber} g`, per100: `${fiber100} g` },
-                                ].map((row, idx, arr) => (
-                                    <div
-                                        key={row.name}
-                                        style={{
-                                            display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr',
-                                            padding: '8px 12px',
-                                            borderBottom: idx < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                                            fontSize: 12,
-                                        }}
-                                    >
-                                        <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{row.name}</span>
-                                        <span style={{ textAlign: 'right', fontFamily: MONO, fontWeight: 700, color: 'var(--text-primary)' }}>{row.portion}</span>
-                                        <span style={{ textAlign: 'right', fontFamily: MONO, color: 'var(--text-muted)' }}>{row.per100}</span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Footer Actions */}
+                {selectedFoodLog && (
+                    <FoodDetailCard
+                        item={selectedFoodLog}
+                        foodCatalog={foodCatalog}
+                        footer={(
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const idToDelete = item.id;
+                                        const idToDelete = selectedFoodLog.id;
                                         setSelectedFoodLog(null);
                                         deleteCalorieLog(idToDelete);
                                     }}
@@ -3248,9 +3018,9 @@ const Calories = () => {
                                     Close
                                 </button>
                             </div>
-                        </div>
-                    );
-                })()}
+                        )}
+                    />
+                )}
             </Modal>
 
             {/* Always-mounted hidden file and camera inputs for nutrition label scanning */}
@@ -3308,7 +3078,7 @@ const Calories = () => {
                                 </button>
                             )}
 
-                            {/* Image frame — uncropped while scanning, blurred backdrop with values overlaid directly on top when done */}
+                            {/* Image frame Ã¢â‚¬â€ uncropped while scanning, blurred backdrop with values overlaid directly on top when done */}
                             <motion.div
                                 className={`cal-scan-frame ${scanOverlay.phase !== 'scanning' ? 'is-done' : ''}`}
                                 initial={{ scale: 0.96, opacity: 0 }}
@@ -3361,7 +3131,7 @@ const Calories = () => {
                                             <div className="cal-scan-top-row">
                                                 <div className="cal-scan-badge">
                                                     <Sparkles size={11} style={{ color: '#38bdf8' }} />
-                                                    <span>Scanned · Per 100{unit}</span>
+                                                    <span>Scanned Ã‚Â· Per 100{unit}</span>
                                                 </div>
                                                 <div className="cal-scan-type-toggle">
                                                     <button
@@ -3476,7 +3246,7 @@ const Calories = () => {
                                                     className="cal-scan-btn-primary"
                                                 >
                                                     <Check size={16} strokeWidth={2.5} />
-                                                    <span>{manualFoodSaving ? 'Saving…' : 'Save to Database'}</span>
+                                                    <span>{manualFoodSaving ? 'SavingÃ¢â‚¬Â¦' : 'Save to Database'}</span>
                                                 </button>
                                             </div>
                                         </motion.form>
@@ -3522,7 +3292,7 @@ const Calories = () => {
                                         animate={{ opacity: [0.35, 1, 0.35] }}
                                         transition={{ duration: 1.4, repeat: Infinity }}
                                     />
-                                    Reading label…
+                                    Reading labelÃ¢â‚¬Â¦
                                 </motion.div>
                             )}
                         </motion.div>
@@ -3569,7 +3339,7 @@ const Calories = () => {
                     box-shadow: 0 12px 30px rgba(124, 58, 237, 0.6);
                 }
 
-                /* ── Full-screen label scan overlay ── */
+                /* Ã¢â€â‚¬Ã¢â€â‚¬ Full-screen label scan overlay Ã¢â€â‚¬Ã¢â€â‚¬ */
                 .cal-scan-overlay {
                     position: fixed; inset: 0; z-index: 10050;
                     background: rgba(6, 7, 14, 0.94);

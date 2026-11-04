@@ -5,6 +5,7 @@ import { calculateFromPer100g } from '../../hooks/useCalories';
 import { resolveFoodUnit, isLiquidFood, normalizeFoodName } from '../../lib/indianFoodCatalog';
 import LiquidGlassSegmented from '../common/LiquidGlassSegmented';
 import Modal from '../Modal';
+import FoodDetailCard from './FoodDetailCard';
 
 const MONO = "'JetBrains Mono', monospace";
 const ACCENT = '#a855f7';
@@ -81,6 +82,24 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
     }, [amount, portionMode, unitInfo]);
 
     const preview = useMemo(() => (active ? calculateFromPer100g(active, grams) : null), [active, grams]);
+
+    // Shape the saved food like a log entry so the shared nutrition card can render it
+    const cardItem = useMemo(() => {
+        if (!active || !preview) return null;
+        return {
+            name: active.name,
+            unit: baseUnit,
+            grams: preview.grams,
+            calories: preview.calories,
+            protein_g: preview.protein_g,
+            carbs_g: preview.carbs_g,
+            fat_g: preview.fat_g,
+            fiber_g: preview.fiber_g,
+            sugar_g: preview.sugar_g,
+            calories_per_100g: active.calories_per_100g,
+            meal_type: meal,
+        };
+    }, [active, preview, baseUnit, meal]);
 
     const openFood = (food) => {
         const info = resolveFoodUnit(food);
@@ -184,7 +203,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search your foods…"
+                        placeholder="Search your foodsâ€¦"
                         className="surface-input"
                         style={{ ...inputStyle, fontFamily: 'inherit', paddingLeft: 34 }}
                     />
@@ -232,7 +251,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                                     {f.name}
                                 </div>
                                 <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                    P{round1(f.protein_per_100g)} C{round1(f.carbs_per_100g)} F{round1(f.fat_per_100g)} · per 100{isLiquidFood(f) || f.is_liquid ? 'ml' : 'g'}
+                                    P{round1(f.protein_per_100g)} C{round1(f.carbs_per_100g)} F{round1(f.fat_per_100g)} Â· per 100{isLiquidFood(f) || f.is_liquid ? 'ml' : 'g'}
                                 </div>
                             </div>
                             <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -246,110 +265,92 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
 
             <Modal isOpen={Boolean(active)} onClose={closeCard} maxWidth="440px" title={editing ? 'Edit Food' : undefined}>
                 {active && !editing && preview && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, paddingRight: 28 }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                                    {active.name}
-                                </h3>
-                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                    Per 100{baseUnit}: {Math.round(Number(active.calories_per_100g) || 0)} kcal
-                                </span>
-                            </div>
+                    <FoodDetailCard
+                        item={cardItem}
+                        foodCatalog={foodCatalog}
+                        badge="Saved food"
+                        showTime={false}
+                        portionLabel="selected portion"
+                        headerAction={(
                             <button
                                 type="button"
                                 onClick={startEdit}
                                 style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 10,
-                                    cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)',
-                                    background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
+                                    alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
+                                    padding: '6px 10px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                                    color: 'var(--text-secondary)', background: 'var(--surface-input)',
+                                    border: '1px solid var(--border-subtle)', marginRight: 4,
                                 }}
                             >
                                 <Pencil size={13} /> Edit
                             </button>
-                        </div>
+                        )}
+                        footer={(
+                            <>
+                                <div>
+                                    <span style={labelStyle}>Portion</span>
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            value={amount}
+                                            onChange={(e) => setAmount(e.target.value)}
+                                            className="surface-input"
+                                            style={{ ...inputStyle, width: 110, flexShrink: 0 }}
+                                        />
+                                        {portionOptions.length > 1 ? (
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <LiquidGlassSegmented
+                                                    options={portionOptions}
+                                                    value={portionMode}
+                                                    onChange={(m) => {
+                                                        if (m === portionMode) return;
+                                                        if (m === 'unit') setAmount('1');
+                                                        else setAmount(String(Math.round(grams) || 100));
+                                                        setPortionMode(m);
+                                                    }}
+                                                    size="sm"
+                                                    fullWidth
+                                                    ariaLabel="Portion unit"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)' }}>{baseUnit}</span>
+                                        )}
+                                    </div>
+                                    {portionMode === 'unit' && (
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>≈ {Math.round(grams)}{baseUnit}</span>
+                                    )}
+                                </div>
 
-                        <div style={{
-                            padding: '14px 16px', borderRadius: 16,
-                            background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(236,72,153,0.08) 100%)',
-                            border: '1px solid rgba(168,85,247,0.22)',
-                        }}>
-                            <span style={labelStyle}>Total Energy</span>
-                            <span style={{ fontFamily: MONO, fontSize: 34, fontWeight: 800, color: 'var(--text-primary)' }}>
-                                {preview.calories}
-                            </span>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}> kcal</span>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 6 }}>
-                            {macro('Protein', preview.protein_g, PROTEIN)}
-                            {macro('Carbs', preview.carbs_g, GREEN)}
-                            {macro('Fat', preview.fat_g, AMBER)}
-                            {macro('Fiber', preview.fiber_g, '#ec4899')}
-                            {macro('Sugar', preview.sugar_g, '#f43f5e')}
-                        </div>
-
-                        <div>
-                            <span style={labelStyle}>Portion</span>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    className="surface-input"
-                                    style={{ ...inputStyle, flex: 1 }}
-                                />
-                                {portionOptions.length > 1 ? (
+                                <div>
+                                    <span style={labelStyle}>Meal</span>
                                     <LiquidGlassSegmented
-                                        options={portionOptions}
-                                        value={portionMode}
-                                        onChange={(m) => {
-                                            if (m === portionMode) return;
-                                            if (m === 'unit') setAmount('1');
-                                            else setAmount(String(Math.round(grams) || 100));
-                                            setPortionMode(m);
-                                        }}
+                                        options={MEALS}
+                                        value={meal}
+                                        onChange={setMeal}
                                         size="sm"
-                                        ariaLabel="Portion unit"
+                                        fullWidth
+                                        dropdownBreakpoint={420}
+                                        ariaLabel="Meal type"
                                     />
-                                ) : (
-                                    <span style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)' }}>{baseUnit}</span>
-                                )}
-                            </div>
-                            {portionMode === 'unit' && (
-                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                    ≈ {Math.round(grams)}{baseUnit}
-                                </span>
-                            )}
-                        </div>
+                                </div>
 
-                        <div>
-                            <span style={labelStyle}>Meal</span>
-                            <LiquidGlassSegmented
-                                options={MEALS}
-                                value={meal}
-                                onChange={setMeal}
-                                size="sm"
-                                fullWidth
-                                dropdownBreakpoint={420}
-                                ariaLabel="Meal type"
-                            />
-                        </div>
+                                {error && <span style={{ fontSize: 12, color: 'var(--danger, #ef4444)' }}>{error}</span>}
 
-                        {error && <span style={{ fontSize: 12, color: 'var(--danger, #ef4444)' }}>{error}</span>}
-
-                        <button
-                            type="button"
-                            className="btn-primary"
-                            onClick={addToToday}
-                            disabled={grams <= 0 || added}
-                            style={{ padding: 12, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                        >
-                            {added ? <><Check size={16} /> Added to today</> : <><Plus size={16} /> Add to today · {preview.calories} kcal</>}
-                        </button>
-                    </div>
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={addToToday}
+                                    disabled={grams <= 0 || added}
+                                    style={{ padding: 12, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                                >
+                                    {added ? <><Check size={16} /> Added to today</> : <><Plus size={16} /> Add to today · {preview.calories} kcal</>}
+                                </button>
+                            </>
+                        )}
+                    />
                 )}
 
                 {active && editing && (
@@ -388,7 +389,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                                 <input
                                     value={form.unit_name}
                                     onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
-                                    placeholder="piece, glass…"
+                                    placeholder="piece, glassâ€¦"
                                     className="surface-input"
                                     style={{ ...inputStyle, fontFamily: 'inherit' }}
                                 />
@@ -425,7 +426,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                                 <X size={14} /> Cancel
                             </button>
                             <button type="submit" disabled={saving} className="btn-primary" style={{ flex: 1, padding: 11, fontSize: 14 }}>
-                                {saving ? 'Saving…' : 'Save changes'}
+                                {saving ? 'Savingâ€¦' : 'Save changes'}
                             </button>
                         </div>
                     </form>
