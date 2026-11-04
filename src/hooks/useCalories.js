@@ -23,6 +23,7 @@ export function calculateFromPer100g(foodItem, gramsInput) {
     const carb100 = parseFloat(foodItem?.carbs_per_100g) || 0;
     const fat100 = parseFloat(foodItem?.fat_per_100g) || 0;
     let fib100 = parseFloat(foodItem?.fiber_per_100g) || 0;
+    let sug100 = parseFloat(foodItem?.sugar_per_100g) || 0;
 
     // Intelligent fallback: if fib100 is 0 but food has carbs and is plant-based, estimate realistic fiber
     if (fib100 <= 0 && carb100 > 3) {
@@ -30,6 +31,20 @@ export function calculateFromPer100g(foodItem, gramsInput) {
         const isAnimalOrDairy = /milk|cheese|curd|yogurt|butter|ghee|oil|egg|chicken|mutton|beef|pork|fish|prawn|sugar|water|soda/i.test(nameLower);
         if (!isAnimalOrDairy && !foodItem?.is_liquid) {
             fib100 = Math.round(Math.max(1.2, carb100 * 0.11) * 10) / 10;
+        }
+    }
+
+    // Intelligent fallback: if sug100 is 0 but food contains natural or added sugars
+    if (sug100 <= 0 && carb100 > 0) {
+        const nameLower = (foodItem?.name || '').toLowerCase();
+        if (/fruit|banana|apple|mango|orange|grape|chikoo|papaya|juice/i.test(nameLower)) {
+            sug100 = Math.round(carb100 * 0.65 * 10) / 10;
+        } else if (/sweet|mithai|halwa|laddu|ladoo|gulab jamun|jalebi|sugar|cake|pastry|ice cream|chocolate|cookie|biscuit/i.test(nameLower)) {
+            sug100 = Math.round(carb100 * 0.70 * 10) / 10;
+        } else if (/milk|curd|dahi|tea|chai|coffee|lassi/i.test(nameLower)) {
+            sug100 = Math.min(carb100, 4.8);
+        } else if (carb100 > 5) {
+            sug100 = Math.round(carb100 * 0.05 * 10) / 10;
         }
     }
 
@@ -41,6 +56,7 @@ export function calculateFromPer100g(foodItem, gramsInput) {
         carbs_g: Math.round(carb100 * multiplier * 10) / 10,
         fat_g: Math.round(fat100 * multiplier * 10) / 10,
         fiber_g: Math.round(fib100 * multiplier * 10) / 10,
+        sugar_g: Math.round(sug100 * multiplier * 10) / 10,
     };
 }
 
@@ -77,6 +93,7 @@ function mergeFoodCatalogs(remoteOrCachedList = []) {
             carbs_per_100g: Number(item.carbs_per_100g) || 0,
             fat_per_100g: Number(item.fat_per_100g) || 0,
             fiber_per_100g: Number(item.fiber_per_100g) || 0,
+            sugar_per_100g: Number(item.sugar_per_100g) || 0,
         });
     });
     return Array.from(map.values());
@@ -274,6 +291,7 @@ export default function useCalories(selectedDateStr = null) {
                     }
 
                     // D. Fetch user's water_logs
+                    const remoteWaterList = [];
                     try {
                         const { data: waterData, error: waterErr } = await supabase
                             .from('water_logs')
@@ -281,20 +299,49 @@ export default function useCalories(selectedDateStr = null) {
                             .eq('user_id', userId)
                             .order('created_at', { ascending: false });
 
-                        if (!waterErr && Array.isArray(waterData) && !cancelled) {
-                            setWaterLogs(prev => {
-                                const localOnly = prev.filter(item => String(item.id).startsWith('local-'));
-                                const byId = new Map();
-                                [...localOnly, ...waterData].forEach(w => byId.set(w.id, w));
-                                const mergedWater = Array.from(byId.values()).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-                                try {
-                                    localStorage.setItem(WATER_LOGS_CACHE_KEY, JSON.stringify(mergedWater));
-                                } catch {}
-                                return mergedWater;
-                            });
+                        if (!waterErr && Array.isArray(waterData)) {
+                            remoteWaterList.push(...waterData);
                         }
                     } catch (wErr) {
                         console.warn('[useCalories] Using local water logs:', wErr.message);
+                    }
+
+                    // E. Also fetch any water logged in calorie_logs (meal_type = 'water')
+                    try {
+                        const { data: calWaterData, error: calWaterErr } = await supabase
+                            .from('calorie_logs')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .eq('meal_type', 'water')
+                            .order('created_at', { ascending: false });
+
+                        if (!calWaterErr && Array.isArray(calWaterData)) {
+                            calWaterData.forEach(row => {
+                                remoteWaterList.push({
+                                    id: row.id,
+                                    user_id: row.user_id,
+                                    date: row.date,
+                                    amount_ml: Math.round(Number(row.grams) || 250),
+                                    created_at: row.created_at,
+                                    source_table: 'calorie_logs',
+                                });
+                            });
+                        }
+                    } catch (calWErr) {
+                        console.warn('[useCalories] Water from calorie_logs:', calWErr.message);
+                    }
+
+                    if (!cancelled) {
+                        setWaterLogs(prev => {
+                            const localOnly = prev.filter(item => String(item.id).startsWith('local-'));
+                            const byId = new Map();
+                            [...localOnly, ...remoteWaterList].forEach(w => byId.set(w.id, w));
+                            const mergedWater = Array.from(byId.values()).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+                            try {
+                                localStorage.setItem(WATER_LOGS_CACHE_KEY, JSON.stringify(mergedWater));
+                            } catch {}
+                            return mergedWater;
+                        });
                     }
                 }
             } catch (err) {
@@ -421,6 +468,7 @@ export default function useCalories(selectedDateStr = null) {
             carbs_per_100g: webFood.carbs_per_100g,
             fat_per_100g: webFood.fat_per_100g,
             fiber_per_100g: webFood.fiber_per_100g || 0,
+            sugar_per_100g: webFood.sugar_per_100g || 0,
             unit_name: unitInfo.unitName,
             grams_per_unit: unitInfo.gramsPerUnit,
             source: 'web',
@@ -449,21 +497,31 @@ export default function useCalories(selectedDateStr = null) {
 
             const res = await supabase
                 .from('food_catalog')
-                .upsert([{ ...baseRow, fiber_per_100g: newCatalogEntry.fiber_per_100g }], { onConflict: 'normalized_name' })
+                .upsert([{ ...baseRow, fiber_per_100g: newCatalogEntry.fiber_per_100g, sugar_per_100g: newCatalogEntry.sugar_per_100g }], { onConflict: 'normalized_name' })
                 .select()
                 .single();
             savedRow = res.data;
             saveErr = res.error;
 
-            // If Supabase table does not yet have fiber_per_100g column, retry without it
-            if (saveErr && (saveErr.message?.includes('fiber') || saveErr.code === 'PGRST204')) {
-                const retryRes = await supabase
+            // If Supabase table does not yet have sugar_per_100g or fiber_per_100g columns, retry gracefully
+            if (saveErr && (saveErr.message?.includes('sugar') || saveErr.message?.includes('fiber') || saveErr.code === 'PGRST204')) {
+                const retryFiberOnly = await supabase
                     .from('food_catalog')
-                    .upsert([baseRow], { onConflict: 'normalized_name' })
+                    .upsert([{ ...baseRow, fiber_per_100g: newCatalogEntry.fiber_per_100g }], { onConflict: 'normalized_name' })
                     .select()
                     .single();
-                savedRow = retryRes.data;
-                saveErr = retryRes.error;
+                if (!retryFiberOnly.error && retryFiberOnly.data) {
+                    savedRow = retryFiberOnly.data;
+                    saveErr = null;
+                } else {
+                    const retryBase = await supabase
+                        .from('food_catalog')
+                        .upsert([baseRow], { onConflict: 'normalized_name' })
+                        .select()
+                        .single();
+                    savedRow = retryBase.data;
+                    saveErr = retryBase.error;
+                }
             }
 
             if (!saveErr && savedRow) {
@@ -499,6 +557,7 @@ export default function useCalories(selectedDateStr = null) {
         carbs_per_100g = 0,
         fat_per_100g = 0,
         fiber_per_100g = 0,
+        sugar_per_100g = 0,
         category = 'Custom',
         unit_name = null,
         grams_per_unit = null,
@@ -512,6 +571,7 @@ export default function useCalories(selectedDateStr = null) {
         const carb = Math.max(0, parseFloat(carbs_per_100g) || 0);
         const fat = Math.max(0, parseFloat(fat_per_100g) || 0);
         const fib = Math.max(0, parseFloat(fiber_per_100g) || 0);
+        const sug = Math.max(0, parseFloat(sugar_per_100g) || 0);
 
         const normalizedName = normalizeFoodName(cleanName);
         const unitInfo = resolveFoodUnit({
@@ -531,6 +591,7 @@ export default function useCalories(selectedDateStr = null) {
             carbs_per_100g: carb,
             fat_per_100g: fat,
             fiber_per_100g: fib,
+            sugar_per_100g: sug,
             unit_name: unitInfo.unitName,
             grams_per_unit: unitInfo.gramsPerUnit,
             is_liquid: Boolean(is_liquid || unitInfo.isLiquid),
@@ -560,19 +621,28 @@ export default function useCalories(selectedDateStr = null) {
 
             const res = await supabase
                 .from('food_catalog')
-                .upsert([{ ...baseRow, fiber_per_100g: newEntry.fiber_per_100g }], { onConflict: 'normalized_name' })
+                .upsert([{ ...baseRow, fiber_per_100g: newEntry.fiber_per_100g, sugar_per_100g: newEntry.sugar_per_100g }], { onConflict: 'normalized_name' })
                 .select()
                 .single();
             savedRow = res.data;
             saveErr = res.error;
 
-            if (saveErr && (saveErr.message?.includes('fiber') || saveErr.code === 'PGRST204')) {
-                const retryRes = await supabase
+            if (saveErr && (saveErr.message?.includes('sugar') || saveErr.message?.includes('fiber') || saveErr.code === 'PGRST204')) {
+                const retryFiber = await supabase
                     .from('food_catalog')
-                    .upsert([baseRow], { onConflict: 'normalized_name' })
+                    .upsert([{ ...baseRow, fiber_per_100g: newEntry.fiber_per_100g }], { onConflict: 'normalized_name' })
                     .select()
                     .single();
-                savedRow = retryRes.data;
+                if (!retryFiber.error && retryFiber.data) {
+                    savedRow = retryFiber.data;
+                } else {
+                    const retryRes = await supabase
+                        .from('food_catalog')
+                        .upsert([baseRow], { onConflict: 'normalized_name' })
+                        .select()
+                        .single();
+                    savedRow = retryRes.data;
+                }
             }
 
             if (savedRow?.id) {
@@ -593,6 +663,81 @@ export default function useCalories(selectedDateStr = null) {
         });
 
         return newEntry;
+    }, []);
+
+    /**
+     * Edit a saved food (per-100g values, name, unit). Presets become a saved override.
+     */
+    const updateSavedFood = useCallback(async (original, changes) => {
+        const cleanName = String(changes.name ?? original.name ?? '').trim();
+        if (!cleanName) throw new Error('Please enter a food name');
+        const num = (v) => Math.max(0, parseFloat(v) || 0);
+        const isLiquid = Boolean(changes.is_liquid ?? original.is_liquid);
+        const unitInfo = resolveFoodUnit({
+            name: cleanName,
+            unit_name: changes.unit_name || undefined,
+            grams_per_unit: changes.grams_per_unit ? Number(changes.grams_per_unit) : undefined,
+            is_liquid: isLiquid,
+        });
+        const normalizedName = normalizeFoodName(cleanName);
+        const oldNorm = original.normalized_name || normalizeFoodName(original.name);
+        const wasPreset = original.source === 'preset';
+
+        const updated = {
+            ...original,
+            name: cleanName,
+            normalized_name: normalizedName,
+            calories_per_100g: num(changes.calories_per_100g),
+            protein_per_100g: num(changes.protein_per_100g),
+            carbs_per_100g: num(changes.carbs_per_100g),
+            fat_per_100g: num(changes.fat_per_100g),
+            fiber_per_100g: num(changes.fiber_per_100g),
+            sugar_per_100g: num(changes.sugar_per_100g),
+            unit_name: unitInfo.unitName,
+            grams_per_unit: unitInfo.gramsPerUnit,
+            is_liquid: isLiquid,
+            source: wasPreset ? 'manual' : original.source,
+        };
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id || null;
+            const baseRow = {
+                name: updated.name,
+                normalized_name: updated.normalized_name,
+                category: updated.category || 'Custom',
+                calories_per_100g: updated.calories_per_100g,
+                protein_per_100g: updated.protein_per_100g,
+                carbs_per_100g: updated.carbs_per_100g,
+                fat_per_100g: updated.fat_per_100g,
+                source: updated.source,
+                created_by: original.created_by || userId,
+            };
+            const isRemoteId = original.id && !String(original.id).startsWith('food-') && !wasPreset;
+            const run = (row) => (isRemoteId
+                ? supabase.from('food_catalog').update(row).eq('id', original.id).select().single()
+                : supabase.from('food_catalog').upsert([row], { onConflict: 'normalized_name' }).select().single());
+
+            let res = await run({ ...baseRow, fiber_per_100g: updated.fiber_per_100g, sugar_per_100g: updated.sugar_per_100g });
+            if (res.error) res = await run({ ...baseRow, fiber_per_100g: updated.fiber_per_100g });
+            if (res.error) res = await run(baseRow);
+            if (res.data?.id) updated.id = res.data.id;
+        } catch (dbErr) {
+            console.warn('[useCalories] Updated food locally:', dbErr.message);
+        }
+
+        setCustomCatalog(prev => {
+            const filtered = prev.filter(i => {
+                const n = i.normalized_name || normalizeFoodName(i.name);
+                return n !== oldNorm && n !== normalizedName;
+            });
+            const next = [updated, ...filtered];
+            try {
+                localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+        });
+        return updated;
     }, []);
 
     /**
@@ -627,6 +772,7 @@ export default function useCalories(selectedDateStr = null) {
             carbs_g: computed.carbs_g,
             fat_g: computed.fat_g,
             fiber_g: computed.fiber_g || 0,
+            sugar_g: computed.sugar_g || 0,
             created_at: new Date().toISOString(),
         };
 
@@ -654,23 +800,34 @@ export default function useCalories(selectedDateStr = null) {
                 inserted = res.data;
                 error = res.error;
 
-                // If Supabase table does not yet have fiber_g or unit column, retry without them
-                if (error && (error.message?.includes('fiber') || error.message?.includes('unit') || error.code === 'PGRST204')) {
+                // If Supabase table does not yet have sugar_g, fiber_g or unit column, retry without them
+                if (error && (error.message?.includes('sugar') || error.message?.includes('fiber') || error.message?.includes('unit') || error.code === 'PGRST204')) {
                     const fallbackPayload = { ...dbPayload };
-                    delete fallbackPayload.fiber_g;
-                    delete fallbackPayload.unit;
+                    delete fallbackPayload.sugar_g;
                     const retryRes = await supabase
                         .from('calorie_logs')
                         .insert([fallbackPayload])
                         .select()
                         .single();
-                    inserted = retryRes.data;
-                    error = retryRes.error;
+                    if (!retryRes.error && retryRes.data) {
+                        inserted = retryRes.data;
+                        error = null;
+                    } else {
+                        delete fallbackPayload.fiber_g;
+                        delete fallbackPayload.unit;
+                        const retryRes2 = await supabase
+                            .from('calorie_logs')
+                            .insert([fallbackPayload])
+                            .select()
+                            .single();
+                        inserted = retryRes2.data;
+                        error = retryRes2.error;
+                    }
                 }
 
                 if (!error && inserted) {
                     setLogs(prev => {
-                        const next = prev.map(item => (item.id === tempId ? { ...inserted, fiber_g: item.fiber_g || inserted.fiber_g || 0 } : item));
+                        const next = prev.map(item => (item.id === tempId ? { ...inserted, fiber_g: item.fiber_g || inserted.fiber_g || 0, sugar_g: item.sugar_g || inserted.sugar_g || 0 } : item));
                         try {
                             localStorage.setItem(LOGS_CACHE_KEY, JSON.stringify(next));
                         } catch {}
@@ -894,13 +1051,14 @@ export default function useCalories(selectedDateStr = null) {
         if (userId) {
             try {
                 const { id, ...dbPayload } = newEntry;
-                const { data: inserted, error } = await supabase
+                // Attempt 1: dedicated water_logs table
+                const { data: inserted, error: waterErr } = await supabase
                     .from('water_logs')
                     .insert([dbPayload])
                     .select()
                     .single();
 
-                if (!error && inserted) {
+                if (!waterErr && inserted) {
                     setWaterLogs(prev => {
                         const next = prev.map(item => (item.id === tempId ? inserted : item));
                         try {
@@ -909,6 +1067,46 @@ export default function useCalories(selectedDateStr = null) {
                         return next;
                     });
                     return { data: inserted, error: null };
+                }
+
+                // Attempt 2: fallback to calorie_logs table with meal_type='water'
+                // This ensures water progress is ALWAYS persisted in Supabase database
+                const fallbackCalPayload = {
+                    user_id: userId,
+                    date,
+                    type: 'intake',
+                    meal_type: 'water',
+                    name: `${ml >= 1000 ? `${(ml / 1000).toFixed(1)} L` : `${ml} ml`} Water`,
+                    grams: ml,
+                    calories: 0,
+                    protein_g: 0,
+                    carbs_g: 0,
+                    fat_g: 0,
+                    fiber_g: 0,
+                };
+                const { data: calIns, error: calErr } = await supabase
+                    .from('calorie_logs')
+                    .insert([fallbackCalPayload])
+                    .select()
+                    .single();
+
+                if (!calErr && calIns) {
+                    const mappedWater = {
+                        id: calIns.id,
+                        user_id: calIns.user_id,
+                        date: calIns.date,
+                        amount_ml: ml,
+                        created_at: calIns.created_at,
+                        source_table: 'calorie_logs',
+                    };
+                    setWaterLogs(prev => {
+                        const next = prev.map(item => (item.id === tempId ? mappedWater : item));
+                        try {
+                            localStorage.setItem(WATER_LOGS_CACHE_KEY, JSON.stringify(next));
+                        } catch {}
+                        return next;
+                    });
+                    return { data: mappedWater, error: null };
                 }
             } catch (err) {
                 console.warn('[useCalories] Saved water locally:', err.message);
@@ -933,9 +1131,10 @@ export default function useCalories(selectedDateStr = null) {
         if (!String(id).startsWith('local-')) {
             try {
                 await supabase.from('water_logs').delete().eq('id', id);
-            } catch (err) {
-                console.warn('[useCalories] Error deleting remote water log:', err.message);
-            }
+            } catch {}
+            try {
+                await supabase.from('calorie_logs').delete().eq('id', id);
+            } catch {}
         }
     }, []);
 
@@ -1034,7 +1233,7 @@ export default function useCalories(selectedDateStr = null) {
     // Summary for the active selected date
     const dailySummary = useMemo(() => {
         const dayLogs = logs.filter(l => l.date === activeDate);
-        const intakeLogs = dayLogs.filter(l => l.type === 'intake');
+        const intakeLogs = dayLogs.filter(l => l.type === 'intake' && l.meal_type !== 'water');
         const burnLogs = dayLogs.filter(l => l.type === 'burn');
 
         const totalIntake = Math.round(
@@ -1052,6 +1251,9 @@ export default function useCalories(selectedDateStr = null) {
         const totalFiber = Math.round(
             intakeLogs.reduce((sum, l) => sum + (parseFloat(l.fiber_g) || 0), 0) * 10
         ) / 10;
+        const totalSugar = Math.round(
+            intakeLogs.reduce((sum, l) => sum + (parseFloat(l.sugar_g) || 0), 0) * 10
+        ) / 10;
 
         const exerciseBurn = Math.round(
             burnLogs.reduce((sum, l) => sum + (parseFloat(l.calories) || 0), 0)
@@ -1060,8 +1262,20 @@ export default function useCalories(selectedDateStr = null) {
         const totalBurn = expectedBmr + exerciseBurn;
         const netBalance = totalIntake - totalBurn; // Negative = Deficit, Positive = Surplus
 
-        // Hydration calculation
-        const dayWaterLogs = waterLogs.filter(w => w.date === activeDate);
+        // Hydration calculation: combine water_logs and any water in calorie_logs
+        const directDayWater = waterLogs.filter(w => w.date === activeDate);
+        const calDayWater = dayLogs.filter(l => l.meal_type === 'water').map(l => ({
+            id: l.id,
+            user_id: l.user_id,
+            date: l.date,
+            amount_ml: Math.round(Number(l.grams) || 250),
+            created_at: l.created_at,
+            source_table: 'calorie_logs',
+        }));
+        const waterMap = new Map();
+        [...directDayWater, ...calDayWater].forEach(w => waterMap.set(w.id, w));
+        const dayWaterLogs = Array.from(waterMap.values()).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
         const totalWaterMl = dayWaterLogs.reduce((sum, w) => sum + (Number(w.amount_ml) || 0), 0);
         const waterGoalMl = Number(localSettings.water_goal_ml) || 3000;
         const waterPct = Math.min(100, Math.round((totalWaterMl / waterGoalMl) * 100));
@@ -1079,6 +1293,7 @@ export default function useCalories(selectedDateStr = null) {
             totalCarbs,
             totalFat,
             totalFiber,
+            totalSugar,
             expectedBmr,
             exerciseBurn,
             totalBurn,
@@ -1088,19 +1303,45 @@ export default function useCalories(selectedDateStr = null) {
         };
     }, [logs, waterLogs, activeDate, expectedBmr, localSettings.water_goal_ml]);
 
-    // 7-day trend data for charts (Calories + Weight)
+    // 7-day trend data for charts (Calories + Macros + Weight + Water)
     const weeklyTrend = useMemo(() => {
         const days = [];
         for (let i = 6; i >= 0; i--) {
             const d = subDays(new Date(), i);
             const dStr = format(d, 'yyyy-MM-dd');
             const dayLogs = logs.filter(l => l.date === dStr);
+            const dayIntake = dayLogs.filter(l => l.type === 'intake' && l.meal_type !== 'water');
             const dayWeight = weightLogs.find(w => w.date === dStr);
-            const dayWater = waterLogs.filter(w => w.date === dStr).reduce((s, w) => s + (Number(w.amount_ml) || 0), 0);
+
+            // Compute water from both sources
+            const directW = waterLogs.filter(w => w.date === dStr);
+            const calW = dayLogs.filter(l => l.meal_type === 'water').map(l => ({
+                id: l.id,
+                amount_ml: Math.round(Number(l.grams) || 250),
+            }));
+            const dayWaterMap = new Map();
+            [...directW, ...calW].forEach(w => dayWaterMap.set(w.id, Number(w.amount_ml) || 0));
+            const dayWater = Array.from(dayWaterMap.values()).reduce((s, v) => s + v, 0);
 
             const intake = Math.round(
-                dayLogs.filter(l => l.type === 'intake').reduce((s, l) => s + (parseFloat(l.calories) || 0), 0)
+                dayIntake.reduce((s, l) => s + (parseFloat(l.calories) || 0), 0)
             );
+            const protein = Math.round(
+                dayIntake.reduce((s, l) => s + (parseFloat(l.protein_g) || 0), 0) * 10
+            ) / 10;
+            const carbs = Math.round(
+                dayIntake.reduce((s, l) => s + (parseFloat(l.carbs_g) || 0), 0) * 10
+            ) / 10;
+            const fat = Math.round(
+                dayIntake.reduce((s, l) => s + (parseFloat(l.fat_g) || 0), 0) * 10
+            ) / 10;
+            const fiber = Math.round(
+                dayIntake.reduce((s, l) => s + (parseFloat(l.fiber_g) || 0), 0) * 10
+            ) / 10;
+            const sugar = Math.round(
+                dayIntake.reduce((s, l) => s + (parseFloat(l.sugar_g) || 0), 0) * 10
+            ) / 10;
+
             const exBurn = Math.round(
                 dayLogs.filter(l => l.type === 'burn').reduce((s, l) => s + (parseFloat(l.calories) || 0), 0)
             );
@@ -1114,6 +1355,11 @@ export default function useCalories(selectedDateStr = null) {
                 bmr: expectedBmr,
                 totalBurn,
                 net: intake - totalBurn,
+                protein,
+                carbs,
+                fat,
+                fiber,
+                sugar,
                 weight: dayWeight ? Number(dayWeight.weight_kg) : null,
                 hasWeight: Boolean(dayWeight),
                 waterMl: dayWater,
@@ -1168,6 +1414,7 @@ export default function useCalories(selectedDateStr = null) {
         searchFoodDatabase,
         lookupAndCacheFood,
         addCustomFood,
+        updateSavedFood,
         addFoodIntake,
         addExerciseBurn,
         deleteCalorieLog,

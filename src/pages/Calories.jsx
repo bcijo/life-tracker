@@ -37,12 +37,14 @@ import { parseNutritionLabelImage, compressImageFile } from '../lib/groq';
 import LiquidGlassSegmented from '../components/common/LiquidGlassSegmented';
 import DateDisplay from '../components/common/DateDisplay';
 import Modal from '../components/Modal';
+import SavedFoodsTab from '../components/calories/SavedFoodsTab';
 
 const MONO = "'JetBrains Mono', monospace";
 const ACCENT = '#a855f7';
 const AMBER = '#f59e0b';
 const GREEN = '#22c55e';
 const FIBER_COLOR = '#ec4899';
+const SUGAR_COLOR = '#f43f5e';
 
 const GRAM_PRESETS = [50, 100, 150, 200, 250];
 const ML_PRESETS = [100, 150, 200, 250, 500];
@@ -170,6 +172,7 @@ const Calories = () => {
     const [mode, setMode] = useState('food'); // 'food' | 'exercise' | 'weight'
     const [logFilter, setLogFilter] = useState('all');
     const [chartTab, setChartTab] = useState('calories'); // 'calories' | 'weight'
+    const [view, setView] = useState('today'); // 'today' | 'saved'
 
     const {
         foodCatalog,
@@ -184,6 +187,7 @@ const Calories = () => {
         searchFoodDatabase,
         lookupAndCacheFood,
         addCustomFood,
+        updateSavedFood,
         addFoodIntake,
         addExerciseBurn,
         deleteCalorieLog,
@@ -245,12 +249,37 @@ const Calories = () => {
 
     /* ── Weekly analytics modal & averages ── */
     const [showAnalytics, setShowAnalytics] = useState(false);
+    const [foodNutrientTab, setFoodNutrientTab] = useState('protein'); // 'protein' | 'sugar' | 'carbs' | 'fat' | 'fiber'
     const avgWeekIntake = useMemo(
         () => Math.round(weeklyTrend.reduce((s, d) => s + (d.intake || 0), 0) / (weeklyTrend.length || 1)),
         [weeklyTrend]
     );
     const avgWeekBurn = useMemo(
         () => Math.round(weeklyTrend.reduce((s, d) => s + (d.totalBurn || 0), 0) / (weeklyTrend.length || 1)),
+        [weeklyTrend]
+    );
+    const avgWeekNet = useMemo(
+        () => Math.round(weeklyTrend.reduce((s, d) => s + (d.net || 0), 0) / (weeklyTrend.length || 1)),
+        [weeklyTrend]
+    );
+    const avgWeekProtein = useMemo(
+        () => Math.round((weeklyTrend.reduce((s, d) => s + (d.protein || 0), 0) / (weeklyTrend.length || 1)) * 10) / 10,
+        [weeklyTrend]
+    );
+    const avgWeekCarbs = useMemo(
+        () => Math.round((weeklyTrend.reduce((s, d) => s + (d.carbs || 0), 0) / (weeklyTrend.length || 1)) * 10) / 10,
+        [weeklyTrend]
+    );
+    const avgWeekFat = useMemo(
+        () => Math.round((weeklyTrend.reduce((s, d) => s + (d.fat || 0), 0) / (weeklyTrend.length || 1)) * 10) / 10,
+        [weeklyTrend]
+    );
+    const avgWeekFiber = useMemo(
+        () => Math.round((weeklyTrend.reduce((s, d) => s + (d.fiber || 0), 0) / (weeklyTrend.length || 1)) * 10) / 10,
+        [weeklyTrend]
+    );
+    const avgWeekSugar = useMemo(
+        () => Math.round((weeklyTrend.reduce((s, d) => s + (d.sugar || 0), 0) / (weeklyTrend.length || 1)) * 10) / 10,
         [weeklyTrend]
     );
     const avgWeekWaterL = useMemo(
@@ -310,6 +339,7 @@ const Calories = () => {
         carbs_per_100g: '',
         fat_per_100g: '',
         fiber_per_100g: '',
+        sugar_per_100g: '',
         is_liquid: false,
         unit_name: '',
         grams_per_unit: '',
@@ -358,6 +388,7 @@ const Calories = () => {
             carbs_per_100g: '',
             fat_per_100g: '',
             fiber_per_100g: '',
+            sugar_per_100g: '',
             is_liquid: liquid,
             unit_name: liquid ? 'glass' : '',
             grams_per_unit: liquid ? '200' : '',
@@ -401,6 +432,7 @@ const Calories = () => {
                 carbs_per_100g: parsed.carbs_per_100g >= 0 ? String(parsed.carbs_per_100g) : prev.carbs_per_100g,
                 fat_per_100g: parsed.fat_per_100g >= 0 ? String(parsed.fat_per_100g) : prev.fat_per_100g,
                 fiber_per_100g: parsed.fiber_per_100g >= 0 ? String(parsed.fiber_per_100g) : prev.fiber_per_100g,
+                sugar_per_100g: parsed.sugar_per_100g >= 0 ? String(parsed.sugar_per_100g) : prev.sugar_per_100g,
                 is_liquid: Boolean(parsed.is_liquid),
                 unit_name: parsed.unit_name || prev.unit_name,
                 grams_per_unit: parsed.grams_per_unit ? String(parsed.grams_per_unit) : prev.grams_per_unit,
@@ -730,67 +762,157 @@ const Calories = () => {
 
     const renderWeeklyAnalytics = (inModal = false) => {
         const waterGoalL = Math.round(((Number(bmrSettings?.water_goal_ml) || 3000) / 1000) * 10) / 10;
+
+        const nutrientMeta = {
+            protein: { label: 'Protein', color: '#818cf8', unit: 'g', kcalFactor: 4, isPrimary: true },
+            sugar: { label: 'Sugar', color: SUGAR_COLOR, unit: 'g', kcalFactor: 4, isPrimary: true },
+            carbs: { label: 'Carbs', color: GREEN, unit: 'g', kcalFactor: 4, isPrimary: false },
+            fat: { label: 'Fat', color: AMBER, unit: 'g', kcalFactor: 9, isPrimary: false },
+            fiber: { label: 'Fiber', color: FIBER_COLOR, unit: 'g', kcalFactor: null, isPrimary: false },
+        };
+
+        const currentNutrient = nutrientMeta[foodNutrientTab] || nutrientMeta.protein;
+
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* ── Key Focus Highlight Header: Net Calories, Protein & Sugar ── */}
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+                    padding: '12px 14px', borderRadius: 14,
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(244,63,94,0.08) 100%)',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                }}>
+                    {/* Net Calories */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: avgWeekNet > 0 ? AMBER : GREEN }} />
+                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Net Calories</span>
+                        </div>
+                        <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: avgWeekNet > 0 ? AMBER : GREEN }}>
+                            {avgWeekNet > 0 ? `+${fmt(avgWeekNet)}` : fmt(avgWeekNet)}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 2 }}>kcal</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                            {avgWeekNet > 0 ? 'Surplus / day' : 'Deficit / day'}
+                        </span>
+                    </div>
+
+                    {/* Protein Focus */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 6px #818cf8' }} />
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>★ Protein</span>
+                        </div>
+                        <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                            {avgWeekProtein}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                            ~{Math.round(avgWeekProtein * 4)} kcal/day
+                        </span>
+                    </div>
+
+                    {/* Sugar Focus */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUGAR_COLOR, boxShadow: `0 0 6px ${SUGAR_COLOR}` }} />
+                            <span style={{ fontSize: 10, fontWeight: 700, color: SUGAR_COLOR, textTransform: 'uppercase', letterSpacing: '0.04em' }}>★ Sugar</span>
+                        </div>
+                        <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                            {avgWeekSugar}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                            ~{Math.round(avgWeekSugar * 4)} kcal/day
+                        </span>
+                    </div>
+                </div>
+
+                {/* ── Main Category Selector ── */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                     <div>
-                        {!inModal && <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>This week</h2>}
-                        {chartTab === 'weight' && weekWeightStats.count > 0 && (
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
-                                {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
+                        {chartTab === 'calories' && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                7d Avg: {fmt(avgWeekIntake)} in · {fmt(avgWeekBurn)} out
                             </span>
                         )}
-                        {chartTab === 'calories' && (
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
-                                Avg: {fmt(avgWeekIntake)} in · {fmt(avgWeekBurn)} out
+                        {chartTab === 'food' && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                7d Avg {currentNutrient.label}: <strong style={{ color: currentNutrient.color }}>{
+                                    foodNutrientTab === 'protein' ? avgWeekProtein :
+                                    foodNutrientTab === 'sugar' ? avgWeekSugar :
+                                    foodNutrientTab === 'carbs' ? avgWeekCarbs :
+                                    foodNutrientTab === 'fat' ? avgWeekFat : avgWeekFiber
+                                }g/day</strong>
                             </span>
                         )}
                         {chartTab === 'water' && (
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2, display: 'block' }}>
-                                Avg: {avgWeekWaterL} L/day
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                7d Avg: {avgWeekWaterL} L/day ({Math.round(Number(avgWeekWaterL) * 1000)} ml)
+                            </span>
+                        )}
+                        {chartTab === 'weight' && weekWeightStats.count > 0 && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
                             </span>
                         )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {chartTab === 'calories' ? (
-                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT }} /> In
-                                </span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: AMBER }} /> Out
-                                </span>
-                            </div>
-                        ) : chartTab === 'water' ? (
-                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#06b6d4' }} /> Water (L)
-                                </span>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} /> kg
-                                </span>
-                            </div>
-                        )}
-                        <div style={{ width: narrow ? 210 : 225 }}>
-                            <LiquidGlassSegmented
-                                options={[
-                                    { id: 'calories', label: 'Calories' },
-                                    { id: 'weight', label: 'Weight' },
-                                    { id: 'water', label: 'Water' },
-                                ]}
-                                value={chartTab}
-                                onChange={setChartTab}
-                                size="sm"
-                                fullWidth
-                                ariaLabel="Chart view"
-                            />
-                        </div>
+                    <div style={{ width: narrow ? '100%' : 290 }}>
+                        <LiquidGlassSegmented
+                            options={[
+                                { id: 'calories', label: 'Calories' },
+                                { id: 'food', label: 'Macros' },
+                                { id: 'water', label: 'Water' },
+                                { id: 'weight', label: 'Weight' },
+                            ]}
+                            value={chartTab}
+                            onChange={setChartTab}
+                            size="sm"
+                            fullWidth
+                            ariaLabel="Chart view"
+                        />
                     </div>
                 </div>
+
+                {/* ── Food / Nutrient Secondary Tab Bar ── */}
+                {chartTab === 'food' && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', paddingBottom: 2,
+                    }}>
+                        {[
+                            { id: 'protein', label: 'Protein', isPrimary: true, color: '#818cf8', val: avgWeekProtein },
+                            { id: 'sugar', label: 'Sugar', isPrimary: true, color: SUGAR_COLOR, val: avgWeekSugar },
+                            { id: 'carbs', label: 'Carbs', isPrimary: false, color: GREEN, val: avgWeekCarbs },
+                            { id: 'fat', label: 'Fat', isPrimary: false, color: AMBER, val: avgWeekFat },
+                            { id: 'fiber', label: 'Fiber', isPrimary: false, color: FIBER_COLOR, val: avgWeekFiber },
+                        ].map((tab) => {
+                            const isSelected = foodNutrientTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setFoodNutrientTab(tab.id)}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                                        padding: '5px 10px', borderRadius: 10,
+                                        fontSize: 11, fontWeight: isSelected ? 700 : 600,
+                                        cursor: 'pointer',
+                                        background: isSelected ? `${tab.color}22` : 'var(--surface-input)',
+                                        border: isSelected ? `1.5px solid ${tab.color}` : '1px solid var(--border-subtle)',
+                                        color: isSelected ? tab.color : 'var(--text-secondary)',
+                                        transition: 'all 0.15s ease',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: tab.color }} />
+                                    <span>{tab.label}</span>
+                                    {tab.isPrimary && (
+                                        <span style={{ fontSize: 9, opacity: 0.85 }}>★</span>
+                                    )}
+                                    <span style={{ fontFamily: MONO, fontSize: 10, opacity: 0.8, marginLeft: 2 }}>{tab.val}g</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 <div style={{ width: '100%', height: inModal ? 210 : 170 }}>
                     {chartTab === 'calories' ? (
@@ -812,36 +934,73 @@ const Calories = () => {
                                     cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
                                     content={({ active, payload, label }) => {
                                         if (!active || !payload || !payload.length) return null;
-                                        const intakeVal = payload.find(p => p.dataKey === 'intake')?.value || 0;
-                                        const burnVal = payload.find(p => p.dataKey === 'totalBurn')?.value || 0;
+                                        const dayData = weeklyTrend.find(d => d.dayLabel === label) || {};
+                                        const intakeVal = dayData.intake || 0;
+                                        const burnVal = dayData.totalBurn || 0;
                                         const netVal = intakeVal - burnVal;
                                         return (
                                             <div style={{
                                                 background: 'var(--surface-elevated)',
                                                 border: '1px solid var(--glass-border)',
                                                 borderRadius: 12,
-                                                padding: '8px 12px',
+                                                padding: '9px 12px',
                                                 fontSize: 12,
                                                 boxShadow: '0 8px 30px rgba(0,0,0,0.35)',
+                                                minWidth: 190,
                                             }}>
-                                                <div style={{ fontWeight: 700, marginBottom: 5, color: 'var(--text-primary)' }}>{label}</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: ACCENT, fontSize: 11 }}>
-                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT }} />
-                                                    <span>Intake: <strong>{intakeVal} kcal</strong></span>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: AMBER, fontSize: 11, marginTop: 2 }}>
-                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: AMBER }} />
-                                                    <span>Burn: <strong>{burnVal} kcal</strong></span>
-                                                </div>
+                                                <div style={{ fontWeight: 700, marginBottom: 5, color: 'var(--text-primary)' }}>{label} ({dayData.date})</div>
+                                                
+                                                {/* Highlighted Net Calories */}
                                                 <div style={{
-                                                    marginTop: 6,
-                                                    paddingTop: 5,
-                                                    borderTop: '1px solid var(--border-subtle)',
-                                                    fontFamily: MONO,
-                                                    fontSize: 11,
+                                                    padding: '4px 8px', borderRadius: 8,
+                                                    background: netVal > 0 ? 'rgba(245,158,11,0.14)' : 'rgba(34,197,94,0.14)',
+                                                    border: `1px solid ${netVal > 0 ? 'rgba(245,158,11,0.3)' : 'rgba(34,197,94,0.3)'}`,
                                                     color: netVal > 0 ? AMBER : GREEN,
+                                                    fontWeight: 800, fontFamily: MONO, fontSize: 11,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    marginBottom: 6,
                                                 }}>
-                                                    Net: {netVal > 0 ? `+${netVal}` : netVal} kcal ({netVal > 0 ? 'Surplus' : 'Deficit'})
+                                                    <span>Net Balance:</span>
+                                                    <span>{netVal > 0 ? `+${netVal}` : netVal} kcal</span>
+                                                </div>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, color: ACCENT, fontSize: 11 }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT }} /> Intake
+                                                    </span>
+                                                    <strong style={{ fontFamily: MONO }}>{intakeVal} kcal</strong>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, color: AMBER, fontSize: 11, marginTop: 2 }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: AMBER }} /> Burn
+                                                    </span>
+                                                    <strong style={{ fontFamily: MONO }}>{burnVal} kcal</strong>
+                                                </div>
+
+                                                {/* Highlighted Protein & Sugar Row */}
+                                                <div style={{
+                                                    display: 'flex', gap: 6, marginTop: 7, paddingTop: 6,
+                                                    borderTop: '1px solid var(--border-subtle)',
+                                                }}>
+                                                    <div style={{
+                                                        flex: 1, padding: '3px 6px', borderRadius: 7,
+                                                        background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)',
+                                                        fontSize: 10, color: '#818cf8', fontWeight: 700, fontFamily: MONO, textAlign: 'center',
+                                                    }}>
+                                                        P: {dayData.protein || 0}g
+                                                    </div>
+                                                    <div style={{
+                                                        flex: 1, padding: '3px 6px', borderRadius: 7,
+                                                        background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.25)',
+                                                        fontSize: 10, color: SUGAR_COLOR, fontWeight: 700, fontFamily: MONO, textAlign: 'center',
+                                                    }}>
+                                                        Sugar: {dayData.sugar || 0}g
+                                                    </div>
+                                                </div>
+
+                                                {/* Carbs, Fat, Fiber */}
+                                                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 4, textAlign: 'center' }}>
+                                                    C {Math.round(dayData.carbs || 0)}g · F {Math.round(dayData.fat || 0)}g · Fib {Math.round(dayData.fiber || 0)}g
                                                 </div>
                                             </div>
                                         );
@@ -865,6 +1024,65 @@ const Calories = () => {
                                     strokeWidth={2.5}
                                     fill="url(#intakeWaveGrad)"
                                     dot={{ r: 4, fill: ACCENT, stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    ) : chartTab === 'food' ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={weeklyTrend} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="nutrientWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={currentNutrient.color} stopOpacity={0.45} />
+                                        <stop offset="95%" stopColor={currentNutrient.color} stopOpacity={0.0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis dataKey="dayLabel" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} unit="g" />
+                                <Tooltip
+                                    cursor={{ stroke: 'var(--border-subtle)', strokeDasharray: '3 3' }}
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload || !payload.length) return null;
+                                        const dayData = weeklyTrend.find(d => d.dayLabel === label) || {};
+                                        const val = dayData[foodNutrientTab] || 0;
+                                        const kcal = currentNutrient.kcalFactor ? Math.round(val * currentNutrient.kcalFactor) : null;
+                                        return (
+                                            <div style={{
+                                                background: 'var(--surface-elevated)',
+                                                border: `1px solid ${currentNutrient.color}44`,
+                                                borderRadius: 12,
+                                                padding: '9px 12px',
+                                                fontSize: 12,
+                                                boxShadow: '0 8px 30px rgba(0,0,0,0.35)',
+                                            }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>{label} ({dayData.date})</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: currentNutrient.color, fontSize: 12, fontWeight: 700 }}>
+                                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: currentNutrient.color }} />
+                                                    <span>{currentNutrient.label}: <strong>{val} g</strong></span>
+                                                    {kcal !== null && (
+                                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>({kcal} kcal)</span>
+                                                    )}
+                                                </div>
+                                                <div style={{
+                                                    marginTop: 6, paddingTop: 5,
+                                                    borderTop: '1px solid var(--border-subtle)',
+                                                    display: 'flex', gap: 8, fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO,
+                                                }}>
+                                                    <span>Day Intake: {dayData.intake || 0} kcal</span>
+                                                    <span>Net: {dayData.net > 0 ? `+${dayData.net}` : dayData.net} kcal</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey={foodNutrientTab}
+                                    name={currentNutrient.label}
+                                    stroke={currentNutrient.color}
+                                    strokeWidth={2.5}
+                                    fill="url(#nutrientWaveGrad)"
+                                    dot={{ r: 4, fill: currentNutrient.color, stroke: 'var(--surface-elevated)', strokeWidth: 2 }}
+                                    activeDot={{ r: 6, fill: currentNutrient.color }}
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -1137,7 +1355,7 @@ const Calories = () => {
                                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
                                                                 {itemUnit.isCountable
                                                                     ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
-                                                                    : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}${item.fiber_per_100g ? ` · Fib ${item.fiber_per_100g}g` : ''}`}
+                                                                    : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
                                                             </span>
                                                         </span>
                                                         <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
@@ -1460,7 +1678,7 @@ const Calories = () => {
                                         </span>
                                         <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>kcal</span>
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                            P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}{livePreview?.fiber_g ? ` · Fib ${livePreview.fiber_g}g` : ''}
+                                            P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}
                                         </div>
                                     </div>
                                     <button
@@ -1755,8 +1973,31 @@ const Calories = () => {
                 </div>
             </motion.header>
 
+            {/* View tabs */}
+            <div style={{ marginBottom: 14 }}>
+                <LiquidGlassSegmented
+                    options={[
+                        { id: 'today', label: 'Tracker' },
+                        { id: 'saved', label: 'Saved Foods' },
+                    ]}
+                    value={view}
+                    onChange={setView}
+                    size="sm"
+                    fullWidth
+                    ariaLabel="Calories view"
+                />
+            </div>
+
+            {view === 'saved' && (
+                <SavedFoodsTab
+                    foodCatalog={foodCatalog}
+                    onUpdateFood={updateSavedFood}
+                    onAddToToday={addFoodIntake}
+                />
+            )}
+
             {/* Glass date strip */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, display: view === 'saved' ? 'none' : undefined }}>
                 <LiquidGlassSegmented
                     options={dateOptions}
                     value={selectedDate}
@@ -1769,7 +2010,7 @@ const Calories = () => {
                 />
             </div>
 
-            <div className="cal-layout">
+            <div className="cal-layout" style={{ display: view === 'saved' ? 'none' : undefined }}>
                 {/* ───────── LEFT COLUMN ───────── */}
                 <div className="cal-col cal-col-left">
                     {/* Unified Daily Nutrition: Hero & Macros */}
@@ -1848,12 +2089,13 @@ const Calories = () => {
                                 <div style={{ width: `${cPct}%`, background: GREEN, transition: 'width .4s ease' }} />
                                 <div style={{ width: `${fPct}%`, background: AMBER, transition: 'width .4s ease' }} />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))', gap: 8 }}>
                                 {[
                                     { label: 'Protein', value: dailySummary.totalProtein, color: '#6366f1', pct: pPct },
                                     { label: 'Carbs', value: dailySummary.totalCarbs, color: GREEN, pct: cPct },
                                     { label: 'Fat', value: dailySummary.totalFat, color: AMBER, pct: fPct },
                                     { label: 'Fiber', value: dailySummary.totalFiber || 0, color: FIBER_COLOR, pct: null },
+                                    { label: 'Sugar', value: dailySummary.totalSugar || 0, color: SUGAR_COLOR, pct: null },
                                 ].map((m) => (
                                     <div key={m.label}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -2200,16 +2442,6 @@ const Calories = () => {
                                         const isFood = !isWater && !isBurn;
                                         const Icon = isWater ? Droplets : isBurn ? Dumbbell : Utensils;
                                         const tint = isWater ? '#06b6d4' : isBurn ? AMBER : ACCENT;
-                                        const effectiveFiber = isFood
-                                            ? (Number(item.fiber_g) > 0
-                                                ? Number(item.fiber_g)
-                                                : (() => {
-                                                    const cat = foodCatalog.find(f => (f.normalized_name && item.name && f.normalized_name === normalizeFoodName(item.name)) || (f.name && item.name && f.name.toLowerCase() === item.name.toLowerCase()));
-                                                    if (cat && Number(cat.fiber_per_100g) > 0) return Math.round((Number(cat.fiber_per_100g) * (Number(item.grams) || 100) / 100) * 10) / 10;
-                                                    if (Number(item.carbs_g) > 3 && !isLiquidFood(item)) return Math.round(Math.max(1, Number(item.carbs_g) * 0.11) * 10) / 10;
-                                                    return 0;
-                                                })())
-                                            : 0;
                                         return (
                                             <motion.div
                                                 key={item.id}
@@ -2248,7 +2480,7 @@ const Calories = () => {
                                                             ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
                                                             : isBurn
                                                             ? `${item.duration_mins || '—'} min`
-                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}${effectiveFiber > 0 ? ` Fib${Math.round(effectiveFiber)}g` : ''}`}
+                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
                                                     </div>
                                                 </div>
                                                 <span style={{
@@ -2292,7 +2524,7 @@ const Calories = () => {
             </Modal>
 
             {/* Weekly Analytics Modal */}
-            <Modal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} title="Weekly Analytics">
+            <Modal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} title="Weekly Analytics" maxWidth="560px">
                 {renderWeeklyAnalytics(true)}
             </Modal>
 
@@ -2494,6 +2726,18 @@ const Calories = () => {
                                     placeholder="0"
                                     value={manualFoodForm.fiber_per_100g}
                                     onChange={(e) => setManualFoodForm({ ...manualFoodForm, fiber_per_100g: e.target.value })}
+                                    className="surface-input"
+                                    style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
+                                />
+                            </div>
+                            <div>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Sugar (g)</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={manualFoodForm.sugar_per_100g}
+                                    onChange={(e) => setManualFoodForm({ ...manualFoodForm, sugar_per_100g: e.target.value })}
                                     className="surface-input"
                                     style={{ ...inputStyle, fontFamily: MONO, padding: '9px 10px' }}
                                 />
@@ -2761,6 +3005,26 @@ const Calories = () => {
                     }
                     const fiber = Math.round(resolvedFiber * 10) / 10;
 
+                    let resolvedSugar = Number(item.sugar_g) || 0;
+                    if (resolvedSugar <= 0) {
+                        const cat = foodCatalog.find(f => (f.normalized_name && item.name && f.normalized_name === normalizeFoodName(item.name)) || (f.name && item.name && f.name.toLowerCase() === item.name.toLowerCase()));
+                        if (cat && Number(cat.sugar_per_100g) > 0) {
+                            resolvedSugar = (Number(cat.sugar_per_100g) * grams) / 100;
+                        } else if (carbs > 0) {
+                            const nameLower = (item.name || '').toLowerCase();
+                            if (/fruit|banana|apple|mango|orange|grape|chikoo|papaya|juice/i.test(nameLower)) {
+                                resolvedSugar = carbs * 0.65;
+                            } else if (/sweet|mithai|halwa|laddu|ladoo|gulab jamun|jalebi|sugar|cake|pastry|ice cream|chocolate|cookie|biscuit/i.test(nameLower)) {
+                                resolvedSugar = carbs * 0.70;
+                            } else if (/milk|curd|dahi|tea|chai|coffee|lassi/i.test(nameLower)) {
+                                resolvedSugar = Math.min(carbs, (grams / 100) * 4.8);
+                            } else if (carbs > 5) {
+                                resolvedSugar = carbs * 0.05;
+                            }
+                        }
+                    }
+                    const sugar = Math.round(resolvedSugar * 10) / 10;
+
                     const proteinKcal = Math.round(protein * 4);
                     const carbsKcal = Math.round(carbs * 4);
                     const fatKcal = Math.round(fat * 9);
@@ -2776,6 +3040,7 @@ const Calories = () => {
                     const carbs100 = Math.round((carbs * factor100) * 10) / 10;
                     const fat100 = Math.round((fat * factor100) * 10) / 10;
                     const fiber100 = Math.round((fiber * factor100) * 10) / 10;
+                    const sugar100 = Math.round((sugar * factor100) * 10) / 10;
 
                     const timeString = item.created_at
                         ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -2872,32 +3137,37 @@ const Calories = () => {
                                 </div>
                             </div>
 
-                            {/* 4 Macro Cards */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                            {/* Macro & Nutrient Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
                                 {[
                                     { label: 'Protein', value: protein, color: '#818cf8', kcal: proteinKcal },
                                     { label: 'Carbs', value: carbs, color: GREEN, kcal: carbsKcal },
                                     { label: 'Fat', value: fat, color: AMBER, kcal: fatKcal },
                                     { label: 'Fiber', value: fiber, color: FIBER_COLOR, kcal: null },
+                                    { label: 'Sugar', value: sugar, color: SUGAR_COLOR, kcal: null },
                                 ].map((m) => (
                                     <div
                                         key={m.label}
                                         style={{
                                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                                            padding: '10px 4px', borderRadius: 12,
+                                            padding: '10px 2px', borderRadius: 12,
                                             background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                             <span style={{ width: 6, height: 6, borderRadius: 9999, background: m.color }} />
-                                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{m.label}</span>
+                                            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{m.label}</span>
                                         </div>
-                                        <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
-                                            {m.value}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
+                                        <div style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                                            {m.value}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
                                         </div>
-                                        {m.kcal !== null && (
-                                            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                        {m.kcal !== null ? (
+                                            <span style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: MONO }}>
                                                 {m.kcal} kcal
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: 9, color: 'var(--text-muted)', opacity: 0.6 }}>
+                                                —
                                             </span>
                                         )}
                                     </div>
@@ -2926,7 +3196,8 @@ const Calories = () => {
                                     { name: 'Energy', portion: `${calories} kcal`, per100: `${cal100} kcal` },
                                     { name: 'Protein', portion: `${protein} g`, per100: `${protein100} g` },
                                     { name: 'Carbs', portion: `${carbs} g`, per100: `${carbs100} g` },
-                                    { name: 'Fat', portion: `${fat} g`, per100: `${fat100} g` },
+                                    { name: 'Sugar', portion: `${sugar} g`, per100: `${sugar100} g` },
+                                    { name: 'Total Fat', portion: `${fat} g`, per100: `${fat100} g` },
                                     { name: 'Dietary Fiber', portion: `${fiber} g`, per100: `${fiber100} g` },
                                 ].map((row, idx, arr) => (
                                     <div
@@ -3077,6 +3348,7 @@ const Calories = () => {
                                         { key: 'carbs_per_100g', label: 'Carbs', color: GREEN },
                                         { key: 'fat_per_100g', label: 'Fat', color: AMBER },
                                         { key: 'fiber_per_100g', label: 'Fiber', color: FIBER_COLOR },
+                                        { key: 'sugar_per_100g', label: 'Sugar', color: SUGAR_COLOR },
                                     ];
                                     return (
                                         <motion.form
@@ -3515,7 +3787,7 @@ const Calories = () => {
                 }
                 .cal-scan-macro-grid {
                     width: 100%;
-                    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+                    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
                 }
                 .cal-scan-macro-head {
                     display: flex; align-items: center; gap: 5px;
