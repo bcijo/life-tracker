@@ -361,7 +361,7 @@ const CompareView = ({
               </span>
               <div style={{
                 fontSize: 20, fontWeight: 900, color: '#a855f7',
-                fontFamily: 'monospace', marginTop: 4, letterSpacing: '-0.02em'
+                fontFamily: 'var(--font-mono)', marginTop: 4, letterSpacing: '-0.02em'
               }}>
                 {myData.score.toLocaleString()} <span style={{ fontSize: 11, fontWeight: 700 }}>XP</span>
               </div>
@@ -424,7 +424,7 @@ const CompareView = ({
               </span>
               <div style={{
                 fontSize: 20, fontWeight: 900, color: '#06b6d4',
-                fontFamily: 'monospace', marginTop: 4, letterSpacing: '-0.02em'
+                fontFamily: 'var(--font-mono)', marginTop: 4, letterSpacing: '-0.02em'
               }}>
                 {theirData.score.toLocaleString()} <span style={{ fontSize: 11, fontWeight: 700 }}>XP</span>
               </div>
@@ -641,7 +641,7 @@ const CompareView = ({
                         fontSize: 'clamp(19px, 3.2vw, 25px)',
                         fontWeight: 900,
                         color: attr.myLead ? '#c084fc' : 'var(--text-primary)',
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                         letterSpacing: '-0.02em',
                         textShadow: attr.myLead ? '0 0 16px rgba(168,85,247,0.5)' : 'none',
                       }}>
@@ -690,7 +690,7 @@ const CompareView = ({
                         fontSize: 'clamp(19px, 3.2vw, 25px)',
                         fontWeight: 900,
                         color: attr.theirLead ? '#38bdf8' : 'var(--text-primary)',
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                         letterSpacing: '-0.02em',
                         textShadow: attr.theirLead ? '0 0 16px rgba(6,182,212,0.5)' : 'none',
                       }}>
@@ -729,7 +729,7 @@ const CompareView = ({
                       justifyContent: 'space-between',
                       fontSize: 9.5,
                       fontWeight: 800,
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                     }}>
                       <span style={{ color: '#c084fc' }}>{myRatio}%</span>
                       <span style={{
@@ -883,7 +883,7 @@ const CompareView = ({
                   {/* Check-in Count / Stat */}
                   <div style={{
                     fontSize: 9.5,
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     fontWeight: 800,
                     lineHeight: 1.1,
                     display: 'flex',
@@ -971,7 +971,7 @@ const CompareView = ({
                     <div style={{ fontSize: 11.5, fontWeight: 700 }}>🎯 Check-ins</div>
                     <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>+10 XP per completion</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#a855f7' }}>
+                  <div style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12, color: '#a855f7' }}>
                     +{myData.breakdown?.checkinXP || 0} XP
                   </div>
                 </div>
@@ -981,7 +981,7 @@ const CompareView = ({
                     <div style={{ fontSize: 11.5, fontWeight: 700 }}>🔥 Streak Multipliers</div>
                     <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>3+ and 7+ day streaks</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#f59e0b' }}>
+                  <div style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12, color: '#f59e0b' }}>
                     +{myData.breakdown?.streakXP || 0} XP
                   </div>
                 </div>
@@ -991,7 +991,7 @@ const CompareView = ({
                     <div style={{ fontSize: 11.5, fontWeight: 700 }}>🛡️ Consistency</div>
                     <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>Schedule completion %</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#10b981' }}>
+                  <div style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12, color: '#10b981' }}>
                     +{myData.breakdown?.consistencyXP || 0} XP
                   </div>
                 </div>
@@ -1001,7 +1001,7 @@ const CompareView = ({
                     <div style={{ fontSize: 11.5, fontWeight: 700 }}>⚡ Active Habits</div>
                     <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>+10 XP per habit</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#3b82f6' }}>
+                  <div style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12, color: '#3b82f6' }}>
                     +{myData.breakdown?.arsenalXP || 0} XP
                   </div>
                 </div>
@@ -1011,7 +1011,7 @@ const CompareView = ({
                     <div style={{ fontSize: 11.5, fontWeight: 700 }}>🌟 Perfect Days</div>
                     <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>+20 XP per 100% day</div>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 12, color: '#ec4899' }}>
+                  <div style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12, color: '#ec4899' }}>
                     +{myData.breakdown?.perfectDaysXP || 0} XP
                   </div>
                 </div>

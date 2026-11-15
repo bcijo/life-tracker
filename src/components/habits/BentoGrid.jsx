@@ -128,14 +128,14 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginTop: 2 }}>
               <span style={{
                 fontSize: 28, fontWeight: 800, color: 'var(--text-primary, #fff)',
-                fontFamily: "'JetBrains Mono', monospace", lineHeight: 1,
+                fontFamily: 'var(--font-mono)' , lineHeight: 1,
               }}>
                 {completedToday}
               </span>
-              <span style={{ fontSize: 16, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 16, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                 /{activeTodayHabits.length}
               </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: progressColor, marginLeft: 6, fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: progressColor, marginLeft: 6, fontFamily: 'var(--font-mono)' }}>
                 ({todayPct}%)
               </span>
             </div>
@@ -220,7 +220,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
               <span style={{
                 fontSize: 30, fontWeight: 800, lineHeight: 1,
-                fontFamily: "'JetBrains Mono', monospace",
+                fontFamily: 'var(--font-mono)' ,
                 color: perfectDays > 0 ? '#f59e0b' : 'var(--text-primary)',
               }}>
                 {perfectDays}
@@ -266,7 +266,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
               <span style={{
                 fontSize: 30, fontWeight: 800, lineHeight: 1,
-                fontFamily: "'JetBrains Mono', monospace",
+                fontFamily: 'var(--font-mono)' ,
                 color: checkinStreak > 0 ? '#a855f7' : 'var(--text-muted)',
               }}>
                 {checkinStreak}
@@ -290,7 +290,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Zap size={13} color="#06b6d4" />
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>This Week</span>
-          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary, #fff)', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary, #fff)', fontFamily: 'var(--font-mono)' }}>
             {weekCompleted}/{weekExpected}
           </span>
         </div>
@@ -304,7 +304,7 @@ export function BentoGrid({ habits, isTodayActive, getTodayStatus, getStatusForD
               transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
             />
           </div>
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#06b6d4', fontFamily: 'monospace', minWidth: 28, textAlign: 'right' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#06b6d4', fontFamily: 'var(--font-mono)', minWidth: 28, textAlign: 'right' }}>
             {weekPct}%
           </span>
         </div>

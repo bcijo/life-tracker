@@ -178,7 +178,7 @@ const InviteModal = ({ isOpen, onClose, username, displayName }) => {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  fontFamily: 'monospace'
+                  fontFamily: 'var(--font-mono)'
                 }}
               >
                 {inviteUrl}

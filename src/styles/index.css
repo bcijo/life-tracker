@@ -1,12 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "./markdown.css";
+@import "./theme-zen.css";
+@import "./theme-zen-remap.css";
 
 /* ============================================================
    THEME-INDEPENDENT TOKENS (typography, spacing, transitions)
    ============================================================ */
 :root {
     --font-family: 'Outfit', system-ui, sans-serif;
+    /* Headings and numeric/mono text. Themes can override these to change the feel. */
+    --font-display: var(--font-family);
+    --font-mono: 'JetBrains Mono', monospace;
 
     /* Safe Area Insets (iOS Dynamic Island, Notch, Home Bar) */
     --sat: env(safe-area-inset-top, 0px);
@@ -359,6 +364,7 @@ body {
    TYPOGRAPHY
    ============================================================ */
 h1, h2, h3 {
+    font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--text-primary);

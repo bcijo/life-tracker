@@ -565,7 +565,7 @@ const Todos = () => {
 
                     <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>TOTAL XP</div>
-                        <div style={{ fontSize: '14px', fontWeight: '900', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '900', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
                             {totalEarnedXp} XP
                         </div>
                     </div>
@@ -575,7 +575,7 @@ const Todos = () => {
                 <div style={{ marginTop: '2px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Progress to Level {userLevelObj.lvl + 1}</span>
-                        <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                        <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                             {userLevelObj.xpIntoLvl} / {userLevelObj.xpNeeded} XP
                         </span>
                     </div>
@@ -613,7 +613,7 @@ const Todos = () => {
                             <span style={{ fontSize: '11px', fontWeight: '800', color: '#10b981' }}>
                                 🟢 Easy (+10 XP)
                             </span>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                                 {difficultyBreakdown.easy.completed} / {difficultyBreakdown.easy.total} done
                             </span>
                         </div>
@@ -631,7 +631,7 @@ const Todos = () => {
                             <span style={{ fontSize: '11px', fontWeight: '800', color: '#f59e0b' }}>
                                 🟡 Medium (+25 XP)
                             </span>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                                 {difficultyBreakdown.medium.completed} / {difficultyBreakdown.medium.total} done
                             </span>
                         </div>
@@ -649,7 +649,7 @@ const Todos = () => {
                             <span style={{ fontSize: '11px', fontWeight: '800', color: '#ef4444' }}>
                                 🔴 Hard (+50 XP)
                             </span>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                                 {difficultyBreakdown.hard.completed} / {difficultyBreakdown.hard.total} done
                             </span>
                         </div>
@@ -676,7 +676,7 @@ const Todos = () => {
                         <Zap size={10} />
                         <span>FASTEST</span>
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                         {velocityMetrics.fastestStr || 'Calibrating'}
                     </div>
                     <div style={{ fontSize: '8.5px', color: 'var(--text-muted)' }}>Best turnaround</div>
@@ -687,7 +687,7 @@ const Todos = () => {
                         <Flame size={10} />
                         <span>STREAK</span>
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                         {velocityMetrics.streak}d
                     </div>
                     <div style={{ fontSize: '8.5px', color: 'var(--text-muted)' }}>Consecutive days</div>
@@ -726,7 +726,8 @@ const Todos = () => {
                             fontWeight: '800',
                             margin: 0,
                             letterSpacing: '-0.3px',
-                            color: 'var(--text-primary)'
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap'
                         }}>
                             Tasks
                         </h1>
@@ -736,7 +737,8 @@ const Todos = () => {
                             color: 'var(--accent-primary)', 
                             background: 'rgba(168,85,247,0.12)', 
                             padding: '2px 8px', 
-                            borderRadius: '12px' 
+                            borderRadius: '12px',
+                            whiteSpace: 'nowrap'
                         }}>
                             {activeTodos.length} active
                         </span>
@@ -752,7 +754,8 @@ const Todos = () => {
                                 borderRadius: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '3px'
+                                gap: '3px',
+                                whiteSpace: 'nowrap'
                             }}>
                                 <AlertCircle size={10} />
                                 {overdueCount} overdue
@@ -779,13 +782,15 @@ const Todos = () => {
                         fontWeight: '700',
                         color: 'var(--text-primary)',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
                     }}
                 >
                     <span>{userLevelObj.icon}</span>
-                    <span style={{ color: userLevelObj.color }}>Lvl {userLevelObj.lvl}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>•</span>
-                    <span style={{ color: '#a855f7', fontWeight: '800', fontFamily: 'monospace' }}>
+                    <span className="todos-xp-level" style={{ color: userLevelObj.color }}>Lvl {userLevelObj.lvl}</span>
+                    <span className="todos-xp-level" style={{ color: 'var(--text-muted)' }}>•</span>
+                    <span style={{ color: '#a855f7', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
                         {totalEarnedXp} XP
                     </span>
                     <span className="mobile-only-indicator" style={{ color: 'var(--text-muted)', marginLeft: '2px', display: 'flex', alignItems: 'center' }}>
@@ -828,6 +833,7 @@ const Todos = () => {
                                 placeholder="Add a new task..."
                                 style={{
                                     flex: 1,
+                                    minWidth: 0,
                                     background: 'transparent',
                                     border: 'none',
                                     outline: 'none',
@@ -1466,6 +1472,16 @@ const Todos = () => {
                         display: block;
                     }
                     .hide-on-compact {
+                        display: none;
+                    }
+                }
+
+                /* Phones: keep the header on one line and give tab labels room */
+                @media (max-width: 480px) {
+                    .todos-xp-level {
+                        display: none;
+                    }
+                    .todos-filter-bar .apple-liquid-seg-icon {
                         display: none;
                     }
                 }

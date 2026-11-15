@@ -299,7 +299,7 @@ const Habits = () => {
                             >
                                 <PauseCircle size={16} />
                                 {pausedCount > 0 && (
-                                    <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{pausedCount}</span>
+                                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{pausedCount}</span>
                                 )}
                             </motion.button>
                         );
@@ -841,7 +841,7 @@ const Habits = () => {
                     <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 9999,
                         background: 'rgba(168,85,247,0.15)', color: '#a855f7',
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                     }}>
                         {habits.length} habits
                     </span>

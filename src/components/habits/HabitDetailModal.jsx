@@ -230,7 +230,7 @@ export function HabitDetailModal({
       border: '1px solid var(--border-subtle, rgba(255,255,255,0.05))',
     }}>
       <div style={{ color }}>{icon}</div>
-      <span style={{ fontSize: isMobile ? 17 : 20, fontWeight: 800, color: 'var(--text-primary, #fff)', fontFamily: 'monospace', lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: isMobile ? 17 : 20, fontWeight: 800, color: 'var(--text-primary, #fff)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{value}</span>
       <span style={{ fontSize: 9, color: 'var(--text-muted, rgba(255,255,255,0.4))', textAlign: 'center', letterSpacing: '0.04em', fontWeight: 600 }}>{label}</span>
     </div>
   );

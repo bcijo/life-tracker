@@ -1,0 +1,297 @@
+/* ============================================================
+   🎋  ANCIENT ZEN THEME
+   A light theme modelled on ink painting on washi paper:
+   warm paper, sumi-ink text, mineral-pigment accents, serif
+   display type, flat paper cards with hairline ink borders.
+
+   Everything here is scoped to html.theme-zen, so the other
+   themes are unaffected. Hard-coded component colours are
+   retoned in theme-zen-remap.css (generated).
+   ============================================================ */
+html.theme-zen {
+    color-scheme: light;
+
+    /* Pigments */
+    --zen-paper: #f2ebdc;
+    --zen-paper-light: #fbf7ee;
+    --zen-ink: #2a2622;
+    --zen-ink-soft: #5d554b;
+    --zen-ink-rgb: 58, 46, 34;
+    --zen-indigo: #3b566f;      /* aizome indigo */
+    --zen-celadon: #4c8782;     /* celadon glaze */
+    --zen-sky: #4b7394;         /* faded asagi blue */
+    --zen-moss: #5d7a4a;        /* moss / matcha */
+    --zen-vermilion: #b4412c;   /* seal red */
+    --zen-ochre: #a8741f;       /* yellow ochre */
+    --zen-persimmon: #bd5f2b;   /* dried persimmon */
+    --zen-plum: #96536c;        /* ume plum */
+    --zen-shadow-soft: 0 10px 24px -16px rgba(var(--zen-ink-rgb), 0.45);
+
+    /* Typography */
+    --font-family: 'Zen Maru Gothic', 'Outfit', system-ui, sans-serif;
+    --font-display: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', Georgia, serif;
+    --font-mono: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', Georgia, serif;
+
+    /* Softer, squarer corners, like cut paper */
+    --radius-lg: 14px;
+    --radius-md: 10px;
+    --radius-sm: 6px;
+
+    /* Calmer motion */
+    --transition-fast: 0.28s ease;
+    --transition-medium: 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Backgrounds */
+    --bg-gradient: linear-gradient(180deg, #f6f0e3 0%, #efe7d5 100%);
+    --bg-solid: var(--zen-paper);
+
+    /* Glass Panel -> sheet of paper */
+    --glass-bg: rgba(251, 247, 238, 0.90);
+    --glass-border: rgba(var(--zen-ink-rgb), 0.16);
+    --glass-shadow: 0 14px 30px -20px rgba(var(--zen-ink-rgb), 0.40);
+
+    /* Glass Card -> rice-paper card */
+    --glass-card-bg: rgba(252, 249, 241, 0.82);
+    --glass-card-border: rgba(var(--zen-ink-rgb), 0.14);
+    --glass-card-hover-shadow: 0 12px 22px -16px rgba(var(--zen-ink-rgb), 0.45);
+
+    /* Text */
+    --text-primary: var(--zen-ink);
+    --text-secondary: var(--zen-ink-soft);
+    --text-muted: rgba(42, 38, 34, 0.52);
+
+    /* Accent */
+    --accent-primary: var(--zen-indigo);
+    --accent-secondary: var(--zen-vermilion);
+    --accent-gradient: linear-gradient(135deg, #42607b 0%, #2f4559 100%);
+
+    /* Surfaces */
+    --surface-elevated: #fbf7ee;
+    --surface-elevated-translucent: rgba(251, 247, 238, 0.92);
+    --surface-input: rgba(255, 253, 247, 0.85);
+    --surface-input-border: rgba(var(--zen-ink-rgb), 0.22);
+
+    /* Semantic */
+    --danger: var(--zen-vermilion);
+    --danger-bg: rgba(180, 65, 44, 0.10);
+    --success: var(--zen-moss);
+    --success-bg: rgba(93, 122, 74, 0.12);
+    --warning: var(--zen-ochre);
+    --warning-bg: rgba(168, 116, 31, 0.12);
+
+    /* Borders & Overlays */
+    --border-subtle: rgba(var(--zen-ink-rgb), 0.12);
+    --overlay-bg: rgba(42, 38, 34, 0.46);
+    --header-bg: rgba(244, 238, 225, 0.94);
+    --scrollbar-thumb: rgba(var(--zen-ink-rgb), 0.22);
+
+    /* Login page */
+    --login-gradient: linear-gradient(160deg, #f6f0e3 0%, #e9dfc9 100%);
+    --login-card-bg: rgba(251, 247, 238, 0.92);
+
+    /* Bottom navigation dock (tokens consumed in Layout.jsx) */
+    --apple-dock-bg: #f8f3e8;
+    --apple-dock-rim: linear-gradient(135deg, rgba(var(--zen-ink-rgb), 0.28), rgba(var(--zen-ink-rgb), 0.10) 50%, rgba(var(--zen-ink-rgb), 0.22));
+    --apple-dock-shadow: 0 14px 28px -14px rgba(var(--zen-ink-rgb), 0.45);
+    --apple-lens-bg: rgba(var(--zen-ink-rgb), 0.07);
+    --apple-lens-rim: linear-gradient(135deg, rgba(var(--zen-ink-rgb), 0.22), rgba(var(--zen-ink-rgb), 0.06) 50%, rgba(var(--zen-ink-rgb), 0.16));
+    --apple-lens-shadow: none;
+    --apple-tab-inactive: rgba(42, 38, 34, 0.55);
+    --apple-tab-active: var(--zen-ink);
+    --apple-tab-icon-active: var(--zen-vermilion);
+    --apple-tab-glow: transparent;
+}
+
+/* ------------------------------------------------------------
+   Paper: grain, a faint ink wash, and an ensō in the corner
+   ------------------------------------------------------------ */
+html.theme-zen body {
+    background-color: var(--zen-paper);
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .23 0 0 0 0 .18 0 0 0 0 .13 .34 0 0 0 -.11'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cfilter id='b' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='2' seed='7'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='9'/%3E%3C/filter%3E%3Cg fill='none' stroke='%232a2622' stroke-linecap='round' filter='url(%23b)'%3E%3Ccircle cx='200' cy='200' r='140' stroke-width='20' stroke-dasharray='775 200' transform='rotate(-62 200 200)' opacity='.05'/%3E%3Ccircle cx='200' cy='200' r='128' stroke-width='4' stroke-dasharray='520 400' transform='rotate(-30 200 200)' opacity='.035'/%3E%3C/g%3E%3C/svg%3E"),
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(var(--zen-ink-rgb), 0.07), transparent 70%),
+        linear-gradient(180deg, #f6f0e3 0%, #efe7d5 100%);
+    background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+    background-position: 0 0, right -120px bottom 60px, 0 0, 0 0;
+    background-size: 240px 240px, 380px 380px, 100% 100%, 100% 100%;
+    background-attachment: scroll, fixed, fixed, fixed;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+html.theme-zen ::selection {
+    background: rgba(180, 65, 44, 0.18);
+}
+
+/* ------------------------------------------------------------
+   Typography: brush-serif headings, generous tracking
+   ------------------------------------------------------------ */
+html.theme-zen h1,
+html.theme-zen h2,
+html.theme-zen h3,
+html.theme-zen h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+/* Wordmark */
+html.theme-zen .accent-gradient-text {
+    font-family: var(--font-display);
+}
+
+/* Numbers set in the display serif instead of a code font */
+html.theme-zen [style*="font-family: var(--font-mono)"] {
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+/* ------------------------------------------------------------
+   Surfaces: no frosted glass, just paper and a hairline of ink
+   ------------------------------------------------------------ */
+html.theme-zen .glass-panel,
+html.theme-zen .glass-card,
+html.theme-zen .surface-elevated,
+html.theme-zen .habit-glass-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html.theme-zen .glass-card,
+html.theme-zen .habit-glass-card {
+    background: var(--glass-card-bg);
+    border: 1px solid var(--glass-card-border);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 18px -16px rgba(var(--zen-ink-rgb), 0.5);
+}
+
+html.theme-zen .glass-card:hover {
+    transform: none;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, var(--glass-card-hover-shadow);
+}
+
+/* Inline white veils and white hairlines were tuned for dark glass.
+   On paper they need ink instead. */
+html.theme-zen [style*="solid rgba(255, 255, 255, 0."] {
+    border-color: rgba(var(--zen-ink-rgb), 0.13) !important;
+}
+
+html.theme-zen [style*="background: rgba(255, 255, 255, 0.0"],
+html.theme-zen [style*="background-color: rgba(255, 255, 255, 0.0"] {
+    background-color: rgba(var(--zen-ink-rgb), 0.045) !important;
+}
+
+/* Dim white text (placeholders, captions) becomes dim ink */
+html.theme-zen [style^="color: rgba(255, 255, 255,"],
+html.theme-zen [style*="; color: rgba(255, 255, 255,"],
+html.theme-zen [style*="color: rgb(255, 255, 255)"][style*="background: rgba(255, 255, 255, 0.0"] {
+    color: rgba(42, 38, 34, 0.5) !important;
+}
+
+html.theme-zen input::placeholder,
+html.theme-zen textarea::placeholder {
+    color: rgba(42, 38, 34, 0.42) !important;
+}
+
+/* ------------------------------------------------------------
+   Controls
+   ------------------------------------------------------------ */
+html.theme-zen .btn-primary,
+html.theme-zen .primary-button {
+    color: var(--zen-paper-light);
+    letter-spacing: 0.06em;
+    box-shadow: 0 8px 16px -12px rgba(var(--zen-ink-rgb), 0.7);
+}
+
+html.theme-zen .btn-ghost {
+    background: transparent;
+    border-color: rgba(var(--zen-ink-rgb), 0.24);
+}
+
+html.theme-zen input::placeholder,
+html.theme-zen textarea::placeholder {
+    font-weight: 400;
+    opacity: 0.55;
+}
+
+/* ------------------------------------------------------------
+   Retire the neon: gradient text, gradient borders and glows
+   ------------------------------------------------------------ */
+html.theme-zen .gradient-text-purple,
+html.theme-zen .accent-gradient-text {
+    background: linear-gradient(135deg, var(--zen-ink) 0%, var(--zen-indigo) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+html.theme-zen .gradient-text-cyan {
+    background: linear-gradient(135deg, var(--zen-celadon) 0%, var(--zen-indigo) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+html.theme-zen .gradient-border::before {
+    background: linear-gradient(135deg, rgba(var(--zen-ink-rgb), 0.30), rgba(var(--zen-ink-rgb), 0.10), rgba(var(--zen-ink-rgb), 0.22));
+}
+
+html.theme-zen .glow-purple,
+html.theme-zen .glow-cyan,
+html.theme-zen .glow-green,
+html.theme-zen .glow-pink,
+html.theme-zen .glow-amber {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 10px 20px -16px rgba(var(--zen-ink-rgb), 0.5);
+}
+
+/* Floating add buttons: ink shadow instead of a coloured glow */
+html.theme-zen .fab-add-expense,
+html.theme-zen .fab-add-calorie {
+    box-shadow: 0 10px 22px -10px rgba(var(--zen-ink-rgb), 0.75);
+}
+
+/* Ambient colour orbs behind the habits page */
+html.theme-zen .habit-orbs-container {
+    display: none;
+}
+
+/* ------------------------------------------------------------
+   Segmented controls (LiquidGlassSegmented and page variants)
+   ------------------------------------------------------------ */
+html.theme-zen .apple-liquid-seg-dock {
+    background: rgba(var(--zen-ink-rgb), 0.06);
+    box-shadow: inset 0 0 0 1px rgba(var(--zen-ink-rgb), 0.10);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html.theme-zen .apple-liquid-seg-bubble-glass,
+html.theme-zen .apple-liquid-seg-bubble.dragging .apple-liquid-seg-bubble-glass,
+html.theme-zen .liquid-bubble.dragging .liquid-bubble-glass,
+html.theme-zen .habits-day-liquid-bubble.dragging .habits-day-liquid-bubble-glass,
+html.theme-zen .finances-liquid-bubble.dragging .finances-liquid-bubble-glass,
+html.theme-zen .friends-liquid-bubble.dragging .friends-liquid-bubble-glass {
+    background: var(--zen-paper-light);
+    box-shadow: 0 0 0 1px rgba(var(--zen-ink-rgb), 0.16), 0 4px 10px -6px rgba(var(--zen-ink-rgb), 0.5);
+}
+
+html.theme-zen .apple-liquid-seg-tab.active {
+    text-shadow: none;
+}
+
+/* Bottom dock: paper strip rather than glass */
+html.theme-zen .bottom-nav.liquid-glass-dock {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* ------------------------------------------------------------
+   Markdown (assistant answers, journal)
+   ------------------------------------------------------------ */
+html.theme-zen .markdown-body h1,
+html.theme-zen .markdown-body h2,
+html.theme-zen .markdown-body h3 {
+    font-family: var(--font-display);
+}
+
+html.theme-zen .markdown-body blockquote {
+    border-left-color: var(--zen-vermilion);
+}

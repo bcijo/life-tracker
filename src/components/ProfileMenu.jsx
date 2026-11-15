@@ -194,7 +194,7 @@ const ProfileMenu = ({ variant = 'default' }) => {
                             <div style={{
                                 fontSize: '11px',
                                 color: 'var(--text-muted)',
-                                fontFamily: 'monospace',
+                                fontFamily: 'var(--font-mono)',
                                 fontWeight: '500',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -297,7 +297,7 @@ const ProfileMenu = ({ variant = 'default' }) => {
                                                 fontSize: '11px',
                                                 color: 'var(--accent-primary)',
                                                 fontWeight: '600',
-                                                fontFamily: 'monospace',
+                                                fontFamily: 'var(--font-mono)',
                                                 marginTop: '1px'
                                             }}>
                                                 <span>@{profile.username}</span>
@@ -746,7 +746,7 @@ const ProfileMenu = ({ variant = 'default' }) => {
                                                 <Lock size={10} /> Permanent
                                             </span>
                                         </div>
-                                        <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-primary)', fontFamily: 'monospace', marginTop: '2px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
                                             {profile?.username ? `@${profile.username}` : 'Not set'}
                                         </div>
                                     </div>
@@ -802,7 +802,7 @@ const ProfileMenu = ({ variant = 'default' }) => {
                                                 <span>{copiedId ? 'Copied' : 'Copy'}</span>
                                             </button>
                                         </div>
-                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {user.id}
                                         </div>
                                     </div>

@@ -40,7 +40,7 @@ import Modal from '../components/Modal';
 import SavedFoodsTab from '../components/calories/SavedFoodsTab';
 import FoodDetailCard from '../components/calories/FoodDetailCard';
 
-const MONO = "'JetBrains Mono', monospace";
+const MONO = "var(--font-mono)";
 const ACCENT = '#a855f7';
 const AMBER = '#f59e0b';
 const GREEN = '#22c55e';
@@ -52,10 +52,10 @@ const ML_PRESETS = [100, 150, 200, 250, 500];
 const COUNT_PRESETS = [1, 2, 3, 4];
 
 const MEALS = [
-    { id: 'breakfast', label: 'Breakfast', emoji: 'Ã°Å¸Å’â€¦' },
-    { id: 'lunch', label: 'Lunch', emoji: 'Ã¢Ëœâ‚¬Ã¯Â¸Â' },
-    { id: 'snack', label: 'Snack', emoji: 'Ã¢Ëœâ€¢' },
-    { id: 'dinner', label: 'Dinner', emoji: 'Ã°Å¸Å’â„¢' },
+    { id: 'breakfast', label: 'Breakfast', emoji: '🌅' },
+    { id: 'lunch', label: 'Lunch', emoji: '☀️' },
+    { id: 'snack', label: 'Snack', emoji: '☕' },
+    { id: 'dinner', label: 'Dinner', emoji: '🌙' },
 ];
 
 const renderVesselSvg = (vessel) => {
@@ -201,7 +201,7 @@ const Calories = () => {
         saveWaterGoal,
     } = useCalories(selectedDate);
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Food logger state Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Food logger state ── */
     const [mealType, setMealType] = useState(() => {
         const hr = new Date().getHours();
         if (hr < 11) return 'breakfast';
@@ -219,17 +219,17 @@ const Calories = () => {
     const [feedback, setFeedback] = useState('');
     const [lookupError, setLookupError] = useState('');
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Exercise logger state Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Exercise logger state ── */
     const [exerciseType, setExerciseType] = useState(COMMON_EXERCISES[0].name);
     const [exerciseDuration, setExerciseDuration] = useState('30');
     const [manualCalories, setManualCalories] = useState(null);
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Weight logger state Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Weight logger state ── */
     const [weightInput, setWeightInput] = useState(() => String(todayWeightLog?.weight_kg || currentWeight || '70'));
     const [weightSaving, setWeightSaving] = useState(false);
     const [weightFeedback, setWeightFeedback] = useState('');
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Add Entry Modal state (Food / Exercise / Weight) Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Add Entry Modal state (Food / Exercise / Weight) ── */
     const [showAddModal, setShowAddModal] = useState(false);
     const closeAddModal = () => {
         setShowAddModal(false);
@@ -248,7 +248,7 @@ const Calories = () => {
         setWeightFeedback('');
     }, [selectedDate, todayWeightLog, currentWeight]);
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Weekly analytics modal & averages Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Weekly analytics modal & averages ── */
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [foodNutrientTab, setFoodNutrientTab] = useState('protein'); // 'protein' | 'sugar' | 'carbs' | 'fat' | 'fiber'
     const avgWeekIntake = useMemo(
@@ -288,11 +288,11 @@ const Calories = () => {
         [weeklyTrend]
     );
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ BMR modal Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── BMR modal ── */
     const [showBmr, setShowBmr] = useState(false);
     const [bmrForm, setBmrForm] = useState(bmrSettings);
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Water tracker state Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Water tracker state ── */
     const [customWaterInput, setCustomWaterInput] = useState('');
     const [showCustomWater, setShowCustomWater] = useState(false);
     const [waterFeedback, setWaterFeedback] = useState('');
@@ -331,7 +331,7 @@ const Calories = () => {
         }
     };
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Manual Food modal state Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Manual Food modal state ── */
     const [showManualFoodModal, setShowManualFoodModal] = useState(false);
     const [manualFoodForm, setManualFoodForm] = useState({
         name: '',
@@ -354,10 +354,10 @@ const Calories = () => {
     const labelCameraInputRef = useRef(null);
     const labelFileInputRef = useRef(null);
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Clicked food log detail card modal Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Clicked food log detail card modal ── */
     const [selectedFoodLog, setSelectedFoodLog] = useState(null);
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Full-screen scan overlay: { src, source, phase: 'scanning' | 'done' | 'error', result, error } Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Full-screen scan overlay: { src, source, phase: 'scanning' | 'done' | 'error', result, error } ── */
     const [scanOverlay, setScanOverlay] = useState(null);
     const closeScanOverlay = () => {
         setScanOverlay((prev) => {
@@ -544,7 +544,7 @@ const Calories = () => {
     const autoCalories = Math.round(activeExercise.met * weight * ((parseFloat(exerciseDuration) || 0) / 60));
     const caloriesValue = manualCalories !== null ? manualCalories : String(autoCalories || '');
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Date strip: last 7 days as a glass segmented control Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Date strip: last 7 days as a glass segmented control ── */
     const dateOptions = useMemo(() => {
         const days = [];
         const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -570,7 +570,7 @@ const Calories = () => {
         []
     );
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Derived numbers Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Derived numbers ── */
     const { totalIntake, totalBurn, netBalance, isDeficit, exerciseBurn } = dailySummary;
     const ringPct = totalBurn > 0 ? totalIntake / totalBurn : 0;
     const ringColor = isDeficit ? ACCENT : AMBER;
@@ -606,7 +606,7 @@ const Calories = () => {
         { id: 'water', label: 'Water', count: (dailySummary.waterLogs || []).length },
     ];
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Handlers Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Handlers ── */
     const selectFoodItem = (food, queryOverride = null) => {
         if (!food) return;
         const info = resolveFoodUnit(food);
@@ -776,7 +776,7 @@ const Calories = () => {
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* Ã¢â€â‚¬Ã¢â€â‚¬ Key Focus Highlight Header: Net Calories, Protein & Sugar Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                {/* ── Key Focus Highlight Header: Net Calories, Protein & Sugar ── */}
                 <div style={{
                     display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
                     padding: '12px 14px', borderRadius: 14,
@@ -801,7 +801,7 @@ const Calories = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 6px #818cf8' }} />
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ã¢Ëœâ€¦ Protein</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>★ Protein</span>
                         </div>
                         <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
                             {avgWeekProtein}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
@@ -815,7 +815,7 @@ const Calories = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUGAR_COLOR, boxShadow: `0 0 6px ${SUGAR_COLOR}` }} />
-                            <span style={{ fontSize: 10, fontWeight: 700, color: SUGAR_COLOR, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ã¢Ëœâ€¦ Sugar</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: SUGAR_COLOR, textTransform: 'uppercase', letterSpacing: '0.04em' }}>★ Sugar</span>
                         </div>
                         <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
                             {avgWeekSugar}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>g</span>
@@ -826,12 +826,12 @@ const Calories = () => {
                     </div>
                 </div>
 
-                {/* Ã¢â€â‚¬Ã¢â€â‚¬ Main Category Selector Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                {/* ── Main Category Selector ── */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                     <div>
                         {chartTab === 'calories' && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                7d Avg: {fmt(avgWeekIntake)} in Ã‚Â· {fmt(avgWeekBurn)} out
+                                7d Avg: {fmt(avgWeekIntake)} in · {fmt(avgWeekBurn)} out
                             </span>
                         )}
                         {chartTab === 'food' && (
@@ -851,7 +851,7 @@ const Calories = () => {
                         )}
                         {chartTab === 'weight' && weekWeightStats.count > 0 && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                {weekWeightStats.latestWeight} kg Ã‚Â· {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
+                                {weekWeightStats.latestWeight} kg · {weekWeightStats.change > 0 ? `+${weekWeightStats.change}` : weekWeightStats.change} kg this week
                             </span>
                         )}
                     </div>
@@ -873,7 +873,7 @@ const Calories = () => {
                     </div>
                 </div>
 
-                {/* Ã¢â€â‚¬Ã¢â€â‚¬ Food / Nutrient Secondary Tab Bar Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                {/* ── Food / Nutrient Secondary Tab Bar ── */}
                 {chartTab === 'food' && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', paddingBottom: 2,
@@ -906,7 +906,7 @@ const Calories = () => {
                                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: tab.color }} />
                                     <span>{tab.label}</span>
                                     {tab.isPrimary && (
-                                        <span style={{ fontSize: 9, opacity: 0.85 }}>Ã¢Ëœâ€¦</span>
+                                        <span style={{ fontSize: 9, opacity: 0.85 }}>★</span>
                                     )}
                                     <span style={{ fontFamily: MONO, fontSize: 10, opacity: 0.8, marginLeft: 2 }}>{tab.val}g</span>
                                 </button>
@@ -1001,7 +1001,7 @@ const Calories = () => {
 
                                                 {/* Carbs, Fat, Fiber */}
                                                 <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 4, textAlign: 'center' }}>
-                                                    C {Math.round(dayData.carbs || 0)}g Ã‚Â· F {Math.round(dayData.fat || 0)}g Ã‚Â· Fib {Math.round(dayData.fiber || 0)}g
+                                                    C {Math.round(dayData.carbs || 0)}g · F {Math.round(dayData.fat || 0)}g · Fib {Math.round(dayData.fiber || 0)}g
                                                 </div>
                                             </div>
                                         );
@@ -1133,7 +1133,7 @@ const Calories = () => {
                                                     fontSize: 11,
                                                     color: waterVal >= waterGoalL ? GREEN : 'var(--text-muted)',
                                                 }}>
-                                                    {pct}% of {waterGoalL}L goal {waterVal >= waterGoalL ? 'Ã¢Å“â€œ' : ''}
+                                                    {pct}% of {waterGoalL}L goal {waterVal >= waterGoalL ? '✓' : ''}
                                                 </div>
                                             </div>
                                         );
@@ -1229,7 +1229,7 @@ const Calories = () => {
     );
 };
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Add Entry Logger (Rendered inside Add Modal) Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ── Add Entry Logger (Rendered inside Add Modal) ── */
     const renderLogger = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <LiquidGlassSegmented
@@ -1355,8 +1355,8 @@ const Calories = () => {
                                                             </span>
                                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
                                                                 {itemUnit.isCountable
-                                                                    ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) Ã‚Â· ${Math.round(item.calories_per_100g)}/100g`
-                                                                    : `P ${item.protein_per_100g} Ã‚Â· C ${item.carbs_per_100g} Ã‚Â· F ${item.fat_per_100g}`}
+                                                                    ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
+                                                                    : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
                                                             </span>
                                                         </span>
                                                         <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
@@ -1398,7 +1398,7 @@ const Calories = () => {
                                                         }}
                                                     >
                                                         {searchingWeb ? <Loader2 size={12} className="spin" /> : <Globe size={12} />}
-                                                        {searchingWeb ? 'SearchingÃ¢â‚¬Â¦' : 'Web lookup'}
+                                                        {searchingWeb ? 'Searching…' : 'Web lookup'}
                                                     </button>
                                                     <button
                                                         type="button"
@@ -1446,7 +1446,7 @@ const Calories = () => {
                                                     }}
                                                 >
                                                     {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
-                                                    {searchingWeb ? 'SearchingÃ¢â‚¬Â¦' : 'Search web & save'}
+                                                    {searchingWeb ? 'Searching…' : 'Search web & save'}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -1486,10 +1486,10 @@ const Calories = () => {
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
                                             {unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood)
                                                 ? (portionMode === 'unit'
-                                                    ? `1 ${unitInfo.unitName} Ã¢â€°Ë† ${unitInfo.gramsPerUnit}ml Ã‚Â· ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
+                                                    ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}ml · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100ml)`
                                                     : `${Math.round(selectedFood.calories_per_100g)} kcal / 100ml`)
                                                 : (portionMode === 'unit'
-                                                    ? `1 ${unitInfo.unitName} Ã¢â€°Ë† ${unitInfo.gramsPerUnit}g Ã‚Â· ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
+                                                    ? `1 ${unitInfo.unitName} ≈ ${unitInfo.gramsPerUnit}g · ${Math.round((selectedFood.calories_per_100g * unitInfo.gramsPerUnit) / 100)} kcal (${Math.round(selectedFood.calories_per_100g)}/100g)`
                                                     : `${Math.round(selectedFood.calories_per_100g)} kcal / 100g`)}
                                         </div>
                                     </div>
@@ -1602,7 +1602,7 @@ const Calories = () => {
                                                             style={{ ...inputStyle, padding: '9px 32px 9px 12px', fontFamily: MONO, fontWeight: 700 }}
                                                         />
                                                         <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
-                                                            Ãƒâ€”
+                                                            ×
                                                         </span>
                                                     </div>
                                                     {COUNT_PRESETS.map((c) => {
@@ -1679,7 +1679,7 @@ const Calories = () => {
                                         </span>
                                         <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>kcal</span>
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, marginTop: 2 }}>
-                                            P {livePreview?.protein_g || 0} Ã‚Â· C {livePreview?.carbs_g || 0} Ã‚Â· F {livePreview?.fat_g || 0}
+                                            P {livePreview?.protein_g || 0} · C {livePreview?.carbs_g || 0} · F {livePreview?.fat_g || 0}
                                         </div>
                                     </div>
                                     <button
@@ -1865,7 +1865,7 @@ const Calories = () => {
                         {enteredBmi && (
                             <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                                 <span>BMI: <strong style={{ color: 'var(--text-primary)', fontFamily: MONO }}>{enteredBmi}</strong></span>
-                                <span>Ã‚Â·</span>
+                                <span>·</span>
                                 <span>Auto-syncs to BMR & calorie burn</span>
                             </div>
                         )}
@@ -1892,7 +1892,7 @@ const Calories = () => {
                             }}
                         >
                             <Scale size={16} />
-                            {weightSaving ? 'SavingÃ¢â‚¬Â¦' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
+                            {weightSaving ? 'Saving…' : todayWeightLog ? 'Update Weight' : 'Log Weight'}
                         </button>
                     </div>
                 </form>
@@ -1900,7 +1900,7 @@ const Calories = () => {
         </div>
     );
 
-    /* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â RENDER Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+    /* ═══════════════ RENDER ═══════════════ */
     return (
         <div className="page-container cal-page" style={{ maxWidth: 1080, margin: '0 auto', width: '100%' }}>
             {/* Header */}
@@ -2012,7 +2012,7 @@ const Calories = () => {
             </div>
 
             <div className="cal-layout" style={{ display: view === 'saved' ? 'none' : undefined }}>
-                {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ LEFT COLUMN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                {/* ───────── LEFT COLUMN ───────── */}
                 <div className="cal-col cal-col-left">
                     {/* Unified Daily Nutrition: Hero & Macros */}
                     <motion.section
@@ -2150,7 +2150,7 @@ const Calories = () => {
                                             <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
                                                 {isGoalMet
                                                     ? 'Target achieved! Keep staying hydrated.'
-                                                    : `${dailySummary.waterLogs?.length || 0} drink${dailySummary.waterLogs?.length === 1 ? '' : 's'} logged Ã‚Â· ${waterRemainingMl.toLocaleString()} ml remaining`}
+                                                    : `${dailySummary.waterLogs?.length || 0} drink${dailySummary.waterLogs?.length === 1 ? '' : 's'} logged · ${waterRemainingMl.toLocaleString()} ml remaining`}
                                             </span>
                                         </div>
                                     </div>
@@ -2392,7 +2392,7 @@ const Calories = () => {
                     })()}
                 </div>
 
-                {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ RIGHT COLUMN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                {/* ───────── RIGHT COLUMN ───────── */}
                 <div className="cal-col cal-col-right">
                     {/* Log */}
                     <motion.section
@@ -2405,7 +2405,7 @@ const Calories = () => {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Today's Log</h2>
                             <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)' }}>
-                                {fmt(totalIntake)} in Ã‚Â· {fmt(exerciseBurn)} out
+                                {fmt(totalIntake)} in · {fmt(exerciseBurn)} out
                             </span>
                         </div>
 
@@ -2480,8 +2480,8 @@ const Calories = () => {
                                                         {isWater
                                                             ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
                                                             : isBurn
-                                                            ? `${item.duration_mins || 'Ã¢â‚¬â€'} min`
-                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} Ã‚Â· ${item.meal_type} Ã‚Â· P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
+                                                            ? `${item.duration_mins || '—'} min`
+                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
                                                     </div>
                                                 </div>
                                                 <span style={{
@@ -2803,7 +2803,7 @@ const Calories = () => {
                             className="btn-primary"
                             style={{ padding: '10px 20px', fontSize: 13 }}
                         >
-                            {manualFoodSaving ? 'Saving to DatabaseÃ¢â‚¬Â¦' : 'Save to Database'}
+                            {manualFoodSaving ? 'Saving to Database…' : 'Save to Database'}
                         </button>
                     </div>
                 </form>
@@ -3078,7 +3078,7 @@ const Calories = () => {
                                 </button>
                             )}
 
-                            {/* Image frame Ã¢â‚¬â€ uncropped while scanning, blurred backdrop with values overlaid directly on top when done */}
+                            {/* Image frame — uncropped while scanning, blurred backdrop with values overlaid directly on top when done */}
                             <motion.div
                                 className={`cal-scan-frame ${scanOverlay.phase !== 'scanning' ? 'is-done' : ''}`}
                                 initial={{ scale: 0.96, opacity: 0 }}
@@ -3131,7 +3131,7 @@ const Calories = () => {
                                             <div className="cal-scan-top-row">
                                                 <div className="cal-scan-badge">
                                                     <Sparkles size={11} style={{ color: '#38bdf8' }} />
-                                                    <span>Scanned Ã‚Â· Per 100{unit}</span>
+                                                    <span>Scanned · Per 100{unit}</span>
                                                 </div>
                                                 <div className="cal-scan-type-toggle">
                                                     <button
@@ -3246,7 +3246,7 @@ const Calories = () => {
                                                     className="cal-scan-btn-primary"
                                                 >
                                                     <Check size={16} strokeWidth={2.5} />
-                                                    <span>{manualFoodSaving ? 'SavingÃ¢â‚¬Â¦' : 'Save to Database'}</span>
+                                                    <span>{manualFoodSaving ? 'Saving…' : 'Save to Database'}</span>
                                                 </button>
                                             </div>
                                         </motion.form>
@@ -3292,7 +3292,7 @@ const Calories = () => {
                                         animate={{ opacity: [0.35, 1, 0.35] }}
                                         transition={{ duration: 1.4, repeat: Infinity }}
                                     />
-                                    Reading labelÃ¢â‚¬Â¦
+                                    Reading label…
                                 </motion.div>
                             )}
                         </motion.div>
@@ -3339,7 +3339,7 @@ const Calories = () => {
                     box-shadow: 0 12px 30px rgba(124, 58, 237, 0.6);
                 }
 
-                /* Ã¢â€â‚¬Ã¢â€â‚¬ Full-screen label scan overlay Ã¢â€â‚¬Ã¢â€â‚¬ */
+                /* ── Full-screen label scan overlay ── */
                 .cal-scan-overlay {
                     position: fixed; inset: 0; z-index: 10050;
                     background: rgba(6, 7, 14, 0.94);
@@ -3534,7 +3534,7 @@ const Calories = () => {
                 .cal-scan-kcal-input {
                     width: 130px;
                     background: transparent; border: none; border-bottom: 1.5px dashed rgba(255, 255, 255, 0.22);
-                    font-family: 'JetBrains Mono', monospace;
+                    font-family: var(--font-mono);
                     font-size: 46px; font-weight: 800; color: #ffffff;
                     line-height: 1; letter-spacing: -0.03em;
                     text-align: right; outline: none; padding: 0 2px 2px;
@@ -3574,7 +3574,7 @@ const Calories = () => {
                 .cal-scan-macro-input {
                     width: 48px;
                     background: transparent; border: none;
-                    font-family: 'JetBrains Mono', monospace;
+                    font-family: var(--font-mono);
                     font-size: 15px; font-weight: 800; color: #ffffff; line-height: 1.1;
                     text-align: right; outline: none; padding: 0;
                     -moz-appearance: textfield;

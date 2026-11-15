@@ -410,7 +410,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                         fontSize: '12px',
                                         color: '#fff',
                                         outline: 'none',
-                                        fontFamily: 'monospace'
+                                        fontFamily: 'var(--font-mono)'
                                     }}
                                 />
                                 {importError && <div style={{ color: '#ef4444', fontSize: '12px' }}>{importError}</div>}

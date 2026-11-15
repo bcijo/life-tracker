@@ -92,7 +92,7 @@ const CategoriesView = () => {
                                 borderRadius: '9999px',
                                 background: 'rgba(168, 85, 247, 0.15)',
                                 color: '#a855f7',
-                                fontFamily: 'monospace',
+                                fontFamily: 'var(--font-mono)',
                             }}>
                                 {cards.length}
                             </span>

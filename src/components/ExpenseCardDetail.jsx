@@ -627,7 +627,7 @@ const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCa
                                             </div>
 
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                                                <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                                                     -₹{parseFloat(t.amount).toLocaleString('en-IN')}
                                                 </span>
                                                 <button

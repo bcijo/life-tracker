@@ -124,7 +124,7 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
       </span>
       <span style={{
         fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999,
-        background: `${color}18`, color, fontFamily: 'monospace',
+        background: `${color}18`, color, fontFamily: 'var(--font-mono)',
       }}>
         {count}
       </span>

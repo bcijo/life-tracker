@@ -196,7 +196,7 @@ const BudgetsView = () => {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
                                 <span>₹{Math.round(monthlyExpenses).toLocaleString('en-IN')} spent</span>
-                                <span>{isExceeded ? 'Over limit' : `₹{Math.round(Math.max(0, totalBudgetCap - monthlyExpenses)).toLocaleString('en-IN')} left`}</span>
+                                <span>{isExceeded ? 'Over limit' : `₹${Math.round(Math.max(0, totalBudgetCap - monthlyExpenses)).toLocaleString('en-IN')} left`}</span>
                             </div>
                         </div>
                     )}

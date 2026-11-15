@@ -188,7 +188,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
             <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {icon && <span style={{ color }}>{icon}</span>}
-                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary, #fff)', fontFamily: 'monospace' }}>{value}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary, #fff)', fontFamily: 'var(--font-mono)' }}>{value}</span>
             </div>
         </div>
     );
@@ -267,20 +267,21 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
             }}>
                 <div style={{
                     width: 54, height: 54, borderRadius: '50%',
-                    background: `conic-gradient(${progressColor} ${progressPercent * 3.6}deg, var(--border-subtle, rgba(255,255,255,0.06)) 0deg)`,
+                    '--ring-color': progressColor,
+                    background: `conic-gradient(var(--ring-color) ${progressPercent * 3.6}deg, var(--border-subtle, rgba(255,255,255,0.06)) 0deg)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
                     <div style={{
                         width: 42, height: 42, borderRadius: '50%', background: 'var(--bg-solid, #0b1120)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, fontWeight: 800, color: progressColor, fontFamily: 'monospace',
+                        fontSize: 13, fontWeight: 800, color: progressColor, fontFamily: 'var(--font-mono)',
                     }}>
                         {progressPercent}%
                     </div>
                 </div>
                 <div>
                     <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today's Progress</p>
-                    <p style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary, #fff)', margin: 0, fontFamily: 'monospace' }}>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary, #fff)', margin: 0, fontFamily: 'var(--font-mono)' }}>
                         {todayStats.completed}<span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/{todayStats.total}</span>
                     </p>
                 </div>
@@ -338,7 +339,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                                 flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             }}>{h.name} {h.isPaused && <span style={{ fontSize: 9, color: '#eab308' }}>(paused)</span>}</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                                 {h.completed}/{h.total}
                             </span>
                             <div style={{
@@ -352,7 +353,7 @@ const HabitAnalytics = ({ habits, getStatusForDate, onClose }) => {
                                     transition: 'width 0.3s ease',
                                 }} />
                             </div>
-                            <span style={{ fontSize: 11, fontWeight: 800, color: getBarColor(h.rate, false), fontFamily: 'monospace', minWidth: 28, textAlign: 'right' }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: getBarColor(h.rate, false), fontFamily: 'var(--font-mono)', minWidth: 28, textAlign: 'right' }}>
                                 {h.rate}%
                             </span>
                         </div>
