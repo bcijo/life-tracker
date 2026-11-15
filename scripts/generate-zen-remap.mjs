@@ -11,14 +11,14 @@
 import { writeFileSync } from 'node:fs';
 
 const groups = {
-    indigo: ['#a855f7', '#c084fc', '#8b5cf6', '#6366f1', '#818cf8', '#667eea', '#9f7aea', '#7c3aed', '#764ba2', '#5a67d8'],
+    indigo: ['#a855f7', '#c084fc', '#8b5cf6', '#6366f1', '#818cf8', '#667eea', '#9f7aea', '#7c3aed', '#764ba2', '#5a67d8', '#a78bfa', '#c4b5fd', '#e9d5ff', '#9b59b6', '#8338ec', '#7209b7', '#6b21a8', '#5f27cd', '#4361ee'],
     celadon: ['#06b6d4', '#4ecdc4', '#45b7d1', '#64ffda', '#00b4d8', '#14b8a6', '#22d3ee'],
-    sky: ['#38bdf8', '#3b82f6', '#60a5fa', '#0ea5e9'],
-    moss: ['#10b981', '#22c55e', '#16a34a', '#48bb78', '#4ade80', '#34d399', '#68d391', '#96ceb4'],
-    vermilion: ['#ef4444', '#f87171', '#ff6b6b', '#dc2626', '#f56565', '#f43f5e', '#fc8181'],
-    ochre: ['#f59e0b', '#eab308', '#fbbf24', '#ffd166', '#ecc94b', '#fbd38d', '#facc15'],
-    persimmon: ['#f97316', '#fb923c', '#ea580c'],
-    plum: ['#ec4899', '#f472b6', '#db2777', '#d946ef'],
+    sky: ['#38bdf8', '#3b82f6', '#60a5fa', '#0ea5e9', '#bae6fd', '#54a0ff', '#3a86ff', '#3498db', '#2563eb'],
+    moss: ['#10b981', '#22c55e', '#16a34a', '#48bb78', '#4ade80', '#34d399', '#68d391', '#96ceb4', '#2ecc71', '#27ae60'],
+    vermilion: ['#ef4444', '#f87171', '#ff6b6b', '#dc2626', '#f56565', '#f43f5e', '#fc8181', '#fecaca', '#fca5a5', '#e11d48', '#b91c1c'],
+    ochre: ['#f59e0b', '#eab308', '#fbbf24', '#ffd166', '#ecc94b', '#fbd38d', '#facc15', '#fde047', '#feca57', '#d97706'],
+    persimmon: ['#f97316', '#fb923c', '#ea580c', '#fdba74', '#e67e22'],
+    plum: ['#ec4899', '#f472b6', '#db2777', '#d946ef', '#f72585'],
 };
 
 const toRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ');
@@ -41,7 +41,8 @@ for (const [name, hexes] of Object.entries(groups)) {
         `[style^="color: rgba(${c},"]`, `[style*="; color: rgba(${c},"]`,
     ]), `color: ${v} !important;`);
     // Solid and tinted backgrounds
-    rule(each((c) => [`[style*="background: rgb(${c})"]`, `[style*="background-color: rgb(${c})"]`]),
+    // (empty buttons are colour-picker swatches, which must show the real colour)
+    rule(each((c) => [`[style*="background: rgb(${c})"]:not(button:empty)`, `[style*="background-color: rgb(${c})"]:not(button:empty)`]),
         `background-color: ${v} !important;`);
     rule(each((c) => [`[style*="background: rgba(${c},"]`, `[style*="background-color: rgba(${c},"]`]),
         `background-color: color-mix(in srgb, ${v} 11%, transparent) !important;`);

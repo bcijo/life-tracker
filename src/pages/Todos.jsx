@@ -726,7 +726,8 @@ const Todos = () => {
                             fontWeight: '800',
                             margin: 0,
                             letterSpacing: '-0.3px',
-                            color: 'var(--text-primary)'
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap'
                         }}>
                             Tasks
                         </h1>
@@ -736,7 +737,8 @@ const Todos = () => {
                             color: 'var(--accent-primary)', 
                             background: 'rgba(168,85,247,0.12)', 
                             padding: '2px 8px', 
-                            borderRadius: '12px' 
+                            borderRadius: '12px',
+                            whiteSpace: 'nowrap'
                         }}>
                             {activeTodos.length} active
                         </span>
@@ -752,7 +754,8 @@ const Todos = () => {
                                 borderRadius: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '3px'
+                                gap: '3px',
+                                whiteSpace: 'nowrap'
                             }}>
                                 <AlertCircle size={10} />
                                 {overdueCount} overdue
@@ -779,12 +782,14 @@ const Todos = () => {
                         fontWeight: '700',
                         color: 'var(--text-primary)',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
                     }}
                 >
                     <span>{userLevelObj.icon}</span>
-                    <span style={{ color: userLevelObj.color }}>Lvl {userLevelObj.lvl}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>•</span>
+                    <span className="todos-xp-level" style={{ color: userLevelObj.color }}>Lvl {userLevelObj.lvl}</span>
+                    <span className="todos-xp-level" style={{ color: 'var(--text-muted)' }}>•</span>
                     <span style={{ color: '#a855f7', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
                         {totalEarnedXp} XP
                     </span>
@@ -828,6 +833,7 @@ const Todos = () => {
                                 placeholder="Add a new task..."
                                 style={{
                                     flex: 1,
+                                    minWidth: 0,
                                     background: 'transparent',
                                     border: 'none',
                                     outline: 'none',
@@ -1466,6 +1472,16 @@ const Todos = () => {
                         display: block;
                     }
                     .hide-on-compact {
+                        display: none;
+                    }
+                }
+
+                /* Phones: keep the header on one line and give tab labels room */
+                @media (max-width: 480px) {
+                    .todos-xp-level {
+                        display: none;
+                    }
+                    .todos-filter-bar .apple-liquid-seg-icon {
                         display: none;
                     }
                 }

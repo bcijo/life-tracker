@@ -452,7 +452,7 @@ const Journal = () => {
                         }}
                     >
                         <ShieldCheck size={14} />
-                        <span>E2EE Active</span>
+                        <span className="journal-e2ee-label">E2EE Active</span>
                     </motion.button>
 
                     <motion.button
@@ -1155,6 +1155,16 @@ const Journal = () => {
                     .journal-title {
                         font-size: 18px !important;
                     }
+                }
+
+                /* Phones: icon-only encryption badge so the status label isn't covered */
+                @media (max-width: 480px) {
+                    .journal-e2ee-label {
+                        display: none;
+                    }
+                }
+
+                @media (max-width: 767px) {
                     .journal-prompt-card {
                         padding: 14px 14px !important;
                     }

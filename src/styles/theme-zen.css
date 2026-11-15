@@ -90,7 +90,7 @@ html.theme-zen {
     --login-card-bg: rgba(251, 247, 238, 0.92);
 
     /* Bottom navigation dock (tokens consumed in Layout.jsx) */
-    --apple-dock-bg: rgba(248, 243, 232, 0.94);
+    --apple-dock-bg: #f8f3e8;
     --apple-dock-rim: linear-gradient(135deg, rgba(var(--zen-ink-rgb), 0.28), rgba(var(--zen-ink-rgb), 0.10) 50%, rgba(var(--zen-ink-rgb), 0.22));
     --apple-dock-shadow: 0 14px 28px -14px rgba(var(--zen-ink-rgb), 0.45);
     --apple-lens-bg: rgba(var(--zen-ink-rgb), 0.07);
@@ -240,6 +240,12 @@ html.theme-zen .glow-green,
 html.theme-zen .glow-pink,
 html.theme-zen .glow-amber {
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 10px 20px -16px rgba(var(--zen-ink-rgb), 0.5);
+}
+
+/* Floating add buttons: ink shadow instead of a coloured glow */
+html.theme-zen .fab-add-expense,
+html.theme-zen .fab-add-calorie {
+    box-shadow: 0 10px 22px -10px rgba(var(--zen-ink-rgb), 0.75);
 }
 
 /* Ambient colour orbs behind the habits page */

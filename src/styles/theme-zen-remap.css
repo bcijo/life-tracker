@@ -41,30 +41,84 @@ html.theme-zen [style*="; color: rgba(118, 75, 162,"],
 html.theme-zen [style^="color: rgb(90, 103, 216)"],
 html.theme-zen [style*="; color: rgb(90, 103, 216)"],
 html.theme-zen [style^="color: rgba(90, 103, 216,"],
-html.theme-zen [style*="; color: rgba(90, 103, 216,"] {
+html.theme-zen [style*="; color: rgba(90, 103, 216,"],
+html.theme-zen [style^="color: rgb(167, 139, 250)"],
+html.theme-zen [style*="; color: rgb(167, 139, 250)"],
+html.theme-zen [style^="color: rgba(167, 139, 250,"],
+html.theme-zen [style*="; color: rgba(167, 139, 250,"],
+html.theme-zen [style^="color: rgb(196, 181, 253)"],
+html.theme-zen [style*="; color: rgb(196, 181, 253)"],
+html.theme-zen [style^="color: rgba(196, 181, 253,"],
+html.theme-zen [style*="; color: rgba(196, 181, 253,"],
+html.theme-zen [style^="color: rgb(233, 213, 255)"],
+html.theme-zen [style*="; color: rgb(233, 213, 255)"],
+html.theme-zen [style^="color: rgba(233, 213, 255,"],
+html.theme-zen [style*="; color: rgba(233, 213, 255,"],
+html.theme-zen [style^="color: rgb(155, 89, 182)"],
+html.theme-zen [style*="; color: rgb(155, 89, 182)"],
+html.theme-zen [style^="color: rgba(155, 89, 182,"],
+html.theme-zen [style*="; color: rgba(155, 89, 182,"],
+html.theme-zen [style^="color: rgb(131, 56, 236)"],
+html.theme-zen [style*="; color: rgb(131, 56, 236)"],
+html.theme-zen [style^="color: rgba(131, 56, 236,"],
+html.theme-zen [style*="; color: rgba(131, 56, 236,"],
+html.theme-zen [style^="color: rgb(114, 9, 183)"],
+html.theme-zen [style*="; color: rgb(114, 9, 183)"],
+html.theme-zen [style^="color: rgba(114, 9, 183,"],
+html.theme-zen [style*="; color: rgba(114, 9, 183,"],
+html.theme-zen [style^="color: rgb(107, 33, 168)"],
+html.theme-zen [style*="; color: rgb(107, 33, 168)"],
+html.theme-zen [style^="color: rgba(107, 33, 168,"],
+html.theme-zen [style*="; color: rgba(107, 33, 168,"],
+html.theme-zen [style^="color: rgb(95, 39, 205)"],
+html.theme-zen [style*="; color: rgb(95, 39, 205)"],
+html.theme-zen [style^="color: rgba(95, 39, 205,"],
+html.theme-zen [style*="; color: rgba(95, 39, 205,"],
+html.theme-zen [style^="color: rgb(67, 97, 238)"],
+html.theme-zen [style*="; color: rgb(67, 97, 238)"],
+html.theme-zen [style^="color: rgba(67, 97, 238,"],
+html.theme-zen [style*="; color: rgba(67, 97, 238,"] {
     color: var(--zen-indigo) !important;
 }
 
-html.theme-zen [style*="background: rgb(168, 85, 247)"],
-html.theme-zen [style*="background-color: rgb(168, 85, 247)"],
-html.theme-zen [style*="background: rgb(192, 132, 252)"],
-html.theme-zen [style*="background-color: rgb(192, 132, 252)"],
-html.theme-zen [style*="background: rgb(139, 92, 246)"],
-html.theme-zen [style*="background-color: rgb(139, 92, 246)"],
-html.theme-zen [style*="background: rgb(99, 102, 241)"],
-html.theme-zen [style*="background-color: rgb(99, 102, 241)"],
-html.theme-zen [style*="background: rgb(129, 140, 248)"],
-html.theme-zen [style*="background-color: rgb(129, 140, 248)"],
-html.theme-zen [style*="background: rgb(102, 126, 234)"],
-html.theme-zen [style*="background-color: rgb(102, 126, 234)"],
-html.theme-zen [style*="background: rgb(159, 122, 234)"],
-html.theme-zen [style*="background-color: rgb(159, 122, 234)"],
-html.theme-zen [style*="background: rgb(124, 58, 237)"],
-html.theme-zen [style*="background-color: rgb(124, 58, 237)"],
-html.theme-zen [style*="background: rgb(118, 75, 162)"],
-html.theme-zen [style*="background-color: rgb(118, 75, 162)"],
-html.theme-zen [style*="background: rgb(90, 103, 216)"],
-html.theme-zen [style*="background-color: rgb(90, 103, 216)"] {
+html.theme-zen [style*="background: rgb(168, 85, 247)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(168, 85, 247)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(192, 132, 252)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(192, 132, 252)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(139, 92, 246)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(139, 92, 246)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(99, 102, 241)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(99, 102, 241)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(129, 140, 248)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(129, 140, 248)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(102, 126, 234)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(102, 126, 234)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(159, 122, 234)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(159, 122, 234)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(124, 58, 237)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(124, 58, 237)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(118, 75, 162)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(118, 75, 162)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(90, 103, 216)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(90, 103, 216)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(167, 139, 250)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(167, 139, 250)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(196, 181, 253)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(196, 181, 253)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(233, 213, 255)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(233, 213, 255)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(155, 89, 182)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(155, 89, 182)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(131, 56, 236)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(131, 56, 236)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(114, 9, 183)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(114, 9, 183)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(107, 33, 168)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(107, 33, 168)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(95, 39, 205)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(95, 39, 205)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(67, 97, 238)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(67, 97, 238)"]:not(button:empty) {
     background-color: var(--zen-indigo) !important;
 }
 
@@ -87,7 +141,25 @@ html.theme-zen [style*="background-color: rgba(124, 58, 237,"],
 html.theme-zen [style*="background: rgba(118, 75, 162,"],
 html.theme-zen [style*="background-color: rgba(118, 75, 162,"],
 html.theme-zen [style*="background: rgba(90, 103, 216,"],
-html.theme-zen [style*="background-color: rgba(90, 103, 216,"] {
+html.theme-zen [style*="background-color: rgba(90, 103, 216,"],
+html.theme-zen [style*="background: rgba(167, 139, 250,"],
+html.theme-zen [style*="background-color: rgba(167, 139, 250,"],
+html.theme-zen [style*="background: rgba(196, 181, 253,"],
+html.theme-zen [style*="background-color: rgba(196, 181, 253,"],
+html.theme-zen [style*="background: rgba(233, 213, 255,"],
+html.theme-zen [style*="background-color: rgba(233, 213, 255,"],
+html.theme-zen [style*="background: rgba(155, 89, 182,"],
+html.theme-zen [style*="background-color: rgba(155, 89, 182,"],
+html.theme-zen [style*="background: rgba(131, 56, 236,"],
+html.theme-zen [style*="background-color: rgba(131, 56, 236,"],
+html.theme-zen [style*="background: rgba(114, 9, 183,"],
+html.theme-zen [style*="background-color: rgba(114, 9, 183,"],
+html.theme-zen [style*="background: rgba(107, 33, 168,"],
+html.theme-zen [style*="background-color: rgba(107, 33, 168,"],
+html.theme-zen [style*="background: rgba(95, 39, 205,"],
+html.theme-zen [style*="background-color: rgba(95, 39, 205,"],
+html.theme-zen [style*="background: rgba(67, 97, 238,"],
+html.theme-zen [style*="background-color: rgba(67, 97, 238,"] {
     background-color: color-mix(in srgb, var(--zen-indigo) 11%, transparent) !important;
 }
 
@@ -100,7 +172,16 @@ html.theme-zen [style*="solid rgb(102, 126, 234)"],
 html.theme-zen [style*="solid rgb(159, 122, 234)"],
 html.theme-zen [style*="solid rgb(124, 58, 237)"],
 html.theme-zen [style*="solid rgb(118, 75, 162)"],
-html.theme-zen [style*="solid rgb(90, 103, 216)"] {
+html.theme-zen [style*="solid rgb(90, 103, 216)"],
+html.theme-zen [style*="solid rgb(167, 139, 250)"],
+html.theme-zen [style*="solid rgb(196, 181, 253)"],
+html.theme-zen [style*="solid rgb(233, 213, 255)"],
+html.theme-zen [style*="solid rgb(155, 89, 182)"],
+html.theme-zen [style*="solid rgb(131, 56, 236)"],
+html.theme-zen [style*="solid rgb(114, 9, 183)"],
+html.theme-zen [style*="solid rgb(107, 33, 168)"],
+html.theme-zen [style*="solid rgb(95, 39, 205)"],
+html.theme-zen [style*="solid rgb(67, 97, 238)"] {
     border-color: var(--zen-indigo) !important;
 }
 
@@ -123,7 +204,25 @@ html.theme-zen [style*="dashed rgba(124, 58, 237,"],
 html.theme-zen [style*="solid rgba(118, 75, 162,"],
 html.theme-zen [style*="dashed rgba(118, 75, 162,"],
 html.theme-zen [style*="solid rgba(90, 103, 216,"],
-html.theme-zen [style*="dashed rgba(90, 103, 216,"] {
+html.theme-zen [style*="dashed rgba(90, 103, 216,"],
+html.theme-zen [style*="solid rgba(167, 139, 250,"],
+html.theme-zen [style*="dashed rgba(167, 139, 250,"],
+html.theme-zen [style*="solid rgba(196, 181, 253,"],
+html.theme-zen [style*="dashed rgba(196, 181, 253,"],
+html.theme-zen [style*="solid rgba(233, 213, 255,"],
+html.theme-zen [style*="dashed rgba(233, 213, 255,"],
+html.theme-zen [style*="solid rgba(155, 89, 182,"],
+html.theme-zen [style*="dashed rgba(155, 89, 182,"],
+html.theme-zen [style*="solid rgba(131, 56, 236,"],
+html.theme-zen [style*="dashed rgba(131, 56, 236,"],
+html.theme-zen [style*="solid rgba(114, 9, 183,"],
+html.theme-zen [style*="dashed rgba(114, 9, 183,"],
+html.theme-zen [style*="solid rgba(107, 33, 168,"],
+html.theme-zen [style*="dashed rgba(107, 33, 168,"],
+html.theme-zen [style*="solid rgba(95, 39, 205,"],
+html.theme-zen [style*="dashed rgba(95, 39, 205,"],
+html.theme-zen [style*="solid rgba(67, 97, 238,"],
+html.theme-zen [style*="dashed rgba(67, 97, 238,"] {
     border-color: color-mix(in srgb, var(--zen-indigo) 32%, transparent) !important;
 }
 
@@ -166,7 +265,43 @@ html.theme-zen [style*="to bottom, rgb(118, 75, 162)"],
 html.theme-zen [style*="deg, rgb(90, 103, 216)"],
 html.theme-zen [style*="gradient(rgb(90, 103, 216)"],
 html.theme-zen [style*="to right, rgb(90, 103, 216)"],
-html.theme-zen [style*="to bottom, rgb(90, 103, 216)"] {
+html.theme-zen [style*="to bottom, rgb(90, 103, 216)"],
+html.theme-zen [style*="deg, rgb(167, 139, 250)"],
+html.theme-zen [style*="gradient(rgb(167, 139, 250)"],
+html.theme-zen [style*="to right, rgb(167, 139, 250)"],
+html.theme-zen [style*="to bottom, rgb(167, 139, 250)"],
+html.theme-zen [style*="deg, rgb(196, 181, 253)"],
+html.theme-zen [style*="gradient(rgb(196, 181, 253)"],
+html.theme-zen [style*="to right, rgb(196, 181, 253)"],
+html.theme-zen [style*="to bottom, rgb(196, 181, 253)"],
+html.theme-zen [style*="deg, rgb(233, 213, 255)"],
+html.theme-zen [style*="gradient(rgb(233, 213, 255)"],
+html.theme-zen [style*="to right, rgb(233, 213, 255)"],
+html.theme-zen [style*="to bottom, rgb(233, 213, 255)"],
+html.theme-zen [style*="deg, rgb(155, 89, 182)"],
+html.theme-zen [style*="gradient(rgb(155, 89, 182)"],
+html.theme-zen [style*="to right, rgb(155, 89, 182)"],
+html.theme-zen [style*="to bottom, rgb(155, 89, 182)"],
+html.theme-zen [style*="deg, rgb(131, 56, 236)"],
+html.theme-zen [style*="gradient(rgb(131, 56, 236)"],
+html.theme-zen [style*="to right, rgb(131, 56, 236)"],
+html.theme-zen [style*="to bottom, rgb(131, 56, 236)"],
+html.theme-zen [style*="deg, rgb(114, 9, 183)"],
+html.theme-zen [style*="gradient(rgb(114, 9, 183)"],
+html.theme-zen [style*="to right, rgb(114, 9, 183)"],
+html.theme-zen [style*="to bottom, rgb(114, 9, 183)"],
+html.theme-zen [style*="deg, rgb(107, 33, 168)"],
+html.theme-zen [style*="gradient(rgb(107, 33, 168)"],
+html.theme-zen [style*="to right, rgb(107, 33, 168)"],
+html.theme-zen [style*="to bottom, rgb(107, 33, 168)"],
+html.theme-zen [style*="deg, rgb(95, 39, 205)"],
+html.theme-zen [style*="gradient(rgb(95, 39, 205)"],
+html.theme-zen [style*="to right, rgb(95, 39, 205)"],
+html.theme-zen [style*="to bottom, rgb(95, 39, 205)"],
+html.theme-zen [style*="deg, rgb(67, 97, 238)"],
+html.theme-zen [style*="gradient(rgb(67, 97, 238)"],
+html.theme-zen [style*="to right, rgb(67, 97, 238)"],
+html.theme-zen [style*="to bottom, rgb(67, 97, 238)"] {
     background-image: linear-gradient(135deg, var(--zen-indigo), color-mix(in srgb, var(--zen-indigo) 82%, #1c1915)) !important;
 }
 
@@ -209,7 +344,43 @@ html.theme-zen [style*="to bottom, rgba(118, 75, 162,"],
 html.theme-zen [style*="deg, rgba(90, 103, 216,"],
 html.theme-zen [style*="gradient(rgba(90, 103, 216,"],
 html.theme-zen [style*="to right, rgba(90, 103, 216,"],
-html.theme-zen [style*="to bottom, rgba(90, 103, 216,"] {
+html.theme-zen [style*="to bottom, rgba(90, 103, 216,"],
+html.theme-zen [style*="deg, rgba(167, 139, 250,"],
+html.theme-zen [style*="gradient(rgba(167, 139, 250,"],
+html.theme-zen [style*="to right, rgba(167, 139, 250,"],
+html.theme-zen [style*="to bottom, rgba(167, 139, 250,"],
+html.theme-zen [style*="deg, rgba(196, 181, 253,"],
+html.theme-zen [style*="gradient(rgba(196, 181, 253,"],
+html.theme-zen [style*="to right, rgba(196, 181, 253,"],
+html.theme-zen [style*="to bottom, rgba(196, 181, 253,"],
+html.theme-zen [style*="deg, rgba(233, 213, 255,"],
+html.theme-zen [style*="gradient(rgba(233, 213, 255,"],
+html.theme-zen [style*="to right, rgba(233, 213, 255,"],
+html.theme-zen [style*="to bottom, rgba(233, 213, 255,"],
+html.theme-zen [style*="deg, rgba(155, 89, 182,"],
+html.theme-zen [style*="gradient(rgba(155, 89, 182,"],
+html.theme-zen [style*="to right, rgba(155, 89, 182,"],
+html.theme-zen [style*="to bottom, rgba(155, 89, 182,"],
+html.theme-zen [style*="deg, rgba(131, 56, 236,"],
+html.theme-zen [style*="gradient(rgba(131, 56, 236,"],
+html.theme-zen [style*="to right, rgba(131, 56, 236,"],
+html.theme-zen [style*="to bottom, rgba(131, 56, 236,"],
+html.theme-zen [style*="deg, rgba(114, 9, 183,"],
+html.theme-zen [style*="gradient(rgba(114, 9, 183,"],
+html.theme-zen [style*="to right, rgba(114, 9, 183,"],
+html.theme-zen [style*="to bottom, rgba(114, 9, 183,"],
+html.theme-zen [style*="deg, rgba(107, 33, 168,"],
+html.theme-zen [style*="gradient(rgba(107, 33, 168,"],
+html.theme-zen [style*="to right, rgba(107, 33, 168,"],
+html.theme-zen [style*="to bottom, rgba(107, 33, 168,"],
+html.theme-zen [style*="deg, rgba(95, 39, 205,"],
+html.theme-zen [style*="gradient(rgba(95, 39, 205,"],
+html.theme-zen [style*="to right, rgba(95, 39, 205,"],
+html.theme-zen [style*="to bottom, rgba(95, 39, 205,"],
+html.theme-zen [style*="deg, rgba(67, 97, 238,"],
+html.theme-zen [style*="gradient(rgba(67, 97, 238,"],
+html.theme-zen [style*="to right, rgba(67, 97, 238,"],
+html.theme-zen [style*="to bottom, rgba(67, 97, 238,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-indigo) 13%, transparent), color-mix(in srgb, var(--zen-indigo) 5%, transparent)) !important;
 }
 
@@ -232,7 +403,25 @@ html.theme-zen [style*="px, rgba(124, 58, 237,"],
 html.theme-zen [style*="box-shadow: rgba(118, 75, 162,"],
 html.theme-zen [style*="px, rgba(118, 75, 162,"],
 html.theme-zen [style*="box-shadow: rgba(90, 103, 216,"],
-html.theme-zen [style*="px, rgba(90, 103, 216,"] {
+html.theme-zen [style*="px, rgba(90, 103, 216,"],
+html.theme-zen [style*="box-shadow: rgba(167, 139, 250,"],
+html.theme-zen [style*="px, rgba(167, 139, 250,"],
+html.theme-zen [style*="box-shadow: rgba(196, 181, 253,"],
+html.theme-zen [style*="px, rgba(196, 181, 253,"],
+html.theme-zen [style*="box-shadow: rgba(233, 213, 255,"],
+html.theme-zen [style*="px, rgba(233, 213, 255,"],
+html.theme-zen [style*="box-shadow: rgba(155, 89, 182,"],
+html.theme-zen [style*="px, rgba(155, 89, 182,"],
+html.theme-zen [style*="box-shadow: rgba(131, 56, 236,"],
+html.theme-zen [style*="px, rgba(131, 56, 236,"],
+html.theme-zen [style*="box-shadow: rgba(114, 9, 183,"],
+html.theme-zen [style*="px, rgba(114, 9, 183,"],
+html.theme-zen [style*="box-shadow: rgba(107, 33, 168,"],
+html.theme-zen [style*="px, rgba(107, 33, 168,"],
+html.theme-zen [style*="box-shadow: rgba(95, 39, 205,"],
+html.theme-zen [style*="px, rgba(95, 39, 205,"],
+html.theme-zen [style*="box-shadow: rgba(67, 97, 238,"],
+html.theme-zen [style*="px, rgba(67, 97, 238,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -255,7 +444,25 @@ html.theme-zen [stroke="#7C3AED"],
 html.theme-zen [stroke="#764ba2"],
 html.theme-zen [stroke="#764BA2"],
 html.theme-zen [stroke="#5a67d8"],
-html.theme-zen [stroke="#5A67D8"] {
+html.theme-zen [stroke="#5A67D8"],
+html.theme-zen [stroke="#a78bfa"],
+html.theme-zen [stroke="#A78BFA"],
+html.theme-zen [stroke="#c4b5fd"],
+html.theme-zen [stroke="#C4B5FD"],
+html.theme-zen [stroke="#e9d5ff"],
+html.theme-zen [stroke="#E9D5FF"],
+html.theme-zen [stroke="#9b59b6"],
+html.theme-zen [stroke="#9B59B6"],
+html.theme-zen [stroke="#8338ec"],
+html.theme-zen [stroke="#8338EC"],
+html.theme-zen [stroke="#7209b7"],
+html.theme-zen [stroke="#7209B7"],
+html.theme-zen [stroke="#6b21a8"],
+html.theme-zen [stroke="#6B21A8"],
+html.theme-zen [stroke="#5f27cd"],
+html.theme-zen [stroke="#5F27CD"],
+html.theme-zen [stroke="#4361ee"],
+html.theme-zen [stroke="#4361EE"] {
     stroke: var(--zen-indigo);
 }
 
@@ -278,7 +485,25 @@ html.theme-zen [fill="#7C3AED"],
 html.theme-zen [fill="#764ba2"],
 html.theme-zen [fill="#764BA2"],
 html.theme-zen [fill="#5a67d8"],
-html.theme-zen [fill="#5A67D8"] {
+html.theme-zen [fill="#5A67D8"],
+html.theme-zen [fill="#a78bfa"],
+html.theme-zen [fill="#A78BFA"],
+html.theme-zen [fill="#c4b5fd"],
+html.theme-zen [fill="#C4B5FD"],
+html.theme-zen [fill="#e9d5ff"],
+html.theme-zen [fill="#E9D5FF"],
+html.theme-zen [fill="#9b59b6"],
+html.theme-zen [fill="#9B59B6"],
+html.theme-zen [fill="#8338ec"],
+html.theme-zen [fill="#8338EC"],
+html.theme-zen [fill="#7209b7"],
+html.theme-zen [fill="#7209B7"],
+html.theme-zen [fill="#6b21a8"],
+html.theme-zen [fill="#6B21A8"],
+html.theme-zen [fill="#5f27cd"],
+html.theme-zen [fill="#5F27CD"],
+html.theme-zen [fill="#4361ee"],
+html.theme-zen [fill="#4361EE"] {
     fill: var(--zen-indigo);
 }
 
@@ -301,7 +526,25 @@ html.theme-zen [stop-color="#7C3AED"],
 html.theme-zen [stop-color="#764ba2"],
 html.theme-zen [stop-color="#764BA2"],
 html.theme-zen [stop-color="#5a67d8"],
-html.theme-zen [stop-color="#5A67D8"] {
+html.theme-zen [stop-color="#5A67D8"],
+html.theme-zen [stop-color="#a78bfa"],
+html.theme-zen [stop-color="#A78BFA"],
+html.theme-zen [stop-color="#c4b5fd"],
+html.theme-zen [stop-color="#C4B5FD"],
+html.theme-zen [stop-color="#e9d5ff"],
+html.theme-zen [stop-color="#E9D5FF"],
+html.theme-zen [stop-color="#9b59b6"],
+html.theme-zen [stop-color="#9B59B6"],
+html.theme-zen [stop-color="#8338ec"],
+html.theme-zen [stop-color="#8338EC"],
+html.theme-zen [stop-color="#7209b7"],
+html.theme-zen [stop-color="#7209B7"],
+html.theme-zen [stop-color="#6b21a8"],
+html.theme-zen [stop-color="#6B21A8"],
+html.theme-zen [stop-color="#5f27cd"],
+html.theme-zen [stop-color="#5F27CD"],
+html.theme-zen [stop-color="#4361ee"],
+html.theme-zen [stop-color="#4361EE"] {
     stop-color: var(--zen-indigo);
 }
 
@@ -324,7 +567,25 @@ html.theme-zen [style*="--ring-color: #7C3AED"],
 html.theme-zen [style*="--ring-color: #764ba2"],
 html.theme-zen [style*="--ring-color: #764BA2"],
 html.theme-zen [style*="--ring-color: #5a67d8"],
-html.theme-zen [style*="--ring-color: #5A67D8"] {
+html.theme-zen [style*="--ring-color: #5A67D8"],
+html.theme-zen [style*="--ring-color: #a78bfa"],
+html.theme-zen [style*="--ring-color: #A78BFA"],
+html.theme-zen [style*="--ring-color: #c4b5fd"],
+html.theme-zen [style*="--ring-color: #C4B5FD"],
+html.theme-zen [style*="--ring-color: #e9d5ff"],
+html.theme-zen [style*="--ring-color: #E9D5FF"],
+html.theme-zen [style*="--ring-color: #9b59b6"],
+html.theme-zen [style*="--ring-color: #9B59B6"],
+html.theme-zen [style*="--ring-color: #8338ec"],
+html.theme-zen [style*="--ring-color: #8338EC"],
+html.theme-zen [style*="--ring-color: #7209b7"],
+html.theme-zen [style*="--ring-color: #7209B7"],
+html.theme-zen [style*="--ring-color: #6b21a8"],
+html.theme-zen [style*="--ring-color: #6B21A8"],
+html.theme-zen [style*="--ring-color: #5f27cd"],
+html.theme-zen [style*="--ring-color: #5F27CD"],
+html.theme-zen [style*="--ring-color: #4361ee"],
+html.theme-zen [style*="--ring-color: #4361EE"] {
     --ring-color: var(--zen-indigo) !important;
 }
 
@@ -361,20 +622,20 @@ html.theme-zen [style*="; color: rgba(34, 211, 238,"] {
     color: var(--zen-celadon) !important;
 }
 
-html.theme-zen [style*="background: rgb(6, 182, 212)"],
-html.theme-zen [style*="background-color: rgb(6, 182, 212)"],
-html.theme-zen [style*="background: rgb(78, 205, 196)"],
-html.theme-zen [style*="background-color: rgb(78, 205, 196)"],
-html.theme-zen [style*="background: rgb(69, 183, 209)"],
-html.theme-zen [style*="background-color: rgb(69, 183, 209)"],
-html.theme-zen [style*="background: rgb(100, 255, 218)"],
-html.theme-zen [style*="background-color: rgb(100, 255, 218)"],
-html.theme-zen [style*="background: rgb(0, 180, 216)"],
-html.theme-zen [style*="background-color: rgb(0, 180, 216)"],
-html.theme-zen [style*="background: rgb(20, 184, 166)"],
-html.theme-zen [style*="background-color: rgb(20, 184, 166)"],
-html.theme-zen [style*="background: rgb(34, 211, 238)"],
-html.theme-zen [style*="background-color: rgb(34, 211, 238)"] {
+html.theme-zen [style*="background: rgb(6, 182, 212)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(6, 182, 212)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(78, 205, 196)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(78, 205, 196)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(69, 183, 209)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(69, 183, 209)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(100, 255, 218)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(100, 255, 218)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(0, 180, 216)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(0, 180, 216)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(20, 184, 166)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(20, 184, 166)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(34, 211, 238)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(34, 211, 238)"]:not(button:empty) {
     background-color: var(--zen-celadon) !important;
 }
 
@@ -586,18 +847,48 @@ html.theme-zen [style*="; color: rgba(96, 165, 250,"],
 html.theme-zen [style^="color: rgb(14, 165, 233)"],
 html.theme-zen [style*="; color: rgb(14, 165, 233)"],
 html.theme-zen [style^="color: rgba(14, 165, 233,"],
-html.theme-zen [style*="; color: rgba(14, 165, 233,"] {
+html.theme-zen [style*="; color: rgba(14, 165, 233,"],
+html.theme-zen [style^="color: rgb(186, 230, 253)"],
+html.theme-zen [style*="; color: rgb(186, 230, 253)"],
+html.theme-zen [style^="color: rgba(186, 230, 253,"],
+html.theme-zen [style*="; color: rgba(186, 230, 253,"],
+html.theme-zen [style^="color: rgb(84, 160, 255)"],
+html.theme-zen [style*="; color: rgb(84, 160, 255)"],
+html.theme-zen [style^="color: rgba(84, 160, 255,"],
+html.theme-zen [style*="; color: rgba(84, 160, 255,"],
+html.theme-zen [style^="color: rgb(58, 134, 255)"],
+html.theme-zen [style*="; color: rgb(58, 134, 255)"],
+html.theme-zen [style^="color: rgba(58, 134, 255,"],
+html.theme-zen [style*="; color: rgba(58, 134, 255,"],
+html.theme-zen [style^="color: rgb(52, 152, 219)"],
+html.theme-zen [style*="; color: rgb(52, 152, 219)"],
+html.theme-zen [style^="color: rgba(52, 152, 219,"],
+html.theme-zen [style*="; color: rgba(52, 152, 219,"],
+html.theme-zen [style^="color: rgb(37, 99, 235)"],
+html.theme-zen [style*="; color: rgb(37, 99, 235)"],
+html.theme-zen [style^="color: rgba(37, 99, 235,"],
+html.theme-zen [style*="; color: rgba(37, 99, 235,"] {
     color: var(--zen-sky) !important;
 }
 
-html.theme-zen [style*="background: rgb(56, 189, 248)"],
-html.theme-zen [style*="background-color: rgb(56, 189, 248)"],
-html.theme-zen [style*="background: rgb(59, 130, 246)"],
-html.theme-zen [style*="background-color: rgb(59, 130, 246)"],
-html.theme-zen [style*="background: rgb(96, 165, 250)"],
-html.theme-zen [style*="background-color: rgb(96, 165, 250)"],
-html.theme-zen [style*="background: rgb(14, 165, 233)"],
-html.theme-zen [style*="background-color: rgb(14, 165, 233)"] {
+html.theme-zen [style*="background: rgb(56, 189, 248)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(56, 189, 248)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(59, 130, 246)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(59, 130, 246)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(96, 165, 250)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(96, 165, 250)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(14, 165, 233)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(14, 165, 233)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(186, 230, 253)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(186, 230, 253)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(84, 160, 255)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(84, 160, 255)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(58, 134, 255)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(58, 134, 255)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(52, 152, 219)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(52, 152, 219)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(37, 99, 235)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(37, 99, 235)"]:not(button:empty) {
     background-color: var(--zen-sky) !important;
 }
 
@@ -608,14 +899,29 @@ html.theme-zen [style*="background-color: rgba(59, 130, 246,"],
 html.theme-zen [style*="background: rgba(96, 165, 250,"],
 html.theme-zen [style*="background-color: rgba(96, 165, 250,"],
 html.theme-zen [style*="background: rgba(14, 165, 233,"],
-html.theme-zen [style*="background-color: rgba(14, 165, 233,"] {
+html.theme-zen [style*="background-color: rgba(14, 165, 233,"],
+html.theme-zen [style*="background: rgba(186, 230, 253,"],
+html.theme-zen [style*="background-color: rgba(186, 230, 253,"],
+html.theme-zen [style*="background: rgba(84, 160, 255,"],
+html.theme-zen [style*="background-color: rgba(84, 160, 255,"],
+html.theme-zen [style*="background: rgba(58, 134, 255,"],
+html.theme-zen [style*="background-color: rgba(58, 134, 255,"],
+html.theme-zen [style*="background: rgba(52, 152, 219,"],
+html.theme-zen [style*="background-color: rgba(52, 152, 219,"],
+html.theme-zen [style*="background: rgba(37, 99, 235,"],
+html.theme-zen [style*="background-color: rgba(37, 99, 235,"] {
     background-color: color-mix(in srgb, var(--zen-sky) 11%, transparent) !important;
 }
 
 html.theme-zen [style*="solid rgb(56, 189, 248)"],
 html.theme-zen [style*="solid rgb(59, 130, 246)"],
 html.theme-zen [style*="solid rgb(96, 165, 250)"],
-html.theme-zen [style*="solid rgb(14, 165, 233)"] {
+html.theme-zen [style*="solid rgb(14, 165, 233)"],
+html.theme-zen [style*="solid rgb(186, 230, 253)"],
+html.theme-zen [style*="solid rgb(84, 160, 255)"],
+html.theme-zen [style*="solid rgb(58, 134, 255)"],
+html.theme-zen [style*="solid rgb(52, 152, 219)"],
+html.theme-zen [style*="solid rgb(37, 99, 235)"] {
     border-color: var(--zen-sky) !important;
 }
 
@@ -626,7 +932,17 @@ html.theme-zen [style*="dashed rgba(59, 130, 246,"],
 html.theme-zen [style*="solid rgba(96, 165, 250,"],
 html.theme-zen [style*="dashed rgba(96, 165, 250,"],
 html.theme-zen [style*="solid rgba(14, 165, 233,"],
-html.theme-zen [style*="dashed rgba(14, 165, 233,"] {
+html.theme-zen [style*="dashed rgba(14, 165, 233,"],
+html.theme-zen [style*="solid rgba(186, 230, 253,"],
+html.theme-zen [style*="dashed rgba(186, 230, 253,"],
+html.theme-zen [style*="solid rgba(84, 160, 255,"],
+html.theme-zen [style*="dashed rgba(84, 160, 255,"],
+html.theme-zen [style*="solid rgba(58, 134, 255,"],
+html.theme-zen [style*="dashed rgba(58, 134, 255,"],
+html.theme-zen [style*="solid rgba(52, 152, 219,"],
+html.theme-zen [style*="dashed rgba(52, 152, 219,"],
+html.theme-zen [style*="solid rgba(37, 99, 235,"],
+html.theme-zen [style*="dashed rgba(37, 99, 235,"] {
     border-color: color-mix(in srgb, var(--zen-sky) 32%, transparent) !important;
 }
 
@@ -645,7 +961,27 @@ html.theme-zen [style*="to bottom, rgb(96, 165, 250)"],
 html.theme-zen [style*="deg, rgb(14, 165, 233)"],
 html.theme-zen [style*="gradient(rgb(14, 165, 233)"],
 html.theme-zen [style*="to right, rgb(14, 165, 233)"],
-html.theme-zen [style*="to bottom, rgb(14, 165, 233)"] {
+html.theme-zen [style*="to bottom, rgb(14, 165, 233)"],
+html.theme-zen [style*="deg, rgb(186, 230, 253)"],
+html.theme-zen [style*="gradient(rgb(186, 230, 253)"],
+html.theme-zen [style*="to right, rgb(186, 230, 253)"],
+html.theme-zen [style*="to bottom, rgb(186, 230, 253)"],
+html.theme-zen [style*="deg, rgb(84, 160, 255)"],
+html.theme-zen [style*="gradient(rgb(84, 160, 255)"],
+html.theme-zen [style*="to right, rgb(84, 160, 255)"],
+html.theme-zen [style*="to bottom, rgb(84, 160, 255)"],
+html.theme-zen [style*="deg, rgb(58, 134, 255)"],
+html.theme-zen [style*="gradient(rgb(58, 134, 255)"],
+html.theme-zen [style*="to right, rgb(58, 134, 255)"],
+html.theme-zen [style*="to bottom, rgb(58, 134, 255)"],
+html.theme-zen [style*="deg, rgb(52, 152, 219)"],
+html.theme-zen [style*="gradient(rgb(52, 152, 219)"],
+html.theme-zen [style*="to right, rgb(52, 152, 219)"],
+html.theme-zen [style*="to bottom, rgb(52, 152, 219)"],
+html.theme-zen [style*="deg, rgb(37, 99, 235)"],
+html.theme-zen [style*="gradient(rgb(37, 99, 235)"],
+html.theme-zen [style*="to right, rgb(37, 99, 235)"],
+html.theme-zen [style*="to bottom, rgb(37, 99, 235)"] {
     background-image: linear-gradient(135deg, var(--zen-sky), color-mix(in srgb, var(--zen-sky) 82%, #1c1915)) !important;
 }
 
@@ -664,7 +1000,27 @@ html.theme-zen [style*="to bottom, rgba(96, 165, 250,"],
 html.theme-zen [style*="deg, rgba(14, 165, 233,"],
 html.theme-zen [style*="gradient(rgba(14, 165, 233,"],
 html.theme-zen [style*="to right, rgba(14, 165, 233,"],
-html.theme-zen [style*="to bottom, rgba(14, 165, 233,"] {
+html.theme-zen [style*="to bottom, rgba(14, 165, 233,"],
+html.theme-zen [style*="deg, rgba(186, 230, 253,"],
+html.theme-zen [style*="gradient(rgba(186, 230, 253,"],
+html.theme-zen [style*="to right, rgba(186, 230, 253,"],
+html.theme-zen [style*="to bottom, rgba(186, 230, 253,"],
+html.theme-zen [style*="deg, rgba(84, 160, 255,"],
+html.theme-zen [style*="gradient(rgba(84, 160, 255,"],
+html.theme-zen [style*="to right, rgba(84, 160, 255,"],
+html.theme-zen [style*="to bottom, rgba(84, 160, 255,"],
+html.theme-zen [style*="deg, rgba(58, 134, 255,"],
+html.theme-zen [style*="gradient(rgba(58, 134, 255,"],
+html.theme-zen [style*="to right, rgba(58, 134, 255,"],
+html.theme-zen [style*="to bottom, rgba(58, 134, 255,"],
+html.theme-zen [style*="deg, rgba(52, 152, 219,"],
+html.theme-zen [style*="gradient(rgba(52, 152, 219,"],
+html.theme-zen [style*="to right, rgba(52, 152, 219,"],
+html.theme-zen [style*="to bottom, rgba(52, 152, 219,"],
+html.theme-zen [style*="deg, rgba(37, 99, 235,"],
+html.theme-zen [style*="gradient(rgba(37, 99, 235,"],
+html.theme-zen [style*="to right, rgba(37, 99, 235,"],
+html.theme-zen [style*="to bottom, rgba(37, 99, 235,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-sky) 13%, transparent), color-mix(in srgb, var(--zen-sky) 5%, transparent)) !important;
 }
 
@@ -675,7 +1031,17 @@ html.theme-zen [style*="px, rgba(59, 130, 246,"],
 html.theme-zen [style*="box-shadow: rgba(96, 165, 250,"],
 html.theme-zen [style*="px, rgba(96, 165, 250,"],
 html.theme-zen [style*="box-shadow: rgba(14, 165, 233,"],
-html.theme-zen [style*="px, rgba(14, 165, 233,"] {
+html.theme-zen [style*="px, rgba(14, 165, 233,"],
+html.theme-zen [style*="box-shadow: rgba(186, 230, 253,"],
+html.theme-zen [style*="px, rgba(186, 230, 253,"],
+html.theme-zen [style*="box-shadow: rgba(84, 160, 255,"],
+html.theme-zen [style*="px, rgba(84, 160, 255,"],
+html.theme-zen [style*="box-shadow: rgba(58, 134, 255,"],
+html.theme-zen [style*="px, rgba(58, 134, 255,"],
+html.theme-zen [style*="box-shadow: rgba(52, 152, 219,"],
+html.theme-zen [style*="px, rgba(52, 152, 219,"],
+html.theme-zen [style*="box-shadow: rgba(37, 99, 235,"],
+html.theme-zen [style*="px, rgba(37, 99, 235,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -686,7 +1052,17 @@ html.theme-zen [stroke="#3B82F6"],
 html.theme-zen [stroke="#60a5fa"],
 html.theme-zen [stroke="#60A5FA"],
 html.theme-zen [stroke="#0ea5e9"],
-html.theme-zen [stroke="#0EA5E9"] {
+html.theme-zen [stroke="#0EA5E9"],
+html.theme-zen [stroke="#bae6fd"],
+html.theme-zen [stroke="#BAE6FD"],
+html.theme-zen [stroke="#54a0ff"],
+html.theme-zen [stroke="#54A0FF"],
+html.theme-zen [stroke="#3a86ff"],
+html.theme-zen [stroke="#3A86FF"],
+html.theme-zen [stroke="#3498db"],
+html.theme-zen [stroke="#3498DB"],
+html.theme-zen [stroke="#2563eb"],
+html.theme-zen [stroke="#2563EB"] {
     stroke: var(--zen-sky);
 }
 
@@ -697,7 +1073,17 @@ html.theme-zen [fill="#3B82F6"],
 html.theme-zen [fill="#60a5fa"],
 html.theme-zen [fill="#60A5FA"],
 html.theme-zen [fill="#0ea5e9"],
-html.theme-zen [fill="#0EA5E9"] {
+html.theme-zen [fill="#0EA5E9"],
+html.theme-zen [fill="#bae6fd"],
+html.theme-zen [fill="#BAE6FD"],
+html.theme-zen [fill="#54a0ff"],
+html.theme-zen [fill="#54A0FF"],
+html.theme-zen [fill="#3a86ff"],
+html.theme-zen [fill="#3A86FF"],
+html.theme-zen [fill="#3498db"],
+html.theme-zen [fill="#3498DB"],
+html.theme-zen [fill="#2563eb"],
+html.theme-zen [fill="#2563EB"] {
     fill: var(--zen-sky);
 }
 
@@ -708,7 +1094,17 @@ html.theme-zen [stop-color="#3B82F6"],
 html.theme-zen [stop-color="#60a5fa"],
 html.theme-zen [stop-color="#60A5FA"],
 html.theme-zen [stop-color="#0ea5e9"],
-html.theme-zen [stop-color="#0EA5E9"] {
+html.theme-zen [stop-color="#0EA5E9"],
+html.theme-zen [stop-color="#bae6fd"],
+html.theme-zen [stop-color="#BAE6FD"],
+html.theme-zen [stop-color="#54a0ff"],
+html.theme-zen [stop-color="#54A0FF"],
+html.theme-zen [stop-color="#3a86ff"],
+html.theme-zen [stop-color="#3A86FF"],
+html.theme-zen [stop-color="#3498db"],
+html.theme-zen [stop-color="#3498DB"],
+html.theme-zen [stop-color="#2563eb"],
+html.theme-zen [stop-color="#2563EB"] {
     stop-color: var(--zen-sky);
 }
 
@@ -719,7 +1115,17 @@ html.theme-zen [style*="--ring-color: #3B82F6"],
 html.theme-zen [style*="--ring-color: #60a5fa"],
 html.theme-zen [style*="--ring-color: #60A5FA"],
 html.theme-zen [style*="--ring-color: #0ea5e9"],
-html.theme-zen [style*="--ring-color: #0EA5E9"] {
+html.theme-zen [style*="--ring-color: #0EA5E9"],
+html.theme-zen [style*="--ring-color: #bae6fd"],
+html.theme-zen [style*="--ring-color: #BAE6FD"],
+html.theme-zen [style*="--ring-color: #54a0ff"],
+html.theme-zen [style*="--ring-color: #54A0FF"],
+html.theme-zen [style*="--ring-color: #3a86ff"],
+html.theme-zen [style*="--ring-color: #3A86FF"],
+html.theme-zen [style*="--ring-color: #3498db"],
+html.theme-zen [style*="--ring-color: #3498DB"],
+html.theme-zen [style*="--ring-color: #2563eb"],
+html.theme-zen [style*="--ring-color: #2563EB"] {
     --ring-color: var(--zen-sky) !important;
 }
 
@@ -756,26 +1162,38 @@ html.theme-zen [style*="; color: rgba(104, 211, 145,"],
 html.theme-zen [style^="color: rgb(150, 206, 180)"],
 html.theme-zen [style*="; color: rgb(150, 206, 180)"],
 html.theme-zen [style^="color: rgba(150, 206, 180,"],
-html.theme-zen [style*="; color: rgba(150, 206, 180,"] {
+html.theme-zen [style*="; color: rgba(150, 206, 180,"],
+html.theme-zen [style^="color: rgb(46, 204, 113)"],
+html.theme-zen [style*="; color: rgb(46, 204, 113)"],
+html.theme-zen [style^="color: rgba(46, 204, 113,"],
+html.theme-zen [style*="; color: rgba(46, 204, 113,"],
+html.theme-zen [style^="color: rgb(39, 174, 96)"],
+html.theme-zen [style*="; color: rgb(39, 174, 96)"],
+html.theme-zen [style^="color: rgba(39, 174, 96,"],
+html.theme-zen [style*="; color: rgba(39, 174, 96,"] {
     color: var(--zen-moss) !important;
 }
 
-html.theme-zen [style*="background: rgb(16, 185, 129)"],
-html.theme-zen [style*="background-color: rgb(16, 185, 129)"],
-html.theme-zen [style*="background: rgb(34, 197, 94)"],
-html.theme-zen [style*="background-color: rgb(34, 197, 94)"],
-html.theme-zen [style*="background: rgb(22, 163, 74)"],
-html.theme-zen [style*="background-color: rgb(22, 163, 74)"],
-html.theme-zen [style*="background: rgb(72, 187, 120)"],
-html.theme-zen [style*="background-color: rgb(72, 187, 120)"],
-html.theme-zen [style*="background: rgb(74, 222, 128)"],
-html.theme-zen [style*="background-color: rgb(74, 222, 128)"],
-html.theme-zen [style*="background: rgb(52, 211, 153)"],
-html.theme-zen [style*="background-color: rgb(52, 211, 153)"],
-html.theme-zen [style*="background: rgb(104, 211, 145)"],
-html.theme-zen [style*="background-color: rgb(104, 211, 145)"],
-html.theme-zen [style*="background: rgb(150, 206, 180)"],
-html.theme-zen [style*="background-color: rgb(150, 206, 180)"] {
+html.theme-zen [style*="background: rgb(16, 185, 129)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(16, 185, 129)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(34, 197, 94)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(34, 197, 94)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(22, 163, 74)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(22, 163, 74)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(72, 187, 120)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(72, 187, 120)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(74, 222, 128)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(74, 222, 128)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(52, 211, 153)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(52, 211, 153)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(104, 211, 145)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(104, 211, 145)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(150, 206, 180)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(150, 206, 180)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(46, 204, 113)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(46, 204, 113)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(39, 174, 96)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(39, 174, 96)"]:not(button:empty) {
     background-color: var(--zen-moss) !important;
 }
 
@@ -794,7 +1212,11 @@ html.theme-zen [style*="background-color: rgba(52, 211, 153,"],
 html.theme-zen [style*="background: rgba(104, 211, 145,"],
 html.theme-zen [style*="background-color: rgba(104, 211, 145,"],
 html.theme-zen [style*="background: rgba(150, 206, 180,"],
-html.theme-zen [style*="background-color: rgba(150, 206, 180,"] {
+html.theme-zen [style*="background-color: rgba(150, 206, 180,"],
+html.theme-zen [style*="background: rgba(46, 204, 113,"],
+html.theme-zen [style*="background-color: rgba(46, 204, 113,"],
+html.theme-zen [style*="background: rgba(39, 174, 96,"],
+html.theme-zen [style*="background-color: rgba(39, 174, 96,"] {
     background-color: color-mix(in srgb, var(--zen-moss) 11%, transparent) !important;
 }
 
@@ -805,7 +1227,9 @@ html.theme-zen [style*="solid rgb(72, 187, 120)"],
 html.theme-zen [style*="solid rgb(74, 222, 128)"],
 html.theme-zen [style*="solid rgb(52, 211, 153)"],
 html.theme-zen [style*="solid rgb(104, 211, 145)"],
-html.theme-zen [style*="solid rgb(150, 206, 180)"] {
+html.theme-zen [style*="solid rgb(150, 206, 180)"],
+html.theme-zen [style*="solid rgb(46, 204, 113)"],
+html.theme-zen [style*="solid rgb(39, 174, 96)"] {
     border-color: var(--zen-moss) !important;
 }
 
@@ -824,7 +1248,11 @@ html.theme-zen [style*="dashed rgba(52, 211, 153,"],
 html.theme-zen [style*="solid rgba(104, 211, 145,"],
 html.theme-zen [style*="dashed rgba(104, 211, 145,"],
 html.theme-zen [style*="solid rgba(150, 206, 180,"],
-html.theme-zen [style*="dashed rgba(150, 206, 180,"] {
+html.theme-zen [style*="dashed rgba(150, 206, 180,"],
+html.theme-zen [style*="solid rgba(46, 204, 113,"],
+html.theme-zen [style*="dashed rgba(46, 204, 113,"],
+html.theme-zen [style*="solid rgba(39, 174, 96,"],
+html.theme-zen [style*="dashed rgba(39, 174, 96,"] {
     border-color: color-mix(in srgb, var(--zen-moss) 32%, transparent) !important;
 }
 
@@ -859,7 +1287,15 @@ html.theme-zen [style*="to bottom, rgb(104, 211, 145)"],
 html.theme-zen [style*="deg, rgb(150, 206, 180)"],
 html.theme-zen [style*="gradient(rgb(150, 206, 180)"],
 html.theme-zen [style*="to right, rgb(150, 206, 180)"],
-html.theme-zen [style*="to bottom, rgb(150, 206, 180)"] {
+html.theme-zen [style*="to bottom, rgb(150, 206, 180)"],
+html.theme-zen [style*="deg, rgb(46, 204, 113)"],
+html.theme-zen [style*="gradient(rgb(46, 204, 113)"],
+html.theme-zen [style*="to right, rgb(46, 204, 113)"],
+html.theme-zen [style*="to bottom, rgb(46, 204, 113)"],
+html.theme-zen [style*="deg, rgb(39, 174, 96)"],
+html.theme-zen [style*="gradient(rgb(39, 174, 96)"],
+html.theme-zen [style*="to right, rgb(39, 174, 96)"],
+html.theme-zen [style*="to bottom, rgb(39, 174, 96)"] {
     background-image: linear-gradient(135deg, var(--zen-moss), color-mix(in srgb, var(--zen-moss) 82%, #1c1915)) !important;
 }
 
@@ -894,7 +1330,15 @@ html.theme-zen [style*="to bottom, rgba(104, 211, 145,"],
 html.theme-zen [style*="deg, rgba(150, 206, 180,"],
 html.theme-zen [style*="gradient(rgba(150, 206, 180,"],
 html.theme-zen [style*="to right, rgba(150, 206, 180,"],
-html.theme-zen [style*="to bottom, rgba(150, 206, 180,"] {
+html.theme-zen [style*="to bottom, rgba(150, 206, 180,"],
+html.theme-zen [style*="deg, rgba(46, 204, 113,"],
+html.theme-zen [style*="gradient(rgba(46, 204, 113,"],
+html.theme-zen [style*="to right, rgba(46, 204, 113,"],
+html.theme-zen [style*="to bottom, rgba(46, 204, 113,"],
+html.theme-zen [style*="deg, rgba(39, 174, 96,"],
+html.theme-zen [style*="gradient(rgba(39, 174, 96,"],
+html.theme-zen [style*="to right, rgba(39, 174, 96,"],
+html.theme-zen [style*="to bottom, rgba(39, 174, 96,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-moss) 13%, transparent), color-mix(in srgb, var(--zen-moss) 5%, transparent)) !important;
 }
 
@@ -913,7 +1357,11 @@ html.theme-zen [style*="px, rgba(52, 211, 153,"],
 html.theme-zen [style*="box-shadow: rgba(104, 211, 145,"],
 html.theme-zen [style*="px, rgba(104, 211, 145,"],
 html.theme-zen [style*="box-shadow: rgba(150, 206, 180,"],
-html.theme-zen [style*="px, rgba(150, 206, 180,"] {
+html.theme-zen [style*="px, rgba(150, 206, 180,"],
+html.theme-zen [style*="box-shadow: rgba(46, 204, 113,"],
+html.theme-zen [style*="px, rgba(46, 204, 113,"],
+html.theme-zen [style*="box-shadow: rgba(39, 174, 96,"],
+html.theme-zen [style*="px, rgba(39, 174, 96,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -932,7 +1380,11 @@ html.theme-zen [stroke="#34D399"],
 html.theme-zen [stroke="#68d391"],
 html.theme-zen [stroke="#68D391"],
 html.theme-zen [stroke="#96ceb4"],
-html.theme-zen [stroke="#96CEB4"] {
+html.theme-zen [stroke="#96CEB4"],
+html.theme-zen [stroke="#2ecc71"],
+html.theme-zen [stroke="#2ECC71"],
+html.theme-zen [stroke="#27ae60"],
+html.theme-zen [stroke="#27AE60"] {
     stroke: var(--zen-moss);
 }
 
@@ -951,7 +1403,11 @@ html.theme-zen [fill="#34D399"],
 html.theme-zen [fill="#68d391"],
 html.theme-zen [fill="#68D391"],
 html.theme-zen [fill="#96ceb4"],
-html.theme-zen [fill="#96CEB4"] {
+html.theme-zen [fill="#96CEB4"],
+html.theme-zen [fill="#2ecc71"],
+html.theme-zen [fill="#2ECC71"],
+html.theme-zen [fill="#27ae60"],
+html.theme-zen [fill="#27AE60"] {
     fill: var(--zen-moss);
 }
 
@@ -970,7 +1426,11 @@ html.theme-zen [stop-color="#34D399"],
 html.theme-zen [stop-color="#68d391"],
 html.theme-zen [stop-color="#68D391"],
 html.theme-zen [stop-color="#96ceb4"],
-html.theme-zen [stop-color="#96CEB4"] {
+html.theme-zen [stop-color="#96CEB4"],
+html.theme-zen [stop-color="#2ecc71"],
+html.theme-zen [stop-color="#2ECC71"],
+html.theme-zen [stop-color="#27ae60"],
+html.theme-zen [stop-color="#27AE60"] {
     stop-color: var(--zen-moss);
 }
 
@@ -989,7 +1449,11 @@ html.theme-zen [style*="--ring-color: #34D399"],
 html.theme-zen [style*="--ring-color: #68d391"],
 html.theme-zen [style*="--ring-color: #68D391"],
 html.theme-zen [style*="--ring-color: #96ceb4"],
-html.theme-zen [style*="--ring-color: #96CEB4"] {
+html.theme-zen [style*="--ring-color: #96CEB4"],
+html.theme-zen [style*="--ring-color: #2ecc71"],
+html.theme-zen [style*="--ring-color: #2ECC71"],
+html.theme-zen [style*="--ring-color: #27ae60"],
+html.theme-zen [style*="--ring-color: #27AE60"] {
     --ring-color: var(--zen-moss) !important;
 }
 
@@ -1022,24 +1486,48 @@ html.theme-zen [style*="; color: rgba(244, 63, 94,"],
 html.theme-zen [style^="color: rgb(252, 129, 129)"],
 html.theme-zen [style*="; color: rgb(252, 129, 129)"],
 html.theme-zen [style^="color: rgba(252, 129, 129,"],
-html.theme-zen [style*="; color: rgba(252, 129, 129,"] {
+html.theme-zen [style*="; color: rgba(252, 129, 129,"],
+html.theme-zen [style^="color: rgb(254, 202, 202)"],
+html.theme-zen [style*="; color: rgb(254, 202, 202)"],
+html.theme-zen [style^="color: rgba(254, 202, 202,"],
+html.theme-zen [style*="; color: rgba(254, 202, 202,"],
+html.theme-zen [style^="color: rgb(252, 165, 165)"],
+html.theme-zen [style*="; color: rgb(252, 165, 165)"],
+html.theme-zen [style^="color: rgba(252, 165, 165,"],
+html.theme-zen [style*="; color: rgba(252, 165, 165,"],
+html.theme-zen [style^="color: rgb(225, 29, 72)"],
+html.theme-zen [style*="; color: rgb(225, 29, 72)"],
+html.theme-zen [style^="color: rgba(225, 29, 72,"],
+html.theme-zen [style*="; color: rgba(225, 29, 72,"],
+html.theme-zen [style^="color: rgb(185, 28, 28)"],
+html.theme-zen [style*="; color: rgb(185, 28, 28)"],
+html.theme-zen [style^="color: rgba(185, 28, 28,"],
+html.theme-zen [style*="; color: rgba(185, 28, 28,"] {
     color: var(--zen-vermilion) !important;
 }
 
-html.theme-zen [style*="background: rgb(239, 68, 68)"],
-html.theme-zen [style*="background-color: rgb(239, 68, 68)"],
-html.theme-zen [style*="background: rgb(248, 113, 113)"],
-html.theme-zen [style*="background-color: rgb(248, 113, 113)"],
-html.theme-zen [style*="background: rgb(255, 107, 107)"],
-html.theme-zen [style*="background-color: rgb(255, 107, 107)"],
-html.theme-zen [style*="background: rgb(220, 38, 38)"],
-html.theme-zen [style*="background-color: rgb(220, 38, 38)"],
-html.theme-zen [style*="background: rgb(245, 101, 101)"],
-html.theme-zen [style*="background-color: rgb(245, 101, 101)"],
-html.theme-zen [style*="background: rgb(244, 63, 94)"],
-html.theme-zen [style*="background-color: rgb(244, 63, 94)"],
-html.theme-zen [style*="background: rgb(252, 129, 129)"],
-html.theme-zen [style*="background-color: rgb(252, 129, 129)"] {
+html.theme-zen [style*="background: rgb(239, 68, 68)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(239, 68, 68)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(248, 113, 113)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(248, 113, 113)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(255, 107, 107)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(255, 107, 107)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(220, 38, 38)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(220, 38, 38)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(245, 101, 101)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(245, 101, 101)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(244, 63, 94)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(244, 63, 94)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(252, 129, 129)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(252, 129, 129)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(254, 202, 202)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(254, 202, 202)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(252, 165, 165)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(252, 165, 165)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(225, 29, 72)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(225, 29, 72)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(185, 28, 28)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(185, 28, 28)"]:not(button:empty) {
     background-color: var(--zen-vermilion) !important;
 }
 
@@ -1056,7 +1544,15 @@ html.theme-zen [style*="background-color: rgba(245, 101, 101,"],
 html.theme-zen [style*="background: rgba(244, 63, 94,"],
 html.theme-zen [style*="background-color: rgba(244, 63, 94,"],
 html.theme-zen [style*="background: rgba(252, 129, 129,"],
-html.theme-zen [style*="background-color: rgba(252, 129, 129,"] {
+html.theme-zen [style*="background-color: rgba(252, 129, 129,"],
+html.theme-zen [style*="background: rgba(254, 202, 202,"],
+html.theme-zen [style*="background-color: rgba(254, 202, 202,"],
+html.theme-zen [style*="background: rgba(252, 165, 165,"],
+html.theme-zen [style*="background-color: rgba(252, 165, 165,"],
+html.theme-zen [style*="background: rgba(225, 29, 72,"],
+html.theme-zen [style*="background-color: rgba(225, 29, 72,"],
+html.theme-zen [style*="background: rgba(185, 28, 28,"],
+html.theme-zen [style*="background-color: rgba(185, 28, 28,"] {
     background-color: color-mix(in srgb, var(--zen-vermilion) 11%, transparent) !important;
 }
 
@@ -1066,7 +1562,11 @@ html.theme-zen [style*="solid rgb(255, 107, 107)"],
 html.theme-zen [style*="solid rgb(220, 38, 38)"],
 html.theme-zen [style*="solid rgb(245, 101, 101)"],
 html.theme-zen [style*="solid rgb(244, 63, 94)"],
-html.theme-zen [style*="solid rgb(252, 129, 129)"] {
+html.theme-zen [style*="solid rgb(252, 129, 129)"],
+html.theme-zen [style*="solid rgb(254, 202, 202)"],
+html.theme-zen [style*="solid rgb(252, 165, 165)"],
+html.theme-zen [style*="solid rgb(225, 29, 72)"],
+html.theme-zen [style*="solid rgb(185, 28, 28)"] {
     border-color: var(--zen-vermilion) !important;
 }
 
@@ -1083,7 +1583,15 @@ html.theme-zen [style*="dashed rgba(245, 101, 101,"],
 html.theme-zen [style*="solid rgba(244, 63, 94,"],
 html.theme-zen [style*="dashed rgba(244, 63, 94,"],
 html.theme-zen [style*="solid rgba(252, 129, 129,"],
-html.theme-zen [style*="dashed rgba(252, 129, 129,"] {
+html.theme-zen [style*="dashed rgba(252, 129, 129,"],
+html.theme-zen [style*="solid rgba(254, 202, 202,"],
+html.theme-zen [style*="dashed rgba(254, 202, 202,"],
+html.theme-zen [style*="solid rgba(252, 165, 165,"],
+html.theme-zen [style*="dashed rgba(252, 165, 165,"],
+html.theme-zen [style*="solid rgba(225, 29, 72,"],
+html.theme-zen [style*="dashed rgba(225, 29, 72,"],
+html.theme-zen [style*="solid rgba(185, 28, 28,"],
+html.theme-zen [style*="dashed rgba(185, 28, 28,"] {
     border-color: color-mix(in srgb, var(--zen-vermilion) 32%, transparent) !important;
 }
 
@@ -1114,7 +1622,23 @@ html.theme-zen [style*="to bottom, rgb(244, 63, 94)"],
 html.theme-zen [style*="deg, rgb(252, 129, 129)"],
 html.theme-zen [style*="gradient(rgb(252, 129, 129)"],
 html.theme-zen [style*="to right, rgb(252, 129, 129)"],
-html.theme-zen [style*="to bottom, rgb(252, 129, 129)"] {
+html.theme-zen [style*="to bottom, rgb(252, 129, 129)"],
+html.theme-zen [style*="deg, rgb(254, 202, 202)"],
+html.theme-zen [style*="gradient(rgb(254, 202, 202)"],
+html.theme-zen [style*="to right, rgb(254, 202, 202)"],
+html.theme-zen [style*="to bottom, rgb(254, 202, 202)"],
+html.theme-zen [style*="deg, rgb(252, 165, 165)"],
+html.theme-zen [style*="gradient(rgb(252, 165, 165)"],
+html.theme-zen [style*="to right, rgb(252, 165, 165)"],
+html.theme-zen [style*="to bottom, rgb(252, 165, 165)"],
+html.theme-zen [style*="deg, rgb(225, 29, 72)"],
+html.theme-zen [style*="gradient(rgb(225, 29, 72)"],
+html.theme-zen [style*="to right, rgb(225, 29, 72)"],
+html.theme-zen [style*="to bottom, rgb(225, 29, 72)"],
+html.theme-zen [style*="deg, rgb(185, 28, 28)"],
+html.theme-zen [style*="gradient(rgb(185, 28, 28)"],
+html.theme-zen [style*="to right, rgb(185, 28, 28)"],
+html.theme-zen [style*="to bottom, rgb(185, 28, 28)"] {
     background-image: linear-gradient(135deg, var(--zen-vermilion), color-mix(in srgb, var(--zen-vermilion) 82%, #1c1915)) !important;
 }
 
@@ -1145,7 +1669,23 @@ html.theme-zen [style*="to bottom, rgba(244, 63, 94,"],
 html.theme-zen [style*="deg, rgba(252, 129, 129,"],
 html.theme-zen [style*="gradient(rgba(252, 129, 129,"],
 html.theme-zen [style*="to right, rgba(252, 129, 129,"],
-html.theme-zen [style*="to bottom, rgba(252, 129, 129,"] {
+html.theme-zen [style*="to bottom, rgba(252, 129, 129,"],
+html.theme-zen [style*="deg, rgba(254, 202, 202,"],
+html.theme-zen [style*="gradient(rgba(254, 202, 202,"],
+html.theme-zen [style*="to right, rgba(254, 202, 202,"],
+html.theme-zen [style*="to bottom, rgba(254, 202, 202,"],
+html.theme-zen [style*="deg, rgba(252, 165, 165,"],
+html.theme-zen [style*="gradient(rgba(252, 165, 165,"],
+html.theme-zen [style*="to right, rgba(252, 165, 165,"],
+html.theme-zen [style*="to bottom, rgba(252, 165, 165,"],
+html.theme-zen [style*="deg, rgba(225, 29, 72,"],
+html.theme-zen [style*="gradient(rgba(225, 29, 72,"],
+html.theme-zen [style*="to right, rgba(225, 29, 72,"],
+html.theme-zen [style*="to bottom, rgba(225, 29, 72,"],
+html.theme-zen [style*="deg, rgba(185, 28, 28,"],
+html.theme-zen [style*="gradient(rgba(185, 28, 28,"],
+html.theme-zen [style*="to right, rgba(185, 28, 28,"],
+html.theme-zen [style*="to bottom, rgba(185, 28, 28,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-vermilion) 13%, transparent), color-mix(in srgb, var(--zen-vermilion) 5%, transparent)) !important;
 }
 
@@ -1162,7 +1702,15 @@ html.theme-zen [style*="px, rgba(245, 101, 101,"],
 html.theme-zen [style*="box-shadow: rgba(244, 63, 94,"],
 html.theme-zen [style*="px, rgba(244, 63, 94,"],
 html.theme-zen [style*="box-shadow: rgba(252, 129, 129,"],
-html.theme-zen [style*="px, rgba(252, 129, 129,"] {
+html.theme-zen [style*="px, rgba(252, 129, 129,"],
+html.theme-zen [style*="box-shadow: rgba(254, 202, 202,"],
+html.theme-zen [style*="px, rgba(254, 202, 202,"],
+html.theme-zen [style*="box-shadow: rgba(252, 165, 165,"],
+html.theme-zen [style*="px, rgba(252, 165, 165,"],
+html.theme-zen [style*="box-shadow: rgba(225, 29, 72,"],
+html.theme-zen [style*="px, rgba(225, 29, 72,"],
+html.theme-zen [style*="box-shadow: rgba(185, 28, 28,"],
+html.theme-zen [style*="px, rgba(185, 28, 28,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -1179,7 +1727,15 @@ html.theme-zen [stroke="#F56565"],
 html.theme-zen [stroke="#f43f5e"],
 html.theme-zen [stroke="#F43F5E"],
 html.theme-zen [stroke="#fc8181"],
-html.theme-zen [stroke="#FC8181"] {
+html.theme-zen [stroke="#FC8181"],
+html.theme-zen [stroke="#fecaca"],
+html.theme-zen [stroke="#FECACA"],
+html.theme-zen [stroke="#fca5a5"],
+html.theme-zen [stroke="#FCA5A5"],
+html.theme-zen [stroke="#e11d48"],
+html.theme-zen [stroke="#E11D48"],
+html.theme-zen [stroke="#b91c1c"],
+html.theme-zen [stroke="#B91C1C"] {
     stroke: var(--zen-vermilion);
 }
 
@@ -1196,7 +1752,15 @@ html.theme-zen [fill="#F56565"],
 html.theme-zen [fill="#f43f5e"],
 html.theme-zen [fill="#F43F5E"],
 html.theme-zen [fill="#fc8181"],
-html.theme-zen [fill="#FC8181"] {
+html.theme-zen [fill="#FC8181"],
+html.theme-zen [fill="#fecaca"],
+html.theme-zen [fill="#FECACA"],
+html.theme-zen [fill="#fca5a5"],
+html.theme-zen [fill="#FCA5A5"],
+html.theme-zen [fill="#e11d48"],
+html.theme-zen [fill="#E11D48"],
+html.theme-zen [fill="#b91c1c"],
+html.theme-zen [fill="#B91C1C"] {
     fill: var(--zen-vermilion);
 }
 
@@ -1213,7 +1777,15 @@ html.theme-zen [stop-color="#F56565"],
 html.theme-zen [stop-color="#f43f5e"],
 html.theme-zen [stop-color="#F43F5E"],
 html.theme-zen [stop-color="#fc8181"],
-html.theme-zen [stop-color="#FC8181"] {
+html.theme-zen [stop-color="#FC8181"],
+html.theme-zen [stop-color="#fecaca"],
+html.theme-zen [stop-color="#FECACA"],
+html.theme-zen [stop-color="#fca5a5"],
+html.theme-zen [stop-color="#FCA5A5"],
+html.theme-zen [stop-color="#e11d48"],
+html.theme-zen [stop-color="#E11D48"],
+html.theme-zen [stop-color="#b91c1c"],
+html.theme-zen [stop-color="#B91C1C"] {
     stop-color: var(--zen-vermilion);
 }
 
@@ -1230,7 +1802,15 @@ html.theme-zen [style*="--ring-color: #F56565"],
 html.theme-zen [style*="--ring-color: #f43f5e"],
 html.theme-zen [style*="--ring-color: #F43F5E"],
 html.theme-zen [style*="--ring-color: #fc8181"],
-html.theme-zen [style*="--ring-color: #FC8181"] {
+html.theme-zen [style*="--ring-color: #FC8181"],
+html.theme-zen [style*="--ring-color: #fecaca"],
+html.theme-zen [style*="--ring-color: #FECACA"],
+html.theme-zen [style*="--ring-color: #fca5a5"],
+html.theme-zen [style*="--ring-color: #FCA5A5"],
+html.theme-zen [style*="--ring-color: #e11d48"],
+html.theme-zen [style*="--ring-color: #E11D48"],
+html.theme-zen [style*="--ring-color: #b91c1c"],
+html.theme-zen [style*="--ring-color: #B91C1C"] {
     --ring-color: var(--zen-vermilion) !important;
 }
 
@@ -1263,24 +1843,42 @@ html.theme-zen [style*="; color: rgba(251, 211, 141,"],
 html.theme-zen [style^="color: rgb(250, 204, 21)"],
 html.theme-zen [style*="; color: rgb(250, 204, 21)"],
 html.theme-zen [style^="color: rgba(250, 204, 21,"],
-html.theme-zen [style*="; color: rgba(250, 204, 21,"] {
+html.theme-zen [style*="; color: rgba(250, 204, 21,"],
+html.theme-zen [style^="color: rgb(253, 224, 71)"],
+html.theme-zen [style*="; color: rgb(253, 224, 71)"],
+html.theme-zen [style^="color: rgba(253, 224, 71,"],
+html.theme-zen [style*="; color: rgba(253, 224, 71,"],
+html.theme-zen [style^="color: rgb(254, 202, 87)"],
+html.theme-zen [style*="; color: rgb(254, 202, 87)"],
+html.theme-zen [style^="color: rgba(254, 202, 87,"],
+html.theme-zen [style*="; color: rgba(254, 202, 87,"],
+html.theme-zen [style^="color: rgb(217, 119, 6)"],
+html.theme-zen [style*="; color: rgb(217, 119, 6)"],
+html.theme-zen [style^="color: rgba(217, 119, 6,"],
+html.theme-zen [style*="; color: rgba(217, 119, 6,"] {
     color: var(--zen-ochre) !important;
 }
 
-html.theme-zen [style*="background: rgb(245, 158, 11)"],
-html.theme-zen [style*="background-color: rgb(245, 158, 11)"],
-html.theme-zen [style*="background: rgb(234, 179, 8)"],
-html.theme-zen [style*="background-color: rgb(234, 179, 8)"],
-html.theme-zen [style*="background: rgb(251, 191, 36)"],
-html.theme-zen [style*="background-color: rgb(251, 191, 36)"],
-html.theme-zen [style*="background: rgb(255, 209, 102)"],
-html.theme-zen [style*="background-color: rgb(255, 209, 102)"],
-html.theme-zen [style*="background: rgb(236, 201, 75)"],
-html.theme-zen [style*="background-color: rgb(236, 201, 75)"],
-html.theme-zen [style*="background: rgb(251, 211, 141)"],
-html.theme-zen [style*="background-color: rgb(251, 211, 141)"],
-html.theme-zen [style*="background: rgb(250, 204, 21)"],
-html.theme-zen [style*="background-color: rgb(250, 204, 21)"] {
+html.theme-zen [style*="background: rgb(245, 158, 11)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(245, 158, 11)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(234, 179, 8)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(234, 179, 8)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(251, 191, 36)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(251, 191, 36)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(255, 209, 102)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(255, 209, 102)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(236, 201, 75)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(236, 201, 75)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(251, 211, 141)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(251, 211, 141)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(250, 204, 21)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(250, 204, 21)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(253, 224, 71)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(253, 224, 71)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(254, 202, 87)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(254, 202, 87)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(217, 119, 6)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(217, 119, 6)"]:not(button:empty) {
     background-color: var(--zen-ochre) !important;
 }
 
@@ -1297,7 +1895,13 @@ html.theme-zen [style*="background-color: rgba(236, 201, 75,"],
 html.theme-zen [style*="background: rgba(251, 211, 141,"],
 html.theme-zen [style*="background-color: rgba(251, 211, 141,"],
 html.theme-zen [style*="background: rgba(250, 204, 21,"],
-html.theme-zen [style*="background-color: rgba(250, 204, 21,"] {
+html.theme-zen [style*="background-color: rgba(250, 204, 21,"],
+html.theme-zen [style*="background: rgba(253, 224, 71,"],
+html.theme-zen [style*="background-color: rgba(253, 224, 71,"],
+html.theme-zen [style*="background: rgba(254, 202, 87,"],
+html.theme-zen [style*="background-color: rgba(254, 202, 87,"],
+html.theme-zen [style*="background: rgba(217, 119, 6,"],
+html.theme-zen [style*="background-color: rgba(217, 119, 6,"] {
     background-color: color-mix(in srgb, var(--zen-ochre) 11%, transparent) !important;
 }
 
@@ -1307,7 +1911,10 @@ html.theme-zen [style*="solid rgb(251, 191, 36)"],
 html.theme-zen [style*="solid rgb(255, 209, 102)"],
 html.theme-zen [style*="solid rgb(236, 201, 75)"],
 html.theme-zen [style*="solid rgb(251, 211, 141)"],
-html.theme-zen [style*="solid rgb(250, 204, 21)"] {
+html.theme-zen [style*="solid rgb(250, 204, 21)"],
+html.theme-zen [style*="solid rgb(253, 224, 71)"],
+html.theme-zen [style*="solid rgb(254, 202, 87)"],
+html.theme-zen [style*="solid rgb(217, 119, 6)"] {
     border-color: var(--zen-ochre) !important;
 }
 
@@ -1324,7 +1931,13 @@ html.theme-zen [style*="dashed rgba(236, 201, 75,"],
 html.theme-zen [style*="solid rgba(251, 211, 141,"],
 html.theme-zen [style*="dashed rgba(251, 211, 141,"],
 html.theme-zen [style*="solid rgba(250, 204, 21,"],
-html.theme-zen [style*="dashed rgba(250, 204, 21,"] {
+html.theme-zen [style*="dashed rgba(250, 204, 21,"],
+html.theme-zen [style*="solid rgba(253, 224, 71,"],
+html.theme-zen [style*="dashed rgba(253, 224, 71,"],
+html.theme-zen [style*="solid rgba(254, 202, 87,"],
+html.theme-zen [style*="dashed rgba(254, 202, 87,"],
+html.theme-zen [style*="solid rgba(217, 119, 6,"],
+html.theme-zen [style*="dashed rgba(217, 119, 6,"] {
     border-color: color-mix(in srgb, var(--zen-ochre) 32%, transparent) !important;
 }
 
@@ -1355,7 +1968,19 @@ html.theme-zen [style*="to bottom, rgb(251, 211, 141)"],
 html.theme-zen [style*="deg, rgb(250, 204, 21)"],
 html.theme-zen [style*="gradient(rgb(250, 204, 21)"],
 html.theme-zen [style*="to right, rgb(250, 204, 21)"],
-html.theme-zen [style*="to bottom, rgb(250, 204, 21)"] {
+html.theme-zen [style*="to bottom, rgb(250, 204, 21)"],
+html.theme-zen [style*="deg, rgb(253, 224, 71)"],
+html.theme-zen [style*="gradient(rgb(253, 224, 71)"],
+html.theme-zen [style*="to right, rgb(253, 224, 71)"],
+html.theme-zen [style*="to bottom, rgb(253, 224, 71)"],
+html.theme-zen [style*="deg, rgb(254, 202, 87)"],
+html.theme-zen [style*="gradient(rgb(254, 202, 87)"],
+html.theme-zen [style*="to right, rgb(254, 202, 87)"],
+html.theme-zen [style*="to bottom, rgb(254, 202, 87)"],
+html.theme-zen [style*="deg, rgb(217, 119, 6)"],
+html.theme-zen [style*="gradient(rgb(217, 119, 6)"],
+html.theme-zen [style*="to right, rgb(217, 119, 6)"],
+html.theme-zen [style*="to bottom, rgb(217, 119, 6)"] {
     background-image: linear-gradient(135deg, var(--zen-ochre), color-mix(in srgb, var(--zen-ochre) 82%, #1c1915)) !important;
 }
 
@@ -1386,7 +2011,19 @@ html.theme-zen [style*="to bottom, rgba(251, 211, 141,"],
 html.theme-zen [style*="deg, rgba(250, 204, 21,"],
 html.theme-zen [style*="gradient(rgba(250, 204, 21,"],
 html.theme-zen [style*="to right, rgba(250, 204, 21,"],
-html.theme-zen [style*="to bottom, rgba(250, 204, 21,"] {
+html.theme-zen [style*="to bottom, rgba(250, 204, 21,"],
+html.theme-zen [style*="deg, rgba(253, 224, 71,"],
+html.theme-zen [style*="gradient(rgba(253, 224, 71,"],
+html.theme-zen [style*="to right, rgba(253, 224, 71,"],
+html.theme-zen [style*="to bottom, rgba(253, 224, 71,"],
+html.theme-zen [style*="deg, rgba(254, 202, 87,"],
+html.theme-zen [style*="gradient(rgba(254, 202, 87,"],
+html.theme-zen [style*="to right, rgba(254, 202, 87,"],
+html.theme-zen [style*="to bottom, rgba(254, 202, 87,"],
+html.theme-zen [style*="deg, rgba(217, 119, 6,"],
+html.theme-zen [style*="gradient(rgba(217, 119, 6,"],
+html.theme-zen [style*="to right, rgba(217, 119, 6,"],
+html.theme-zen [style*="to bottom, rgba(217, 119, 6,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-ochre) 13%, transparent), color-mix(in srgb, var(--zen-ochre) 5%, transparent)) !important;
 }
 
@@ -1403,7 +2040,13 @@ html.theme-zen [style*="px, rgba(236, 201, 75,"],
 html.theme-zen [style*="box-shadow: rgba(251, 211, 141,"],
 html.theme-zen [style*="px, rgba(251, 211, 141,"],
 html.theme-zen [style*="box-shadow: rgba(250, 204, 21,"],
-html.theme-zen [style*="px, rgba(250, 204, 21,"] {
+html.theme-zen [style*="px, rgba(250, 204, 21,"],
+html.theme-zen [style*="box-shadow: rgba(253, 224, 71,"],
+html.theme-zen [style*="px, rgba(253, 224, 71,"],
+html.theme-zen [style*="box-shadow: rgba(254, 202, 87,"],
+html.theme-zen [style*="px, rgba(254, 202, 87,"],
+html.theme-zen [style*="box-shadow: rgba(217, 119, 6,"],
+html.theme-zen [style*="px, rgba(217, 119, 6,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -1420,7 +2063,13 @@ html.theme-zen [stroke="#ECC94B"],
 html.theme-zen [stroke="#fbd38d"],
 html.theme-zen [stroke="#FBD38D"],
 html.theme-zen [stroke="#facc15"],
-html.theme-zen [stroke="#FACC15"] {
+html.theme-zen [stroke="#FACC15"],
+html.theme-zen [stroke="#fde047"],
+html.theme-zen [stroke="#FDE047"],
+html.theme-zen [stroke="#feca57"],
+html.theme-zen [stroke="#FECA57"],
+html.theme-zen [stroke="#d97706"],
+html.theme-zen [stroke="#D97706"] {
     stroke: var(--zen-ochre);
 }
 
@@ -1437,7 +2086,13 @@ html.theme-zen [fill="#ECC94B"],
 html.theme-zen [fill="#fbd38d"],
 html.theme-zen [fill="#FBD38D"],
 html.theme-zen [fill="#facc15"],
-html.theme-zen [fill="#FACC15"] {
+html.theme-zen [fill="#FACC15"],
+html.theme-zen [fill="#fde047"],
+html.theme-zen [fill="#FDE047"],
+html.theme-zen [fill="#feca57"],
+html.theme-zen [fill="#FECA57"],
+html.theme-zen [fill="#d97706"],
+html.theme-zen [fill="#D97706"] {
     fill: var(--zen-ochre);
 }
 
@@ -1454,7 +2109,13 @@ html.theme-zen [stop-color="#ECC94B"],
 html.theme-zen [stop-color="#fbd38d"],
 html.theme-zen [stop-color="#FBD38D"],
 html.theme-zen [stop-color="#facc15"],
-html.theme-zen [stop-color="#FACC15"] {
+html.theme-zen [stop-color="#FACC15"],
+html.theme-zen [stop-color="#fde047"],
+html.theme-zen [stop-color="#FDE047"],
+html.theme-zen [stop-color="#feca57"],
+html.theme-zen [stop-color="#FECA57"],
+html.theme-zen [stop-color="#d97706"],
+html.theme-zen [stop-color="#D97706"] {
     stop-color: var(--zen-ochre);
 }
 
@@ -1471,7 +2132,13 @@ html.theme-zen [style*="--ring-color: #ECC94B"],
 html.theme-zen [style*="--ring-color: #fbd38d"],
 html.theme-zen [style*="--ring-color: #FBD38D"],
 html.theme-zen [style*="--ring-color: #facc15"],
-html.theme-zen [style*="--ring-color: #FACC15"] {
+html.theme-zen [style*="--ring-color: #FACC15"],
+html.theme-zen [style*="--ring-color: #fde047"],
+html.theme-zen [style*="--ring-color: #FDE047"],
+html.theme-zen [style*="--ring-color: #feca57"],
+html.theme-zen [style*="--ring-color: #FECA57"],
+html.theme-zen [style*="--ring-color: #d97706"],
+html.theme-zen [style*="--ring-color: #D97706"] {
     --ring-color: var(--zen-ochre) !important;
 }
 
@@ -1488,16 +2155,28 @@ html.theme-zen [style*="; color: rgba(251, 146, 60,"],
 html.theme-zen [style^="color: rgb(234, 88, 12)"],
 html.theme-zen [style*="; color: rgb(234, 88, 12)"],
 html.theme-zen [style^="color: rgba(234, 88, 12,"],
-html.theme-zen [style*="; color: rgba(234, 88, 12,"] {
+html.theme-zen [style*="; color: rgba(234, 88, 12,"],
+html.theme-zen [style^="color: rgb(253, 186, 116)"],
+html.theme-zen [style*="; color: rgb(253, 186, 116)"],
+html.theme-zen [style^="color: rgba(253, 186, 116,"],
+html.theme-zen [style*="; color: rgba(253, 186, 116,"],
+html.theme-zen [style^="color: rgb(230, 126, 34)"],
+html.theme-zen [style*="; color: rgb(230, 126, 34)"],
+html.theme-zen [style^="color: rgba(230, 126, 34,"],
+html.theme-zen [style*="; color: rgba(230, 126, 34,"] {
     color: var(--zen-persimmon) !important;
 }
 
-html.theme-zen [style*="background: rgb(249, 115, 22)"],
-html.theme-zen [style*="background-color: rgb(249, 115, 22)"],
-html.theme-zen [style*="background: rgb(251, 146, 60)"],
-html.theme-zen [style*="background-color: rgb(251, 146, 60)"],
-html.theme-zen [style*="background: rgb(234, 88, 12)"],
-html.theme-zen [style*="background-color: rgb(234, 88, 12)"] {
+html.theme-zen [style*="background: rgb(249, 115, 22)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(249, 115, 22)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(251, 146, 60)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(251, 146, 60)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(234, 88, 12)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(234, 88, 12)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(253, 186, 116)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(253, 186, 116)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(230, 126, 34)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(230, 126, 34)"]:not(button:empty) {
     background-color: var(--zen-persimmon) !important;
 }
 
@@ -1506,13 +2185,19 @@ html.theme-zen [style*="background-color: rgba(249, 115, 22,"],
 html.theme-zen [style*="background: rgba(251, 146, 60,"],
 html.theme-zen [style*="background-color: rgba(251, 146, 60,"],
 html.theme-zen [style*="background: rgba(234, 88, 12,"],
-html.theme-zen [style*="background-color: rgba(234, 88, 12,"] {
+html.theme-zen [style*="background-color: rgba(234, 88, 12,"],
+html.theme-zen [style*="background: rgba(253, 186, 116,"],
+html.theme-zen [style*="background-color: rgba(253, 186, 116,"],
+html.theme-zen [style*="background: rgba(230, 126, 34,"],
+html.theme-zen [style*="background-color: rgba(230, 126, 34,"] {
     background-color: color-mix(in srgb, var(--zen-persimmon) 11%, transparent) !important;
 }
 
 html.theme-zen [style*="solid rgb(249, 115, 22)"],
 html.theme-zen [style*="solid rgb(251, 146, 60)"],
-html.theme-zen [style*="solid rgb(234, 88, 12)"] {
+html.theme-zen [style*="solid rgb(234, 88, 12)"],
+html.theme-zen [style*="solid rgb(253, 186, 116)"],
+html.theme-zen [style*="solid rgb(230, 126, 34)"] {
     border-color: var(--zen-persimmon) !important;
 }
 
@@ -1521,7 +2206,11 @@ html.theme-zen [style*="dashed rgba(249, 115, 22,"],
 html.theme-zen [style*="solid rgba(251, 146, 60,"],
 html.theme-zen [style*="dashed rgba(251, 146, 60,"],
 html.theme-zen [style*="solid rgba(234, 88, 12,"],
-html.theme-zen [style*="dashed rgba(234, 88, 12,"] {
+html.theme-zen [style*="dashed rgba(234, 88, 12,"],
+html.theme-zen [style*="solid rgba(253, 186, 116,"],
+html.theme-zen [style*="dashed rgba(253, 186, 116,"],
+html.theme-zen [style*="solid rgba(230, 126, 34,"],
+html.theme-zen [style*="dashed rgba(230, 126, 34,"] {
     border-color: color-mix(in srgb, var(--zen-persimmon) 32%, transparent) !important;
 }
 
@@ -1536,7 +2225,15 @@ html.theme-zen [style*="to bottom, rgb(251, 146, 60)"],
 html.theme-zen [style*="deg, rgb(234, 88, 12)"],
 html.theme-zen [style*="gradient(rgb(234, 88, 12)"],
 html.theme-zen [style*="to right, rgb(234, 88, 12)"],
-html.theme-zen [style*="to bottom, rgb(234, 88, 12)"] {
+html.theme-zen [style*="to bottom, rgb(234, 88, 12)"],
+html.theme-zen [style*="deg, rgb(253, 186, 116)"],
+html.theme-zen [style*="gradient(rgb(253, 186, 116)"],
+html.theme-zen [style*="to right, rgb(253, 186, 116)"],
+html.theme-zen [style*="to bottom, rgb(253, 186, 116)"],
+html.theme-zen [style*="deg, rgb(230, 126, 34)"],
+html.theme-zen [style*="gradient(rgb(230, 126, 34)"],
+html.theme-zen [style*="to right, rgb(230, 126, 34)"],
+html.theme-zen [style*="to bottom, rgb(230, 126, 34)"] {
     background-image: linear-gradient(135deg, var(--zen-persimmon), color-mix(in srgb, var(--zen-persimmon) 82%, #1c1915)) !important;
 }
 
@@ -1551,7 +2248,15 @@ html.theme-zen [style*="to bottom, rgba(251, 146, 60,"],
 html.theme-zen [style*="deg, rgba(234, 88, 12,"],
 html.theme-zen [style*="gradient(rgba(234, 88, 12,"],
 html.theme-zen [style*="to right, rgba(234, 88, 12,"],
-html.theme-zen [style*="to bottom, rgba(234, 88, 12,"] {
+html.theme-zen [style*="to bottom, rgba(234, 88, 12,"],
+html.theme-zen [style*="deg, rgba(253, 186, 116,"],
+html.theme-zen [style*="gradient(rgba(253, 186, 116,"],
+html.theme-zen [style*="to right, rgba(253, 186, 116,"],
+html.theme-zen [style*="to bottom, rgba(253, 186, 116,"],
+html.theme-zen [style*="deg, rgba(230, 126, 34,"],
+html.theme-zen [style*="gradient(rgba(230, 126, 34,"],
+html.theme-zen [style*="to right, rgba(230, 126, 34,"],
+html.theme-zen [style*="to bottom, rgba(230, 126, 34,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-persimmon) 13%, transparent), color-mix(in srgb, var(--zen-persimmon) 5%, transparent)) !important;
 }
 
@@ -1560,7 +2265,11 @@ html.theme-zen [style*="px, rgba(249, 115, 22,"],
 html.theme-zen [style*="box-shadow: rgba(251, 146, 60,"],
 html.theme-zen [style*="px, rgba(251, 146, 60,"],
 html.theme-zen [style*="box-shadow: rgba(234, 88, 12,"],
-html.theme-zen [style*="px, rgba(234, 88, 12,"] {
+html.theme-zen [style*="px, rgba(234, 88, 12,"],
+html.theme-zen [style*="box-shadow: rgba(253, 186, 116,"],
+html.theme-zen [style*="px, rgba(253, 186, 116,"],
+html.theme-zen [style*="box-shadow: rgba(230, 126, 34,"],
+html.theme-zen [style*="px, rgba(230, 126, 34,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -1569,7 +2278,11 @@ html.theme-zen [stroke="#F97316"],
 html.theme-zen [stroke="#fb923c"],
 html.theme-zen [stroke="#FB923C"],
 html.theme-zen [stroke="#ea580c"],
-html.theme-zen [stroke="#EA580C"] {
+html.theme-zen [stroke="#EA580C"],
+html.theme-zen [stroke="#fdba74"],
+html.theme-zen [stroke="#FDBA74"],
+html.theme-zen [stroke="#e67e22"],
+html.theme-zen [stroke="#E67E22"] {
     stroke: var(--zen-persimmon);
 }
 
@@ -1578,7 +2291,11 @@ html.theme-zen [fill="#F97316"],
 html.theme-zen [fill="#fb923c"],
 html.theme-zen [fill="#FB923C"],
 html.theme-zen [fill="#ea580c"],
-html.theme-zen [fill="#EA580C"] {
+html.theme-zen [fill="#EA580C"],
+html.theme-zen [fill="#fdba74"],
+html.theme-zen [fill="#FDBA74"],
+html.theme-zen [fill="#e67e22"],
+html.theme-zen [fill="#E67E22"] {
     fill: var(--zen-persimmon);
 }
 
@@ -1587,7 +2304,11 @@ html.theme-zen [stop-color="#F97316"],
 html.theme-zen [stop-color="#fb923c"],
 html.theme-zen [stop-color="#FB923C"],
 html.theme-zen [stop-color="#ea580c"],
-html.theme-zen [stop-color="#EA580C"] {
+html.theme-zen [stop-color="#EA580C"],
+html.theme-zen [stop-color="#fdba74"],
+html.theme-zen [stop-color="#FDBA74"],
+html.theme-zen [stop-color="#e67e22"],
+html.theme-zen [stop-color="#E67E22"] {
     stop-color: var(--zen-persimmon);
 }
 
@@ -1596,7 +2317,11 @@ html.theme-zen [style*="--ring-color: #F97316"],
 html.theme-zen [style*="--ring-color: #fb923c"],
 html.theme-zen [style*="--ring-color: #FB923C"],
 html.theme-zen [style*="--ring-color: #ea580c"],
-html.theme-zen [style*="--ring-color: #EA580C"] {
+html.theme-zen [style*="--ring-color: #EA580C"],
+html.theme-zen [style*="--ring-color: #fdba74"],
+html.theme-zen [style*="--ring-color: #FDBA74"],
+html.theme-zen [style*="--ring-color: #e67e22"],
+html.theme-zen [style*="--ring-color: #E67E22"] {
     --ring-color: var(--zen-persimmon) !important;
 }
 
@@ -1617,18 +2342,24 @@ html.theme-zen [style*="; color: rgba(219, 39, 119,"],
 html.theme-zen [style^="color: rgb(217, 70, 239)"],
 html.theme-zen [style*="; color: rgb(217, 70, 239)"],
 html.theme-zen [style^="color: rgba(217, 70, 239,"],
-html.theme-zen [style*="; color: rgba(217, 70, 239,"] {
+html.theme-zen [style*="; color: rgba(217, 70, 239,"],
+html.theme-zen [style^="color: rgb(247, 37, 133)"],
+html.theme-zen [style*="; color: rgb(247, 37, 133)"],
+html.theme-zen [style^="color: rgba(247, 37, 133,"],
+html.theme-zen [style*="; color: rgba(247, 37, 133,"] {
     color: var(--zen-plum) !important;
 }
 
-html.theme-zen [style*="background: rgb(236, 72, 153)"],
-html.theme-zen [style*="background-color: rgb(236, 72, 153)"],
-html.theme-zen [style*="background: rgb(244, 114, 182)"],
-html.theme-zen [style*="background-color: rgb(244, 114, 182)"],
-html.theme-zen [style*="background: rgb(219, 39, 119)"],
-html.theme-zen [style*="background-color: rgb(219, 39, 119)"],
-html.theme-zen [style*="background: rgb(217, 70, 239)"],
-html.theme-zen [style*="background-color: rgb(217, 70, 239)"] {
+html.theme-zen [style*="background: rgb(236, 72, 153)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(236, 72, 153)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(244, 114, 182)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(244, 114, 182)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(219, 39, 119)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(219, 39, 119)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(217, 70, 239)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(217, 70, 239)"]:not(button:empty),
+html.theme-zen [style*="background: rgb(247, 37, 133)"]:not(button:empty),
+html.theme-zen [style*="background-color: rgb(247, 37, 133)"]:not(button:empty) {
     background-color: var(--zen-plum) !important;
 }
 
@@ -1639,14 +2370,17 @@ html.theme-zen [style*="background-color: rgba(244, 114, 182,"],
 html.theme-zen [style*="background: rgba(219, 39, 119,"],
 html.theme-zen [style*="background-color: rgba(219, 39, 119,"],
 html.theme-zen [style*="background: rgba(217, 70, 239,"],
-html.theme-zen [style*="background-color: rgba(217, 70, 239,"] {
+html.theme-zen [style*="background-color: rgba(217, 70, 239,"],
+html.theme-zen [style*="background: rgba(247, 37, 133,"],
+html.theme-zen [style*="background-color: rgba(247, 37, 133,"] {
     background-color: color-mix(in srgb, var(--zen-plum) 11%, transparent) !important;
 }
 
 html.theme-zen [style*="solid rgb(236, 72, 153)"],
 html.theme-zen [style*="solid rgb(244, 114, 182)"],
 html.theme-zen [style*="solid rgb(219, 39, 119)"],
-html.theme-zen [style*="solid rgb(217, 70, 239)"] {
+html.theme-zen [style*="solid rgb(217, 70, 239)"],
+html.theme-zen [style*="solid rgb(247, 37, 133)"] {
     border-color: var(--zen-plum) !important;
 }
 
@@ -1657,7 +2391,9 @@ html.theme-zen [style*="dashed rgba(244, 114, 182,"],
 html.theme-zen [style*="solid rgba(219, 39, 119,"],
 html.theme-zen [style*="dashed rgba(219, 39, 119,"],
 html.theme-zen [style*="solid rgba(217, 70, 239,"],
-html.theme-zen [style*="dashed rgba(217, 70, 239,"] {
+html.theme-zen [style*="dashed rgba(217, 70, 239,"],
+html.theme-zen [style*="solid rgba(247, 37, 133,"],
+html.theme-zen [style*="dashed rgba(247, 37, 133,"] {
     border-color: color-mix(in srgb, var(--zen-plum) 32%, transparent) !important;
 }
 
@@ -1676,7 +2412,11 @@ html.theme-zen [style*="to bottom, rgb(219, 39, 119)"],
 html.theme-zen [style*="deg, rgb(217, 70, 239)"],
 html.theme-zen [style*="gradient(rgb(217, 70, 239)"],
 html.theme-zen [style*="to right, rgb(217, 70, 239)"],
-html.theme-zen [style*="to bottom, rgb(217, 70, 239)"] {
+html.theme-zen [style*="to bottom, rgb(217, 70, 239)"],
+html.theme-zen [style*="deg, rgb(247, 37, 133)"],
+html.theme-zen [style*="gradient(rgb(247, 37, 133)"],
+html.theme-zen [style*="to right, rgb(247, 37, 133)"],
+html.theme-zen [style*="to bottom, rgb(247, 37, 133)"] {
     background-image: linear-gradient(135deg, var(--zen-plum), color-mix(in srgb, var(--zen-plum) 82%, #1c1915)) !important;
 }
 
@@ -1695,7 +2435,11 @@ html.theme-zen [style*="to bottom, rgba(219, 39, 119,"],
 html.theme-zen [style*="deg, rgba(217, 70, 239,"],
 html.theme-zen [style*="gradient(rgba(217, 70, 239,"],
 html.theme-zen [style*="to right, rgba(217, 70, 239,"],
-html.theme-zen [style*="to bottom, rgba(217, 70, 239,"] {
+html.theme-zen [style*="to bottom, rgba(217, 70, 239,"],
+html.theme-zen [style*="deg, rgba(247, 37, 133,"],
+html.theme-zen [style*="gradient(rgba(247, 37, 133,"],
+html.theme-zen [style*="to right, rgba(247, 37, 133,"],
+html.theme-zen [style*="to bottom, rgba(247, 37, 133,"] {
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-plum) 13%, transparent), color-mix(in srgb, var(--zen-plum) 5%, transparent)) !important;
 }
 
@@ -1706,7 +2450,9 @@ html.theme-zen [style*="px, rgba(244, 114, 182,"],
 html.theme-zen [style*="box-shadow: rgba(219, 39, 119,"],
 html.theme-zen [style*="px, rgba(219, 39, 119,"],
 html.theme-zen [style*="box-shadow: rgba(217, 70, 239,"],
-html.theme-zen [style*="px, rgba(217, 70, 239,"] {
+html.theme-zen [style*="px, rgba(217, 70, 239,"],
+html.theme-zen [style*="box-shadow: rgba(247, 37, 133,"],
+html.theme-zen [style*="px, rgba(247, 37, 133,"] {
     box-shadow: var(--zen-shadow-soft) !important;
 }
 
@@ -1717,7 +2463,9 @@ html.theme-zen [stroke="#F472B6"],
 html.theme-zen [stroke="#db2777"],
 html.theme-zen [stroke="#DB2777"],
 html.theme-zen [stroke="#d946ef"],
-html.theme-zen [stroke="#D946EF"] {
+html.theme-zen [stroke="#D946EF"],
+html.theme-zen [stroke="#f72585"],
+html.theme-zen [stroke="#F72585"] {
     stroke: var(--zen-plum);
 }
 
@@ -1728,7 +2476,9 @@ html.theme-zen [fill="#F472B6"],
 html.theme-zen [fill="#db2777"],
 html.theme-zen [fill="#DB2777"],
 html.theme-zen [fill="#d946ef"],
-html.theme-zen [fill="#D946EF"] {
+html.theme-zen [fill="#D946EF"],
+html.theme-zen [fill="#f72585"],
+html.theme-zen [fill="#F72585"] {
     fill: var(--zen-plum);
 }
 
@@ -1739,7 +2489,9 @@ html.theme-zen [stop-color="#F472B6"],
 html.theme-zen [stop-color="#db2777"],
 html.theme-zen [stop-color="#DB2777"],
 html.theme-zen [stop-color="#d946ef"],
-html.theme-zen [stop-color="#D946EF"] {
+html.theme-zen [stop-color="#D946EF"],
+html.theme-zen [stop-color="#f72585"],
+html.theme-zen [stop-color="#F72585"] {
     stop-color: var(--zen-plum);
 }
 
@@ -1750,6 +2502,8 @@ html.theme-zen [style*="--ring-color: #F472B6"],
 html.theme-zen [style*="--ring-color: #db2777"],
 html.theme-zen [style*="--ring-color: #DB2777"],
 html.theme-zen [style*="--ring-color: #d946ef"],
-html.theme-zen [style*="--ring-color: #D946EF"] {
+html.theme-zen [style*="--ring-color: #D946EF"],
+html.theme-zen [style*="--ring-color: #f72585"],
+html.theme-zen [style*="--ring-color: #F72585"] {
     --ring-color: var(--zen-plum) !important;
 }

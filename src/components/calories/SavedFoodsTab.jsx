@@ -203,7 +203,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search your foodsâ€¦"
+                        placeholder="Search your foods…"
                         className="surface-input"
                         style={{ ...inputStyle, fontFamily: 'inherit', paddingLeft: 34 }}
                     />
@@ -251,7 +251,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                                     {f.name}
                                 </div>
                                 <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                    P{round1(f.protein_per_100g)} C{round1(f.carbs_per_100g)} F{round1(f.fat_per_100g)} Â· per 100{isLiquidFood(f) || f.is_liquid ? 'ml' : 'g'}
+                                    P{round1(f.protein_per_100g)} C{round1(f.carbs_per_100g)} F{round1(f.fat_per_100g)} · per 100{isLiquidFood(f) || f.is_liquid ? 'ml' : 'g'}
                                 </div>
                             </div>
                             <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -389,7 +389,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                                 <input
                                     value={form.unit_name}
                                     onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
-                                    placeholder="piece, glassâ€¦"
+                                    placeholder="piece, glass…"
                                     className="surface-input"
                                     style={{ ...inputStyle, fontFamily: 'inherit' }}
                                 />
@@ -426,7 +426,7 @@ const SavedFoodsTab = ({ foodCatalog, onUpdateFood, onAddToToday }) => {
                                 <X size={14} /> Cancel
                             </button>
                             <button type="submit" disabled={saving} className="btn-primary" style={{ flex: 1, padding: 11, fontSize: 14 }}>
-                                {saving ? 'Savingâ€¦' : 'Save changes'}
+                                {saving ? 'Saving…' : 'Save changes'}
                             </button>
                         </div>
                     </form>

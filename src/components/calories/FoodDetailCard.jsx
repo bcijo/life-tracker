@@ -151,7 +151,7 @@ const FoodDetailCard = ({ item, foodCatalog = [], headerAction = null, footer = 
                                             Calorie Ratio
                                         </span>
                                         <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-secondary)' }}>
-                                            P {proteinPct}% Â· C {carbsPct}% Â· F {fatPct}%
+                                            P {proteinPct}% · C {carbsPct}% · F {fatPct}%
                                         </span>
                                     </div>
                                 </div>
@@ -197,7 +197,7 @@ const FoodDetailCard = ({ item, foodCatalog = [], headerAction = null, footer = 
                                             </span>
                                         ) : (
                                             <span style={{ fontSize: 9, color: 'var(--text-muted)', opacity: 0.6 }}>
-                                                â€”
+                                                —
                                             </span>
                                         )}
                                     </div>
