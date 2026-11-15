@@ -1,5 +1,71 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../../contexts/ThemeContext';
+
+/**
+ * Ancient Zen loader: an ensō (brush circle) drawn in one slow stroke, held for
+ * a breath, then fading away, with a vermilion seal dot at its centre.
+ */
+const ZenEnso = ({ size }) => {
+    const filterId = `zen-brush-${useId().replace(/:/g, '')}`;
+    const stroke = Math.max(2.5, size * 0.085);
+    const times = [0, 0.55, 0.8, 1];
+    const loop = { duration: 3.6, repeat: Infinity, ease: 'easeInOut', times };
+
+    return (
+        <div style={{ position: 'relative', width: `${size}px`, height: `${size}px`, flexShrink: 0 }}>
+            <svg viewBox="0 0 100 100" width={size} height={size} style={{ overflow: 'visible', display: 'block' }} aria-hidden="true">
+                <defs>
+                    {/* Roughens the stroke edge so it reads as a brush, not a ring */}
+                    <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="3" />
+                        <feDisplacementMap in="SourceGraphic" scale="3.5" />
+                    </filter>
+                </defs>
+                <g
+                    fill="none"
+                    stroke="var(--zen-ink, #2a2622)"
+                    strokeLinecap="round"
+                    transform="rotate(-70 50 50)"
+                    filter={size >= 40 ? `url(#${filterId})` : undefined}
+                >
+                    {/* Dry outer edge of the brush */}
+                    <motion.circle
+                        cx="50" cy="50" r="38"
+                        strokeWidth={(stroke / size) * 100 * 1.25}
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: [0, 0.9, 0.9, 0.9], opacity: [0.18, 0.18, 0.18, 0] }}
+                        transition={loop}
+                    />
+                    {/* Wet ink core */}
+                    <motion.circle
+                        cx="50" cy="50" r="38"
+                        strokeWidth={(stroke / size) * 100 * 0.7}
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: [0, 0.86, 0.86, 0.86], opacity: [0.85, 0.85, 0.85, 0] }}
+                        transition={loop}
+                    />
+                </g>
+            </svg>
+            {/* Seal dot */}
+            <motion.div
+                animate={{ scale: [0.75, 1, 0.75], opacity: [0.55, 1, 0.55] }}
+                transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: `${Math.max(3, size * 0.1)}px`,
+                    height: `${Math.max(3, size * 0.1)}px`,
+                    marginTop: `${-Math.max(3, size * 0.1) / 2}px`,
+                    marginLeft: `${-Math.max(3, size * 0.1) / 2}px`,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--zen-vermilion, #b4412c)'
+                }}
+            />
+        </div>
+    );
+};
 
 /**
  * Custom Unified Branded Loading Animation for LifeTracker.
@@ -21,6 +87,8 @@ const AppLoader = ({
     showLogoText = true,
     className = ''
 }) => {
+    const { theme } = useTheme();
+    const isZen = theme === 'zen';
 
     const sizeConfig = {
         small: {
@@ -52,6 +120,7 @@ const AppLoader = ({
     if (variant === 'inline') {
         return (
             <div className={`lt-loader-inline ${className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                {isZen ? <ZenEnso size={20} /> : (
                 <div style={{ position: 'relative', width: '20px', height: '20px' }}>
                     <motion.div
                         animate={{ rotate: 360 }}
@@ -74,6 +143,7 @@ const AppLoader = ({
                         }}
                     />
                 </div>
+                )}
                 {message && (
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>{message}</span>
                 )}
@@ -98,7 +168,7 @@ const AppLoader = ({
         { color: '#10b981', glow: 'rgba(16, 185, 129, 0.6)' }    // Social (Emerald)
     ];
 
-    const LoaderGraphic = (
+    const LoaderGraphic = isZen ? <ZenEnso size={cs} /> : (
         <div style={{
             position: 'relative',
             width: `${cs}px`,
@@ -310,7 +380,7 @@ const AppLoader = ({
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'var(--bg-primary, #0f0f17)',
+                background: isZen ? 'var(--bg-solid)' : 'var(--bg-primary, #0f0f17)',
                 zIndex: 9999,
                 padding: '24px',
                 textAlign: 'center'
@@ -334,7 +404,13 @@ const AppLoader = ({
                         <motion.div
                             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                            style={{
+                            style={isZen ? {
+                                fontSize: sizeConfig.titleSize,
+                                fontWeight: '700',
+                                fontFamily: 'var(--font-display)',
+                                color: 'var(--text-primary)',
+                                letterSpacing: '0.04em'
+                            } : {
                                 fontSize: sizeConfig.titleSize,
                                 fontWeight: '800',
                                 background: 'linear-gradient(90deg, #c084fc, #f472b6, #818cf8, #34d399, #c084fc)',
