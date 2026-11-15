@@ -7,7 +7,7 @@ import LiquidGlassSegmented from '../common/LiquidGlassSegmented';
 import Modal from '../Modal';
 import FoodDetailCard from './FoodDetailCard';
 
-const MONO = "'JetBrains Mono', monospace";
+const MONO = "var(--font-mono)";
 const ACCENT = '#a855f7';
 const AMBER = '#f59e0b';
 const GREEN = '#22c55e';

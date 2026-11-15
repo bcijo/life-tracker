@@ -40,7 +40,7 @@ import Modal from '../components/Modal';
 import SavedFoodsTab from '../components/calories/SavedFoodsTab';
 import FoodDetailCard from '../components/calories/FoodDetailCard';
 
-const MONO = "'JetBrains Mono', monospace";
+const MONO = "var(--font-mono)";
 const ACCENT = '#a855f7';
 const AMBER = '#f59e0b';
 const GREEN = '#22c55e';
@@ -3534,7 +3534,7 @@ const Calories = () => {
                 .cal-scan-kcal-input {
                     width: 130px;
                     background: transparent; border: none; border-bottom: 1.5px dashed rgba(255, 255, 255, 0.22);
-                    font-family: 'JetBrains Mono', monospace;
+                    font-family: var(--font-mono);
                     font-size: 46px; font-weight: 800; color: #ffffff;
                     line-height: 1; letter-spacing: -0.03em;
                     text-align: right; outline: none; padding: 0 2px 2px;
@@ -3574,7 +3574,7 @@ const Calories = () => {
                 .cal-scan-macro-input {
                     width: 48px;
                     background: transparent; border: none;
-                    font-family: 'JetBrains Mono', monospace;
+                    font-family: var(--font-mono);
                     font-size: 15px; font-weight: 800; color: #ffffff; line-height: 1.1;
                     text-align: right; outline: none; padding: 0;
                     -moz-appearance: textfield;

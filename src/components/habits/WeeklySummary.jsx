@@ -455,7 +455,7 @@ export const WeeklySummary = memo(function WeeklySummary({
           font-size: 12px;
           font-weight: 700;
           line-height: 1;
-          font-family: monospace;
+          font-family: var(--font-mono);
           transition: color 0.15s ease, filter 0.2s ease;
         }
       `}</style>

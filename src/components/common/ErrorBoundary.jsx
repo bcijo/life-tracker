@@ -92,7 +92,7 @@ class ErrorBoundary extends React.Component {
                                 fontSize: '11px',
                                 color: 'var(--text-muted, #64748b)',
                                 textAlign: 'left',
-                                fontFamily: 'monospace',
+                                fontFamily: 'var(--font-mono)',
                                 wordBreak: 'break-all',
                                 maxHeight: '80px',
                                 overflowY: 'auto'

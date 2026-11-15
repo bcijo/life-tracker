@@ -175,7 +175,7 @@ const InviteLanding = () => {
               {displayName.charAt(0).toUpperCase()}
             </motion.div>
             <h2 style={{ color: '#fff', fontWeight: 700, marginBottom: 4 }}>{displayName}</h2>
-            <p style={{ color: '#a855f7', fontSize: 13, fontFamily: 'monospace', fontWeight: 600, marginBottom: 20 }}>
+            <p style={{ color: '#a855f7', fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600, marginBottom: 20 }}>
               @{inviter.username}
             </p>
             <p style={{ color: 'var(--text-muted, #888)', fontSize: 14, marginBottom: 24 }}>

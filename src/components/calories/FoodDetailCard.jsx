@@ -2,7 +2,7 @@ import React from 'react';
 import { Utensils, Clock } from 'lucide-react';
 import { isLiquidFood, normalizeFoodName } from '../../lib/indianFoodCatalog';
 
-const MONO = "'JetBrains Mono', monospace";
+const MONO = "var(--font-mono)";
 const ACCENT = '#a855f7';
 const AMBER = '#f59e0b';
 const GREEN = '#22c55e';

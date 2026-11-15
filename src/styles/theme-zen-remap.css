@@ -1,0 +1,1755 @@
+/* GENERATED FILE. Do not edit by hand: run `node scripts/generate-zen-remap.mjs`. */
+
+/* ---- indigo ---- */
+
+html.theme-zen [style^="color: rgb(168, 85, 247)"],
+html.theme-zen [style*="; color: rgb(168, 85, 247)"],
+html.theme-zen [style^="color: rgba(168, 85, 247,"],
+html.theme-zen [style*="; color: rgba(168, 85, 247,"],
+html.theme-zen [style^="color: rgb(192, 132, 252)"],
+html.theme-zen [style*="; color: rgb(192, 132, 252)"],
+html.theme-zen [style^="color: rgba(192, 132, 252,"],
+html.theme-zen [style*="; color: rgba(192, 132, 252,"],
+html.theme-zen [style^="color: rgb(139, 92, 246)"],
+html.theme-zen [style*="; color: rgb(139, 92, 246)"],
+html.theme-zen [style^="color: rgba(139, 92, 246,"],
+html.theme-zen [style*="; color: rgba(139, 92, 246,"],
+html.theme-zen [style^="color: rgb(99, 102, 241)"],
+html.theme-zen [style*="; color: rgb(99, 102, 241)"],
+html.theme-zen [style^="color: rgba(99, 102, 241,"],
+html.theme-zen [style*="; color: rgba(99, 102, 241,"],
+html.theme-zen [style^="color: rgb(129, 140, 248)"],
+html.theme-zen [style*="; color: rgb(129, 140, 248)"],
+html.theme-zen [style^="color: rgba(129, 140, 248,"],
+html.theme-zen [style*="; color: rgba(129, 140, 248,"],
+html.theme-zen [style^="color: rgb(102, 126, 234)"],
+html.theme-zen [style*="; color: rgb(102, 126, 234)"],
+html.theme-zen [style^="color: rgba(102, 126, 234,"],
+html.theme-zen [style*="; color: rgba(102, 126, 234,"],
+html.theme-zen [style^="color: rgb(159, 122, 234)"],
+html.theme-zen [style*="; color: rgb(159, 122, 234)"],
+html.theme-zen [style^="color: rgba(159, 122, 234,"],
+html.theme-zen [style*="; color: rgba(159, 122, 234,"],
+html.theme-zen [style^="color: rgb(124, 58, 237)"],
+html.theme-zen [style*="; color: rgb(124, 58, 237)"],
+html.theme-zen [style^="color: rgba(124, 58, 237,"],
+html.theme-zen [style*="; color: rgba(124, 58, 237,"],
+html.theme-zen [style^="color: rgb(118, 75, 162)"],
+html.theme-zen [style*="; color: rgb(118, 75, 162)"],
+html.theme-zen [style^="color: rgba(118, 75, 162,"],
+html.theme-zen [style*="; color: rgba(118, 75, 162,"],
+html.theme-zen [style^="color: rgb(90, 103, 216)"],
+html.theme-zen [style*="; color: rgb(90, 103, 216)"],
+html.theme-zen [style^="color: rgba(90, 103, 216,"],
+html.theme-zen [style*="; color: rgba(90, 103, 216,"] {
+    color: var(--zen-indigo) !important;
+}
+
+html.theme-zen [style*="background: rgb(168, 85, 247)"],
+html.theme-zen [style*="background-color: rgb(168, 85, 247)"],
+html.theme-zen [style*="background: rgb(192, 132, 252)"],
+html.theme-zen [style*="background-color: rgb(192, 132, 252)"],
+html.theme-zen [style*="background: rgb(139, 92, 246)"],
+html.theme-zen [style*="background-color: rgb(139, 92, 246)"],
+html.theme-zen [style*="background: rgb(99, 102, 241)"],
+html.theme-zen [style*="background-color: rgb(99, 102, 241)"],
+html.theme-zen [style*="background: rgb(129, 140, 248)"],
+html.theme-zen [style*="background-color: rgb(129, 140, 248)"],
+html.theme-zen [style*="background: rgb(102, 126, 234)"],
+html.theme-zen [style*="background-color: rgb(102, 126, 234)"],
+html.theme-zen [style*="background: rgb(159, 122, 234)"],
+html.theme-zen [style*="background-color: rgb(159, 122, 234)"],
+html.theme-zen [style*="background: rgb(124, 58, 237)"],
+html.theme-zen [style*="background-color: rgb(124, 58, 237)"],
+html.theme-zen [style*="background: rgb(118, 75, 162)"],
+html.theme-zen [style*="background-color: rgb(118, 75, 162)"],
+html.theme-zen [style*="background: rgb(90, 103, 216)"],
+html.theme-zen [style*="background-color: rgb(90, 103, 216)"] {
+    background-color: var(--zen-indigo) !important;
+}
+
+html.theme-zen [style*="background: rgba(168, 85, 247,"],
+html.theme-zen [style*="background-color: rgba(168, 85, 247,"],
+html.theme-zen [style*="background: rgba(192, 132, 252,"],
+html.theme-zen [style*="background-color: rgba(192, 132, 252,"],
+html.theme-zen [style*="background: rgba(139, 92, 246,"],
+html.theme-zen [style*="background-color: rgba(139, 92, 246,"],
+html.theme-zen [style*="background: rgba(99, 102, 241,"],
+html.theme-zen [style*="background-color: rgba(99, 102, 241,"],
+html.theme-zen [style*="background: rgba(129, 140, 248,"],
+html.theme-zen [style*="background-color: rgba(129, 140, 248,"],
+html.theme-zen [style*="background: rgba(102, 126, 234,"],
+html.theme-zen [style*="background-color: rgba(102, 126, 234,"],
+html.theme-zen [style*="background: rgba(159, 122, 234,"],
+html.theme-zen [style*="background-color: rgba(159, 122, 234,"],
+html.theme-zen [style*="background: rgba(124, 58, 237,"],
+html.theme-zen [style*="background-color: rgba(124, 58, 237,"],
+html.theme-zen [style*="background: rgba(118, 75, 162,"],
+html.theme-zen [style*="background-color: rgba(118, 75, 162,"],
+html.theme-zen [style*="background: rgba(90, 103, 216,"],
+html.theme-zen [style*="background-color: rgba(90, 103, 216,"] {
+    background-color: color-mix(in srgb, var(--zen-indigo) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(168, 85, 247)"],
+html.theme-zen [style*="solid rgb(192, 132, 252)"],
+html.theme-zen [style*="solid rgb(139, 92, 246)"],
+html.theme-zen [style*="solid rgb(99, 102, 241)"],
+html.theme-zen [style*="solid rgb(129, 140, 248)"],
+html.theme-zen [style*="solid rgb(102, 126, 234)"],
+html.theme-zen [style*="solid rgb(159, 122, 234)"],
+html.theme-zen [style*="solid rgb(124, 58, 237)"],
+html.theme-zen [style*="solid rgb(118, 75, 162)"],
+html.theme-zen [style*="solid rgb(90, 103, 216)"] {
+    border-color: var(--zen-indigo) !important;
+}
+
+html.theme-zen [style*="solid rgba(168, 85, 247,"],
+html.theme-zen [style*="dashed rgba(168, 85, 247,"],
+html.theme-zen [style*="solid rgba(192, 132, 252,"],
+html.theme-zen [style*="dashed rgba(192, 132, 252,"],
+html.theme-zen [style*="solid rgba(139, 92, 246,"],
+html.theme-zen [style*="dashed rgba(139, 92, 246,"],
+html.theme-zen [style*="solid rgba(99, 102, 241,"],
+html.theme-zen [style*="dashed rgba(99, 102, 241,"],
+html.theme-zen [style*="solid rgba(129, 140, 248,"],
+html.theme-zen [style*="dashed rgba(129, 140, 248,"],
+html.theme-zen [style*="solid rgba(102, 126, 234,"],
+html.theme-zen [style*="dashed rgba(102, 126, 234,"],
+html.theme-zen [style*="solid rgba(159, 122, 234,"],
+html.theme-zen [style*="dashed rgba(159, 122, 234,"],
+html.theme-zen [style*="solid rgba(124, 58, 237,"],
+html.theme-zen [style*="dashed rgba(124, 58, 237,"],
+html.theme-zen [style*="solid rgba(118, 75, 162,"],
+html.theme-zen [style*="dashed rgba(118, 75, 162,"],
+html.theme-zen [style*="solid rgba(90, 103, 216,"],
+html.theme-zen [style*="dashed rgba(90, 103, 216,"] {
+    border-color: color-mix(in srgb, var(--zen-indigo) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(168, 85, 247)"],
+html.theme-zen [style*="gradient(rgb(168, 85, 247)"],
+html.theme-zen [style*="to right, rgb(168, 85, 247)"],
+html.theme-zen [style*="to bottom, rgb(168, 85, 247)"],
+html.theme-zen [style*="deg, rgb(192, 132, 252)"],
+html.theme-zen [style*="gradient(rgb(192, 132, 252)"],
+html.theme-zen [style*="to right, rgb(192, 132, 252)"],
+html.theme-zen [style*="to bottom, rgb(192, 132, 252)"],
+html.theme-zen [style*="deg, rgb(139, 92, 246)"],
+html.theme-zen [style*="gradient(rgb(139, 92, 246)"],
+html.theme-zen [style*="to right, rgb(139, 92, 246)"],
+html.theme-zen [style*="to bottom, rgb(139, 92, 246)"],
+html.theme-zen [style*="deg, rgb(99, 102, 241)"],
+html.theme-zen [style*="gradient(rgb(99, 102, 241)"],
+html.theme-zen [style*="to right, rgb(99, 102, 241)"],
+html.theme-zen [style*="to bottom, rgb(99, 102, 241)"],
+html.theme-zen [style*="deg, rgb(129, 140, 248)"],
+html.theme-zen [style*="gradient(rgb(129, 140, 248)"],
+html.theme-zen [style*="to right, rgb(129, 140, 248)"],
+html.theme-zen [style*="to bottom, rgb(129, 140, 248)"],
+html.theme-zen [style*="deg, rgb(102, 126, 234)"],
+html.theme-zen [style*="gradient(rgb(102, 126, 234)"],
+html.theme-zen [style*="to right, rgb(102, 126, 234)"],
+html.theme-zen [style*="to bottom, rgb(102, 126, 234)"],
+html.theme-zen [style*="deg, rgb(159, 122, 234)"],
+html.theme-zen [style*="gradient(rgb(159, 122, 234)"],
+html.theme-zen [style*="to right, rgb(159, 122, 234)"],
+html.theme-zen [style*="to bottom, rgb(159, 122, 234)"],
+html.theme-zen [style*="deg, rgb(124, 58, 237)"],
+html.theme-zen [style*="gradient(rgb(124, 58, 237)"],
+html.theme-zen [style*="to right, rgb(124, 58, 237)"],
+html.theme-zen [style*="to bottom, rgb(124, 58, 237)"],
+html.theme-zen [style*="deg, rgb(118, 75, 162)"],
+html.theme-zen [style*="gradient(rgb(118, 75, 162)"],
+html.theme-zen [style*="to right, rgb(118, 75, 162)"],
+html.theme-zen [style*="to bottom, rgb(118, 75, 162)"],
+html.theme-zen [style*="deg, rgb(90, 103, 216)"],
+html.theme-zen [style*="gradient(rgb(90, 103, 216)"],
+html.theme-zen [style*="to right, rgb(90, 103, 216)"],
+html.theme-zen [style*="to bottom, rgb(90, 103, 216)"] {
+    background-image: linear-gradient(135deg, var(--zen-indigo), color-mix(in srgb, var(--zen-indigo) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(168, 85, 247,"],
+html.theme-zen [style*="gradient(rgba(168, 85, 247,"],
+html.theme-zen [style*="to right, rgba(168, 85, 247,"],
+html.theme-zen [style*="to bottom, rgba(168, 85, 247,"],
+html.theme-zen [style*="deg, rgba(192, 132, 252,"],
+html.theme-zen [style*="gradient(rgba(192, 132, 252,"],
+html.theme-zen [style*="to right, rgba(192, 132, 252,"],
+html.theme-zen [style*="to bottom, rgba(192, 132, 252,"],
+html.theme-zen [style*="deg, rgba(139, 92, 246,"],
+html.theme-zen [style*="gradient(rgba(139, 92, 246,"],
+html.theme-zen [style*="to right, rgba(139, 92, 246,"],
+html.theme-zen [style*="to bottom, rgba(139, 92, 246,"],
+html.theme-zen [style*="deg, rgba(99, 102, 241,"],
+html.theme-zen [style*="gradient(rgba(99, 102, 241,"],
+html.theme-zen [style*="to right, rgba(99, 102, 241,"],
+html.theme-zen [style*="to bottom, rgba(99, 102, 241,"],
+html.theme-zen [style*="deg, rgba(129, 140, 248,"],
+html.theme-zen [style*="gradient(rgba(129, 140, 248,"],
+html.theme-zen [style*="to right, rgba(129, 140, 248,"],
+html.theme-zen [style*="to bottom, rgba(129, 140, 248,"],
+html.theme-zen [style*="deg, rgba(102, 126, 234,"],
+html.theme-zen [style*="gradient(rgba(102, 126, 234,"],
+html.theme-zen [style*="to right, rgba(102, 126, 234,"],
+html.theme-zen [style*="to bottom, rgba(102, 126, 234,"],
+html.theme-zen [style*="deg, rgba(159, 122, 234,"],
+html.theme-zen [style*="gradient(rgba(159, 122, 234,"],
+html.theme-zen [style*="to right, rgba(159, 122, 234,"],
+html.theme-zen [style*="to bottom, rgba(159, 122, 234,"],
+html.theme-zen [style*="deg, rgba(124, 58, 237,"],
+html.theme-zen [style*="gradient(rgba(124, 58, 237,"],
+html.theme-zen [style*="to right, rgba(124, 58, 237,"],
+html.theme-zen [style*="to bottom, rgba(124, 58, 237,"],
+html.theme-zen [style*="deg, rgba(118, 75, 162,"],
+html.theme-zen [style*="gradient(rgba(118, 75, 162,"],
+html.theme-zen [style*="to right, rgba(118, 75, 162,"],
+html.theme-zen [style*="to bottom, rgba(118, 75, 162,"],
+html.theme-zen [style*="deg, rgba(90, 103, 216,"],
+html.theme-zen [style*="gradient(rgba(90, 103, 216,"],
+html.theme-zen [style*="to right, rgba(90, 103, 216,"],
+html.theme-zen [style*="to bottom, rgba(90, 103, 216,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-indigo) 13%, transparent), color-mix(in srgb, var(--zen-indigo) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(168, 85, 247,"],
+html.theme-zen [style*="px, rgba(168, 85, 247,"],
+html.theme-zen [style*="box-shadow: rgba(192, 132, 252,"],
+html.theme-zen [style*="px, rgba(192, 132, 252,"],
+html.theme-zen [style*="box-shadow: rgba(139, 92, 246,"],
+html.theme-zen [style*="px, rgba(139, 92, 246,"],
+html.theme-zen [style*="box-shadow: rgba(99, 102, 241,"],
+html.theme-zen [style*="px, rgba(99, 102, 241,"],
+html.theme-zen [style*="box-shadow: rgba(129, 140, 248,"],
+html.theme-zen [style*="px, rgba(129, 140, 248,"],
+html.theme-zen [style*="box-shadow: rgba(102, 126, 234,"],
+html.theme-zen [style*="px, rgba(102, 126, 234,"],
+html.theme-zen [style*="box-shadow: rgba(159, 122, 234,"],
+html.theme-zen [style*="px, rgba(159, 122, 234,"],
+html.theme-zen [style*="box-shadow: rgba(124, 58, 237,"],
+html.theme-zen [style*="px, rgba(124, 58, 237,"],
+html.theme-zen [style*="box-shadow: rgba(118, 75, 162,"],
+html.theme-zen [style*="px, rgba(118, 75, 162,"],
+html.theme-zen [style*="box-shadow: rgba(90, 103, 216,"],
+html.theme-zen [style*="px, rgba(90, 103, 216,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#a855f7"],
+html.theme-zen [stroke="#A855F7"],
+html.theme-zen [stroke="#c084fc"],
+html.theme-zen [stroke="#C084FC"],
+html.theme-zen [stroke="#8b5cf6"],
+html.theme-zen [stroke="#8B5CF6"],
+html.theme-zen [stroke="#6366f1"],
+html.theme-zen [stroke="#6366F1"],
+html.theme-zen [stroke="#818cf8"],
+html.theme-zen [stroke="#818CF8"],
+html.theme-zen [stroke="#667eea"],
+html.theme-zen [stroke="#667EEA"],
+html.theme-zen [stroke="#9f7aea"],
+html.theme-zen [stroke="#9F7AEA"],
+html.theme-zen [stroke="#7c3aed"],
+html.theme-zen [stroke="#7C3AED"],
+html.theme-zen [stroke="#764ba2"],
+html.theme-zen [stroke="#764BA2"],
+html.theme-zen [stroke="#5a67d8"],
+html.theme-zen [stroke="#5A67D8"] {
+    stroke: var(--zen-indigo);
+}
+
+html.theme-zen [fill="#a855f7"],
+html.theme-zen [fill="#A855F7"],
+html.theme-zen [fill="#c084fc"],
+html.theme-zen [fill="#C084FC"],
+html.theme-zen [fill="#8b5cf6"],
+html.theme-zen [fill="#8B5CF6"],
+html.theme-zen [fill="#6366f1"],
+html.theme-zen [fill="#6366F1"],
+html.theme-zen [fill="#818cf8"],
+html.theme-zen [fill="#818CF8"],
+html.theme-zen [fill="#667eea"],
+html.theme-zen [fill="#667EEA"],
+html.theme-zen [fill="#9f7aea"],
+html.theme-zen [fill="#9F7AEA"],
+html.theme-zen [fill="#7c3aed"],
+html.theme-zen [fill="#7C3AED"],
+html.theme-zen [fill="#764ba2"],
+html.theme-zen [fill="#764BA2"],
+html.theme-zen [fill="#5a67d8"],
+html.theme-zen [fill="#5A67D8"] {
+    fill: var(--zen-indigo);
+}
+
+html.theme-zen [stop-color="#a855f7"],
+html.theme-zen [stop-color="#A855F7"],
+html.theme-zen [stop-color="#c084fc"],
+html.theme-zen [stop-color="#C084FC"],
+html.theme-zen [stop-color="#8b5cf6"],
+html.theme-zen [stop-color="#8B5CF6"],
+html.theme-zen [stop-color="#6366f1"],
+html.theme-zen [stop-color="#6366F1"],
+html.theme-zen [stop-color="#818cf8"],
+html.theme-zen [stop-color="#818CF8"],
+html.theme-zen [stop-color="#667eea"],
+html.theme-zen [stop-color="#667EEA"],
+html.theme-zen [stop-color="#9f7aea"],
+html.theme-zen [stop-color="#9F7AEA"],
+html.theme-zen [stop-color="#7c3aed"],
+html.theme-zen [stop-color="#7C3AED"],
+html.theme-zen [stop-color="#764ba2"],
+html.theme-zen [stop-color="#764BA2"],
+html.theme-zen [stop-color="#5a67d8"],
+html.theme-zen [stop-color="#5A67D8"] {
+    stop-color: var(--zen-indigo);
+}
+
+html.theme-zen [style*="--ring-color: #a855f7"],
+html.theme-zen [style*="--ring-color: #A855F7"],
+html.theme-zen [style*="--ring-color: #c084fc"],
+html.theme-zen [style*="--ring-color: #C084FC"],
+html.theme-zen [style*="--ring-color: #8b5cf6"],
+html.theme-zen [style*="--ring-color: #8B5CF6"],
+html.theme-zen [style*="--ring-color: #6366f1"],
+html.theme-zen [style*="--ring-color: #6366F1"],
+html.theme-zen [style*="--ring-color: #818cf8"],
+html.theme-zen [style*="--ring-color: #818CF8"],
+html.theme-zen [style*="--ring-color: #667eea"],
+html.theme-zen [style*="--ring-color: #667EEA"],
+html.theme-zen [style*="--ring-color: #9f7aea"],
+html.theme-zen [style*="--ring-color: #9F7AEA"],
+html.theme-zen [style*="--ring-color: #7c3aed"],
+html.theme-zen [style*="--ring-color: #7C3AED"],
+html.theme-zen [style*="--ring-color: #764ba2"],
+html.theme-zen [style*="--ring-color: #764BA2"],
+html.theme-zen [style*="--ring-color: #5a67d8"],
+html.theme-zen [style*="--ring-color: #5A67D8"] {
+    --ring-color: var(--zen-indigo) !important;
+}
+
+/* ---- celadon ---- */
+
+html.theme-zen [style^="color: rgb(6, 182, 212)"],
+html.theme-zen [style*="; color: rgb(6, 182, 212)"],
+html.theme-zen [style^="color: rgba(6, 182, 212,"],
+html.theme-zen [style*="; color: rgba(6, 182, 212,"],
+html.theme-zen [style^="color: rgb(78, 205, 196)"],
+html.theme-zen [style*="; color: rgb(78, 205, 196)"],
+html.theme-zen [style^="color: rgba(78, 205, 196,"],
+html.theme-zen [style*="; color: rgba(78, 205, 196,"],
+html.theme-zen [style^="color: rgb(69, 183, 209)"],
+html.theme-zen [style*="; color: rgb(69, 183, 209)"],
+html.theme-zen [style^="color: rgba(69, 183, 209,"],
+html.theme-zen [style*="; color: rgba(69, 183, 209,"],
+html.theme-zen [style^="color: rgb(100, 255, 218)"],
+html.theme-zen [style*="; color: rgb(100, 255, 218)"],
+html.theme-zen [style^="color: rgba(100, 255, 218,"],
+html.theme-zen [style*="; color: rgba(100, 255, 218,"],
+html.theme-zen [style^="color: rgb(0, 180, 216)"],
+html.theme-zen [style*="; color: rgb(0, 180, 216)"],
+html.theme-zen [style^="color: rgba(0, 180, 216,"],
+html.theme-zen [style*="; color: rgba(0, 180, 216,"],
+html.theme-zen [style^="color: rgb(20, 184, 166)"],
+html.theme-zen [style*="; color: rgb(20, 184, 166)"],
+html.theme-zen [style^="color: rgba(20, 184, 166,"],
+html.theme-zen [style*="; color: rgba(20, 184, 166,"],
+html.theme-zen [style^="color: rgb(34, 211, 238)"],
+html.theme-zen [style*="; color: rgb(34, 211, 238)"],
+html.theme-zen [style^="color: rgba(34, 211, 238,"],
+html.theme-zen [style*="; color: rgba(34, 211, 238,"] {
+    color: var(--zen-celadon) !important;
+}
+
+html.theme-zen [style*="background: rgb(6, 182, 212)"],
+html.theme-zen [style*="background-color: rgb(6, 182, 212)"],
+html.theme-zen [style*="background: rgb(78, 205, 196)"],
+html.theme-zen [style*="background-color: rgb(78, 205, 196)"],
+html.theme-zen [style*="background: rgb(69, 183, 209)"],
+html.theme-zen [style*="background-color: rgb(69, 183, 209)"],
+html.theme-zen [style*="background: rgb(100, 255, 218)"],
+html.theme-zen [style*="background-color: rgb(100, 255, 218)"],
+html.theme-zen [style*="background: rgb(0, 180, 216)"],
+html.theme-zen [style*="background-color: rgb(0, 180, 216)"],
+html.theme-zen [style*="background: rgb(20, 184, 166)"],
+html.theme-zen [style*="background-color: rgb(20, 184, 166)"],
+html.theme-zen [style*="background: rgb(34, 211, 238)"],
+html.theme-zen [style*="background-color: rgb(34, 211, 238)"] {
+    background-color: var(--zen-celadon) !important;
+}
+
+html.theme-zen [style*="background: rgba(6, 182, 212,"],
+html.theme-zen [style*="background-color: rgba(6, 182, 212,"],
+html.theme-zen [style*="background: rgba(78, 205, 196,"],
+html.theme-zen [style*="background-color: rgba(78, 205, 196,"],
+html.theme-zen [style*="background: rgba(69, 183, 209,"],
+html.theme-zen [style*="background-color: rgba(69, 183, 209,"],
+html.theme-zen [style*="background: rgba(100, 255, 218,"],
+html.theme-zen [style*="background-color: rgba(100, 255, 218,"],
+html.theme-zen [style*="background: rgba(0, 180, 216,"],
+html.theme-zen [style*="background-color: rgba(0, 180, 216,"],
+html.theme-zen [style*="background: rgba(20, 184, 166,"],
+html.theme-zen [style*="background-color: rgba(20, 184, 166,"],
+html.theme-zen [style*="background: rgba(34, 211, 238,"],
+html.theme-zen [style*="background-color: rgba(34, 211, 238,"] {
+    background-color: color-mix(in srgb, var(--zen-celadon) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(6, 182, 212)"],
+html.theme-zen [style*="solid rgb(78, 205, 196)"],
+html.theme-zen [style*="solid rgb(69, 183, 209)"],
+html.theme-zen [style*="solid rgb(100, 255, 218)"],
+html.theme-zen [style*="solid rgb(0, 180, 216)"],
+html.theme-zen [style*="solid rgb(20, 184, 166)"],
+html.theme-zen [style*="solid rgb(34, 211, 238)"] {
+    border-color: var(--zen-celadon) !important;
+}
+
+html.theme-zen [style*="solid rgba(6, 182, 212,"],
+html.theme-zen [style*="dashed rgba(6, 182, 212,"],
+html.theme-zen [style*="solid rgba(78, 205, 196,"],
+html.theme-zen [style*="dashed rgba(78, 205, 196,"],
+html.theme-zen [style*="solid rgba(69, 183, 209,"],
+html.theme-zen [style*="dashed rgba(69, 183, 209,"],
+html.theme-zen [style*="solid rgba(100, 255, 218,"],
+html.theme-zen [style*="dashed rgba(100, 255, 218,"],
+html.theme-zen [style*="solid rgba(0, 180, 216,"],
+html.theme-zen [style*="dashed rgba(0, 180, 216,"],
+html.theme-zen [style*="solid rgba(20, 184, 166,"],
+html.theme-zen [style*="dashed rgba(20, 184, 166,"],
+html.theme-zen [style*="solid rgba(34, 211, 238,"],
+html.theme-zen [style*="dashed rgba(34, 211, 238,"] {
+    border-color: color-mix(in srgb, var(--zen-celadon) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(6, 182, 212)"],
+html.theme-zen [style*="gradient(rgb(6, 182, 212)"],
+html.theme-zen [style*="to right, rgb(6, 182, 212)"],
+html.theme-zen [style*="to bottom, rgb(6, 182, 212)"],
+html.theme-zen [style*="deg, rgb(78, 205, 196)"],
+html.theme-zen [style*="gradient(rgb(78, 205, 196)"],
+html.theme-zen [style*="to right, rgb(78, 205, 196)"],
+html.theme-zen [style*="to bottom, rgb(78, 205, 196)"],
+html.theme-zen [style*="deg, rgb(69, 183, 209)"],
+html.theme-zen [style*="gradient(rgb(69, 183, 209)"],
+html.theme-zen [style*="to right, rgb(69, 183, 209)"],
+html.theme-zen [style*="to bottom, rgb(69, 183, 209)"],
+html.theme-zen [style*="deg, rgb(100, 255, 218)"],
+html.theme-zen [style*="gradient(rgb(100, 255, 218)"],
+html.theme-zen [style*="to right, rgb(100, 255, 218)"],
+html.theme-zen [style*="to bottom, rgb(100, 255, 218)"],
+html.theme-zen [style*="deg, rgb(0, 180, 216)"],
+html.theme-zen [style*="gradient(rgb(0, 180, 216)"],
+html.theme-zen [style*="to right, rgb(0, 180, 216)"],
+html.theme-zen [style*="to bottom, rgb(0, 180, 216)"],
+html.theme-zen [style*="deg, rgb(20, 184, 166)"],
+html.theme-zen [style*="gradient(rgb(20, 184, 166)"],
+html.theme-zen [style*="to right, rgb(20, 184, 166)"],
+html.theme-zen [style*="to bottom, rgb(20, 184, 166)"],
+html.theme-zen [style*="deg, rgb(34, 211, 238)"],
+html.theme-zen [style*="gradient(rgb(34, 211, 238)"],
+html.theme-zen [style*="to right, rgb(34, 211, 238)"],
+html.theme-zen [style*="to bottom, rgb(34, 211, 238)"] {
+    background-image: linear-gradient(135deg, var(--zen-celadon), color-mix(in srgb, var(--zen-celadon) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(6, 182, 212,"],
+html.theme-zen [style*="gradient(rgba(6, 182, 212,"],
+html.theme-zen [style*="to right, rgba(6, 182, 212,"],
+html.theme-zen [style*="to bottom, rgba(6, 182, 212,"],
+html.theme-zen [style*="deg, rgba(78, 205, 196,"],
+html.theme-zen [style*="gradient(rgba(78, 205, 196,"],
+html.theme-zen [style*="to right, rgba(78, 205, 196,"],
+html.theme-zen [style*="to bottom, rgba(78, 205, 196,"],
+html.theme-zen [style*="deg, rgba(69, 183, 209,"],
+html.theme-zen [style*="gradient(rgba(69, 183, 209,"],
+html.theme-zen [style*="to right, rgba(69, 183, 209,"],
+html.theme-zen [style*="to bottom, rgba(69, 183, 209,"],
+html.theme-zen [style*="deg, rgba(100, 255, 218,"],
+html.theme-zen [style*="gradient(rgba(100, 255, 218,"],
+html.theme-zen [style*="to right, rgba(100, 255, 218,"],
+html.theme-zen [style*="to bottom, rgba(100, 255, 218,"],
+html.theme-zen [style*="deg, rgba(0, 180, 216,"],
+html.theme-zen [style*="gradient(rgba(0, 180, 216,"],
+html.theme-zen [style*="to right, rgba(0, 180, 216,"],
+html.theme-zen [style*="to bottom, rgba(0, 180, 216,"],
+html.theme-zen [style*="deg, rgba(20, 184, 166,"],
+html.theme-zen [style*="gradient(rgba(20, 184, 166,"],
+html.theme-zen [style*="to right, rgba(20, 184, 166,"],
+html.theme-zen [style*="to bottom, rgba(20, 184, 166,"],
+html.theme-zen [style*="deg, rgba(34, 211, 238,"],
+html.theme-zen [style*="gradient(rgba(34, 211, 238,"],
+html.theme-zen [style*="to right, rgba(34, 211, 238,"],
+html.theme-zen [style*="to bottom, rgba(34, 211, 238,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-celadon) 13%, transparent), color-mix(in srgb, var(--zen-celadon) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(6, 182, 212,"],
+html.theme-zen [style*="px, rgba(6, 182, 212,"],
+html.theme-zen [style*="box-shadow: rgba(78, 205, 196,"],
+html.theme-zen [style*="px, rgba(78, 205, 196,"],
+html.theme-zen [style*="box-shadow: rgba(69, 183, 209,"],
+html.theme-zen [style*="px, rgba(69, 183, 209,"],
+html.theme-zen [style*="box-shadow: rgba(100, 255, 218,"],
+html.theme-zen [style*="px, rgba(100, 255, 218,"],
+html.theme-zen [style*="box-shadow: rgba(0, 180, 216,"],
+html.theme-zen [style*="px, rgba(0, 180, 216,"],
+html.theme-zen [style*="box-shadow: rgba(20, 184, 166,"],
+html.theme-zen [style*="px, rgba(20, 184, 166,"],
+html.theme-zen [style*="box-shadow: rgba(34, 211, 238,"],
+html.theme-zen [style*="px, rgba(34, 211, 238,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#06b6d4"],
+html.theme-zen [stroke="#06B6D4"],
+html.theme-zen [stroke="#4ecdc4"],
+html.theme-zen [stroke="#4ECDC4"],
+html.theme-zen [stroke="#45b7d1"],
+html.theme-zen [stroke="#45B7D1"],
+html.theme-zen [stroke="#64ffda"],
+html.theme-zen [stroke="#64FFDA"],
+html.theme-zen [stroke="#00b4d8"],
+html.theme-zen [stroke="#00B4D8"],
+html.theme-zen [stroke="#14b8a6"],
+html.theme-zen [stroke="#14B8A6"],
+html.theme-zen [stroke="#22d3ee"],
+html.theme-zen [stroke="#22D3EE"] {
+    stroke: var(--zen-celadon);
+}
+
+html.theme-zen [fill="#06b6d4"],
+html.theme-zen [fill="#06B6D4"],
+html.theme-zen [fill="#4ecdc4"],
+html.theme-zen [fill="#4ECDC4"],
+html.theme-zen [fill="#45b7d1"],
+html.theme-zen [fill="#45B7D1"],
+html.theme-zen [fill="#64ffda"],
+html.theme-zen [fill="#64FFDA"],
+html.theme-zen [fill="#00b4d8"],
+html.theme-zen [fill="#00B4D8"],
+html.theme-zen [fill="#14b8a6"],
+html.theme-zen [fill="#14B8A6"],
+html.theme-zen [fill="#22d3ee"],
+html.theme-zen [fill="#22D3EE"] {
+    fill: var(--zen-celadon);
+}
+
+html.theme-zen [stop-color="#06b6d4"],
+html.theme-zen [stop-color="#06B6D4"],
+html.theme-zen [stop-color="#4ecdc4"],
+html.theme-zen [stop-color="#4ECDC4"],
+html.theme-zen [stop-color="#45b7d1"],
+html.theme-zen [stop-color="#45B7D1"],
+html.theme-zen [stop-color="#64ffda"],
+html.theme-zen [stop-color="#64FFDA"],
+html.theme-zen [stop-color="#00b4d8"],
+html.theme-zen [stop-color="#00B4D8"],
+html.theme-zen [stop-color="#14b8a6"],
+html.theme-zen [stop-color="#14B8A6"],
+html.theme-zen [stop-color="#22d3ee"],
+html.theme-zen [stop-color="#22D3EE"] {
+    stop-color: var(--zen-celadon);
+}
+
+html.theme-zen [style*="--ring-color: #06b6d4"],
+html.theme-zen [style*="--ring-color: #06B6D4"],
+html.theme-zen [style*="--ring-color: #4ecdc4"],
+html.theme-zen [style*="--ring-color: #4ECDC4"],
+html.theme-zen [style*="--ring-color: #45b7d1"],
+html.theme-zen [style*="--ring-color: #45B7D1"],
+html.theme-zen [style*="--ring-color: #64ffda"],
+html.theme-zen [style*="--ring-color: #64FFDA"],
+html.theme-zen [style*="--ring-color: #00b4d8"],
+html.theme-zen [style*="--ring-color: #00B4D8"],
+html.theme-zen [style*="--ring-color: #14b8a6"],
+html.theme-zen [style*="--ring-color: #14B8A6"],
+html.theme-zen [style*="--ring-color: #22d3ee"],
+html.theme-zen [style*="--ring-color: #22D3EE"] {
+    --ring-color: var(--zen-celadon) !important;
+}
+
+/* ---- sky ---- */
+
+html.theme-zen [style^="color: rgb(56, 189, 248)"],
+html.theme-zen [style*="; color: rgb(56, 189, 248)"],
+html.theme-zen [style^="color: rgba(56, 189, 248,"],
+html.theme-zen [style*="; color: rgba(56, 189, 248,"],
+html.theme-zen [style^="color: rgb(59, 130, 246)"],
+html.theme-zen [style*="; color: rgb(59, 130, 246)"],
+html.theme-zen [style^="color: rgba(59, 130, 246,"],
+html.theme-zen [style*="; color: rgba(59, 130, 246,"],
+html.theme-zen [style^="color: rgb(96, 165, 250)"],
+html.theme-zen [style*="; color: rgb(96, 165, 250)"],
+html.theme-zen [style^="color: rgba(96, 165, 250,"],
+html.theme-zen [style*="; color: rgba(96, 165, 250,"],
+html.theme-zen [style^="color: rgb(14, 165, 233)"],
+html.theme-zen [style*="; color: rgb(14, 165, 233)"],
+html.theme-zen [style^="color: rgba(14, 165, 233,"],
+html.theme-zen [style*="; color: rgba(14, 165, 233,"] {
+    color: var(--zen-sky) !important;
+}
+
+html.theme-zen [style*="background: rgb(56, 189, 248)"],
+html.theme-zen [style*="background-color: rgb(56, 189, 248)"],
+html.theme-zen [style*="background: rgb(59, 130, 246)"],
+html.theme-zen [style*="background-color: rgb(59, 130, 246)"],
+html.theme-zen [style*="background: rgb(96, 165, 250)"],
+html.theme-zen [style*="background-color: rgb(96, 165, 250)"],
+html.theme-zen [style*="background: rgb(14, 165, 233)"],
+html.theme-zen [style*="background-color: rgb(14, 165, 233)"] {
+    background-color: var(--zen-sky) !important;
+}
+
+html.theme-zen [style*="background: rgba(56, 189, 248,"],
+html.theme-zen [style*="background-color: rgba(56, 189, 248,"],
+html.theme-zen [style*="background: rgba(59, 130, 246,"],
+html.theme-zen [style*="background-color: rgba(59, 130, 246,"],
+html.theme-zen [style*="background: rgba(96, 165, 250,"],
+html.theme-zen [style*="background-color: rgba(96, 165, 250,"],
+html.theme-zen [style*="background: rgba(14, 165, 233,"],
+html.theme-zen [style*="background-color: rgba(14, 165, 233,"] {
+    background-color: color-mix(in srgb, var(--zen-sky) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(56, 189, 248)"],
+html.theme-zen [style*="solid rgb(59, 130, 246)"],
+html.theme-zen [style*="solid rgb(96, 165, 250)"],
+html.theme-zen [style*="solid rgb(14, 165, 233)"] {
+    border-color: var(--zen-sky) !important;
+}
+
+html.theme-zen [style*="solid rgba(56, 189, 248,"],
+html.theme-zen [style*="dashed rgba(56, 189, 248,"],
+html.theme-zen [style*="solid rgba(59, 130, 246,"],
+html.theme-zen [style*="dashed rgba(59, 130, 246,"],
+html.theme-zen [style*="solid rgba(96, 165, 250,"],
+html.theme-zen [style*="dashed rgba(96, 165, 250,"],
+html.theme-zen [style*="solid rgba(14, 165, 233,"],
+html.theme-zen [style*="dashed rgba(14, 165, 233,"] {
+    border-color: color-mix(in srgb, var(--zen-sky) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(56, 189, 248)"],
+html.theme-zen [style*="gradient(rgb(56, 189, 248)"],
+html.theme-zen [style*="to right, rgb(56, 189, 248)"],
+html.theme-zen [style*="to bottom, rgb(56, 189, 248)"],
+html.theme-zen [style*="deg, rgb(59, 130, 246)"],
+html.theme-zen [style*="gradient(rgb(59, 130, 246)"],
+html.theme-zen [style*="to right, rgb(59, 130, 246)"],
+html.theme-zen [style*="to bottom, rgb(59, 130, 246)"],
+html.theme-zen [style*="deg, rgb(96, 165, 250)"],
+html.theme-zen [style*="gradient(rgb(96, 165, 250)"],
+html.theme-zen [style*="to right, rgb(96, 165, 250)"],
+html.theme-zen [style*="to bottom, rgb(96, 165, 250)"],
+html.theme-zen [style*="deg, rgb(14, 165, 233)"],
+html.theme-zen [style*="gradient(rgb(14, 165, 233)"],
+html.theme-zen [style*="to right, rgb(14, 165, 233)"],
+html.theme-zen [style*="to bottom, rgb(14, 165, 233)"] {
+    background-image: linear-gradient(135deg, var(--zen-sky), color-mix(in srgb, var(--zen-sky) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(56, 189, 248,"],
+html.theme-zen [style*="gradient(rgba(56, 189, 248,"],
+html.theme-zen [style*="to right, rgba(56, 189, 248,"],
+html.theme-zen [style*="to bottom, rgba(56, 189, 248,"],
+html.theme-zen [style*="deg, rgba(59, 130, 246,"],
+html.theme-zen [style*="gradient(rgba(59, 130, 246,"],
+html.theme-zen [style*="to right, rgba(59, 130, 246,"],
+html.theme-zen [style*="to bottom, rgba(59, 130, 246,"],
+html.theme-zen [style*="deg, rgba(96, 165, 250,"],
+html.theme-zen [style*="gradient(rgba(96, 165, 250,"],
+html.theme-zen [style*="to right, rgba(96, 165, 250,"],
+html.theme-zen [style*="to bottom, rgba(96, 165, 250,"],
+html.theme-zen [style*="deg, rgba(14, 165, 233,"],
+html.theme-zen [style*="gradient(rgba(14, 165, 233,"],
+html.theme-zen [style*="to right, rgba(14, 165, 233,"],
+html.theme-zen [style*="to bottom, rgba(14, 165, 233,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-sky) 13%, transparent), color-mix(in srgb, var(--zen-sky) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(56, 189, 248,"],
+html.theme-zen [style*="px, rgba(56, 189, 248,"],
+html.theme-zen [style*="box-shadow: rgba(59, 130, 246,"],
+html.theme-zen [style*="px, rgba(59, 130, 246,"],
+html.theme-zen [style*="box-shadow: rgba(96, 165, 250,"],
+html.theme-zen [style*="px, rgba(96, 165, 250,"],
+html.theme-zen [style*="box-shadow: rgba(14, 165, 233,"],
+html.theme-zen [style*="px, rgba(14, 165, 233,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#38bdf8"],
+html.theme-zen [stroke="#38BDF8"],
+html.theme-zen [stroke="#3b82f6"],
+html.theme-zen [stroke="#3B82F6"],
+html.theme-zen [stroke="#60a5fa"],
+html.theme-zen [stroke="#60A5FA"],
+html.theme-zen [stroke="#0ea5e9"],
+html.theme-zen [stroke="#0EA5E9"] {
+    stroke: var(--zen-sky);
+}
+
+html.theme-zen [fill="#38bdf8"],
+html.theme-zen [fill="#38BDF8"],
+html.theme-zen [fill="#3b82f6"],
+html.theme-zen [fill="#3B82F6"],
+html.theme-zen [fill="#60a5fa"],
+html.theme-zen [fill="#60A5FA"],
+html.theme-zen [fill="#0ea5e9"],
+html.theme-zen [fill="#0EA5E9"] {
+    fill: var(--zen-sky);
+}
+
+html.theme-zen [stop-color="#38bdf8"],
+html.theme-zen [stop-color="#38BDF8"],
+html.theme-zen [stop-color="#3b82f6"],
+html.theme-zen [stop-color="#3B82F6"],
+html.theme-zen [stop-color="#60a5fa"],
+html.theme-zen [stop-color="#60A5FA"],
+html.theme-zen [stop-color="#0ea5e9"],
+html.theme-zen [stop-color="#0EA5E9"] {
+    stop-color: var(--zen-sky);
+}
+
+html.theme-zen [style*="--ring-color: #38bdf8"],
+html.theme-zen [style*="--ring-color: #38BDF8"],
+html.theme-zen [style*="--ring-color: #3b82f6"],
+html.theme-zen [style*="--ring-color: #3B82F6"],
+html.theme-zen [style*="--ring-color: #60a5fa"],
+html.theme-zen [style*="--ring-color: #60A5FA"],
+html.theme-zen [style*="--ring-color: #0ea5e9"],
+html.theme-zen [style*="--ring-color: #0EA5E9"] {
+    --ring-color: var(--zen-sky) !important;
+}
+
+/* ---- moss ---- */
+
+html.theme-zen [style^="color: rgb(16, 185, 129)"],
+html.theme-zen [style*="; color: rgb(16, 185, 129)"],
+html.theme-zen [style^="color: rgba(16, 185, 129,"],
+html.theme-zen [style*="; color: rgba(16, 185, 129,"],
+html.theme-zen [style^="color: rgb(34, 197, 94)"],
+html.theme-zen [style*="; color: rgb(34, 197, 94)"],
+html.theme-zen [style^="color: rgba(34, 197, 94,"],
+html.theme-zen [style*="; color: rgba(34, 197, 94,"],
+html.theme-zen [style^="color: rgb(22, 163, 74)"],
+html.theme-zen [style*="; color: rgb(22, 163, 74)"],
+html.theme-zen [style^="color: rgba(22, 163, 74,"],
+html.theme-zen [style*="; color: rgba(22, 163, 74,"],
+html.theme-zen [style^="color: rgb(72, 187, 120)"],
+html.theme-zen [style*="; color: rgb(72, 187, 120)"],
+html.theme-zen [style^="color: rgba(72, 187, 120,"],
+html.theme-zen [style*="; color: rgba(72, 187, 120,"],
+html.theme-zen [style^="color: rgb(74, 222, 128)"],
+html.theme-zen [style*="; color: rgb(74, 222, 128)"],
+html.theme-zen [style^="color: rgba(74, 222, 128,"],
+html.theme-zen [style*="; color: rgba(74, 222, 128,"],
+html.theme-zen [style^="color: rgb(52, 211, 153)"],
+html.theme-zen [style*="; color: rgb(52, 211, 153)"],
+html.theme-zen [style^="color: rgba(52, 211, 153,"],
+html.theme-zen [style*="; color: rgba(52, 211, 153,"],
+html.theme-zen [style^="color: rgb(104, 211, 145)"],
+html.theme-zen [style*="; color: rgb(104, 211, 145)"],
+html.theme-zen [style^="color: rgba(104, 211, 145,"],
+html.theme-zen [style*="; color: rgba(104, 211, 145,"],
+html.theme-zen [style^="color: rgb(150, 206, 180)"],
+html.theme-zen [style*="; color: rgb(150, 206, 180)"],
+html.theme-zen [style^="color: rgba(150, 206, 180,"],
+html.theme-zen [style*="; color: rgba(150, 206, 180,"] {
+    color: var(--zen-moss) !important;
+}
+
+html.theme-zen [style*="background: rgb(16, 185, 129)"],
+html.theme-zen [style*="background-color: rgb(16, 185, 129)"],
+html.theme-zen [style*="background: rgb(34, 197, 94)"],
+html.theme-zen [style*="background-color: rgb(34, 197, 94)"],
+html.theme-zen [style*="background: rgb(22, 163, 74)"],
+html.theme-zen [style*="background-color: rgb(22, 163, 74)"],
+html.theme-zen [style*="background: rgb(72, 187, 120)"],
+html.theme-zen [style*="background-color: rgb(72, 187, 120)"],
+html.theme-zen [style*="background: rgb(74, 222, 128)"],
+html.theme-zen [style*="background-color: rgb(74, 222, 128)"],
+html.theme-zen [style*="background: rgb(52, 211, 153)"],
+html.theme-zen [style*="background-color: rgb(52, 211, 153)"],
+html.theme-zen [style*="background: rgb(104, 211, 145)"],
+html.theme-zen [style*="background-color: rgb(104, 211, 145)"],
+html.theme-zen [style*="background: rgb(150, 206, 180)"],
+html.theme-zen [style*="background-color: rgb(150, 206, 180)"] {
+    background-color: var(--zen-moss) !important;
+}
+
+html.theme-zen [style*="background: rgba(16, 185, 129,"],
+html.theme-zen [style*="background-color: rgba(16, 185, 129,"],
+html.theme-zen [style*="background: rgba(34, 197, 94,"],
+html.theme-zen [style*="background-color: rgba(34, 197, 94,"],
+html.theme-zen [style*="background: rgba(22, 163, 74,"],
+html.theme-zen [style*="background-color: rgba(22, 163, 74,"],
+html.theme-zen [style*="background: rgba(72, 187, 120,"],
+html.theme-zen [style*="background-color: rgba(72, 187, 120,"],
+html.theme-zen [style*="background: rgba(74, 222, 128,"],
+html.theme-zen [style*="background-color: rgba(74, 222, 128,"],
+html.theme-zen [style*="background: rgba(52, 211, 153,"],
+html.theme-zen [style*="background-color: rgba(52, 211, 153,"],
+html.theme-zen [style*="background: rgba(104, 211, 145,"],
+html.theme-zen [style*="background-color: rgba(104, 211, 145,"],
+html.theme-zen [style*="background: rgba(150, 206, 180,"],
+html.theme-zen [style*="background-color: rgba(150, 206, 180,"] {
+    background-color: color-mix(in srgb, var(--zen-moss) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(16, 185, 129)"],
+html.theme-zen [style*="solid rgb(34, 197, 94)"],
+html.theme-zen [style*="solid rgb(22, 163, 74)"],
+html.theme-zen [style*="solid rgb(72, 187, 120)"],
+html.theme-zen [style*="solid rgb(74, 222, 128)"],
+html.theme-zen [style*="solid rgb(52, 211, 153)"],
+html.theme-zen [style*="solid rgb(104, 211, 145)"],
+html.theme-zen [style*="solid rgb(150, 206, 180)"] {
+    border-color: var(--zen-moss) !important;
+}
+
+html.theme-zen [style*="solid rgba(16, 185, 129,"],
+html.theme-zen [style*="dashed rgba(16, 185, 129,"],
+html.theme-zen [style*="solid rgba(34, 197, 94,"],
+html.theme-zen [style*="dashed rgba(34, 197, 94,"],
+html.theme-zen [style*="solid rgba(22, 163, 74,"],
+html.theme-zen [style*="dashed rgba(22, 163, 74,"],
+html.theme-zen [style*="solid rgba(72, 187, 120,"],
+html.theme-zen [style*="dashed rgba(72, 187, 120,"],
+html.theme-zen [style*="solid rgba(74, 222, 128,"],
+html.theme-zen [style*="dashed rgba(74, 222, 128,"],
+html.theme-zen [style*="solid rgba(52, 211, 153,"],
+html.theme-zen [style*="dashed rgba(52, 211, 153,"],
+html.theme-zen [style*="solid rgba(104, 211, 145,"],
+html.theme-zen [style*="dashed rgba(104, 211, 145,"],
+html.theme-zen [style*="solid rgba(150, 206, 180,"],
+html.theme-zen [style*="dashed rgba(150, 206, 180,"] {
+    border-color: color-mix(in srgb, var(--zen-moss) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(16, 185, 129)"],
+html.theme-zen [style*="gradient(rgb(16, 185, 129)"],
+html.theme-zen [style*="to right, rgb(16, 185, 129)"],
+html.theme-zen [style*="to bottom, rgb(16, 185, 129)"],
+html.theme-zen [style*="deg, rgb(34, 197, 94)"],
+html.theme-zen [style*="gradient(rgb(34, 197, 94)"],
+html.theme-zen [style*="to right, rgb(34, 197, 94)"],
+html.theme-zen [style*="to bottom, rgb(34, 197, 94)"],
+html.theme-zen [style*="deg, rgb(22, 163, 74)"],
+html.theme-zen [style*="gradient(rgb(22, 163, 74)"],
+html.theme-zen [style*="to right, rgb(22, 163, 74)"],
+html.theme-zen [style*="to bottom, rgb(22, 163, 74)"],
+html.theme-zen [style*="deg, rgb(72, 187, 120)"],
+html.theme-zen [style*="gradient(rgb(72, 187, 120)"],
+html.theme-zen [style*="to right, rgb(72, 187, 120)"],
+html.theme-zen [style*="to bottom, rgb(72, 187, 120)"],
+html.theme-zen [style*="deg, rgb(74, 222, 128)"],
+html.theme-zen [style*="gradient(rgb(74, 222, 128)"],
+html.theme-zen [style*="to right, rgb(74, 222, 128)"],
+html.theme-zen [style*="to bottom, rgb(74, 222, 128)"],
+html.theme-zen [style*="deg, rgb(52, 211, 153)"],
+html.theme-zen [style*="gradient(rgb(52, 211, 153)"],
+html.theme-zen [style*="to right, rgb(52, 211, 153)"],
+html.theme-zen [style*="to bottom, rgb(52, 211, 153)"],
+html.theme-zen [style*="deg, rgb(104, 211, 145)"],
+html.theme-zen [style*="gradient(rgb(104, 211, 145)"],
+html.theme-zen [style*="to right, rgb(104, 211, 145)"],
+html.theme-zen [style*="to bottom, rgb(104, 211, 145)"],
+html.theme-zen [style*="deg, rgb(150, 206, 180)"],
+html.theme-zen [style*="gradient(rgb(150, 206, 180)"],
+html.theme-zen [style*="to right, rgb(150, 206, 180)"],
+html.theme-zen [style*="to bottom, rgb(150, 206, 180)"] {
+    background-image: linear-gradient(135deg, var(--zen-moss), color-mix(in srgb, var(--zen-moss) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(16, 185, 129,"],
+html.theme-zen [style*="gradient(rgba(16, 185, 129,"],
+html.theme-zen [style*="to right, rgba(16, 185, 129,"],
+html.theme-zen [style*="to bottom, rgba(16, 185, 129,"],
+html.theme-zen [style*="deg, rgba(34, 197, 94,"],
+html.theme-zen [style*="gradient(rgba(34, 197, 94,"],
+html.theme-zen [style*="to right, rgba(34, 197, 94,"],
+html.theme-zen [style*="to bottom, rgba(34, 197, 94,"],
+html.theme-zen [style*="deg, rgba(22, 163, 74,"],
+html.theme-zen [style*="gradient(rgba(22, 163, 74,"],
+html.theme-zen [style*="to right, rgba(22, 163, 74,"],
+html.theme-zen [style*="to bottom, rgba(22, 163, 74,"],
+html.theme-zen [style*="deg, rgba(72, 187, 120,"],
+html.theme-zen [style*="gradient(rgba(72, 187, 120,"],
+html.theme-zen [style*="to right, rgba(72, 187, 120,"],
+html.theme-zen [style*="to bottom, rgba(72, 187, 120,"],
+html.theme-zen [style*="deg, rgba(74, 222, 128,"],
+html.theme-zen [style*="gradient(rgba(74, 222, 128,"],
+html.theme-zen [style*="to right, rgba(74, 222, 128,"],
+html.theme-zen [style*="to bottom, rgba(74, 222, 128,"],
+html.theme-zen [style*="deg, rgba(52, 211, 153,"],
+html.theme-zen [style*="gradient(rgba(52, 211, 153,"],
+html.theme-zen [style*="to right, rgba(52, 211, 153,"],
+html.theme-zen [style*="to bottom, rgba(52, 211, 153,"],
+html.theme-zen [style*="deg, rgba(104, 211, 145,"],
+html.theme-zen [style*="gradient(rgba(104, 211, 145,"],
+html.theme-zen [style*="to right, rgba(104, 211, 145,"],
+html.theme-zen [style*="to bottom, rgba(104, 211, 145,"],
+html.theme-zen [style*="deg, rgba(150, 206, 180,"],
+html.theme-zen [style*="gradient(rgba(150, 206, 180,"],
+html.theme-zen [style*="to right, rgba(150, 206, 180,"],
+html.theme-zen [style*="to bottom, rgba(150, 206, 180,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-moss) 13%, transparent), color-mix(in srgb, var(--zen-moss) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(16, 185, 129,"],
+html.theme-zen [style*="px, rgba(16, 185, 129,"],
+html.theme-zen [style*="box-shadow: rgba(34, 197, 94,"],
+html.theme-zen [style*="px, rgba(34, 197, 94,"],
+html.theme-zen [style*="box-shadow: rgba(22, 163, 74,"],
+html.theme-zen [style*="px, rgba(22, 163, 74,"],
+html.theme-zen [style*="box-shadow: rgba(72, 187, 120,"],
+html.theme-zen [style*="px, rgba(72, 187, 120,"],
+html.theme-zen [style*="box-shadow: rgba(74, 222, 128,"],
+html.theme-zen [style*="px, rgba(74, 222, 128,"],
+html.theme-zen [style*="box-shadow: rgba(52, 211, 153,"],
+html.theme-zen [style*="px, rgba(52, 211, 153,"],
+html.theme-zen [style*="box-shadow: rgba(104, 211, 145,"],
+html.theme-zen [style*="px, rgba(104, 211, 145,"],
+html.theme-zen [style*="box-shadow: rgba(150, 206, 180,"],
+html.theme-zen [style*="px, rgba(150, 206, 180,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#10b981"],
+html.theme-zen [stroke="#10B981"],
+html.theme-zen [stroke="#22c55e"],
+html.theme-zen [stroke="#22C55E"],
+html.theme-zen [stroke="#16a34a"],
+html.theme-zen [stroke="#16A34A"],
+html.theme-zen [stroke="#48bb78"],
+html.theme-zen [stroke="#48BB78"],
+html.theme-zen [stroke="#4ade80"],
+html.theme-zen [stroke="#4ADE80"],
+html.theme-zen [stroke="#34d399"],
+html.theme-zen [stroke="#34D399"],
+html.theme-zen [stroke="#68d391"],
+html.theme-zen [stroke="#68D391"],
+html.theme-zen [stroke="#96ceb4"],
+html.theme-zen [stroke="#96CEB4"] {
+    stroke: var(--zen-moss);
+}
+
+html.theme-zen [fill="#10b981"],
+html.theme-zen [fill="#10B981"],
+html.theme-zen [fill="#22c55e"],
+html.theme-zen [fill="#22C55E"],
+html.theme-zen [fill="#16a34a"],
+html.theme-zen [fill="#16A34A"],
+html.theme-zen [fill="#48bb78"],
+html.theme-zen [fill="#48BB78"],
+html.theme-zen [fill="#4ade80"],
+html.theme-zen [fill="#4ADE80"],
+html.theme-zen [fill="#34d399"],
+html.theme-zen [fill="#34D399"],
+html.theme-zen [fill="#68d391"],
+html.theme-zen [fill="#68D391"],
+html.theme-zen [fill="#96ceb4"],
+html.theme-zen [fill="#96CEB4"] {
+    fill: var(--zen-moss);
+}
+
+html.theme-zen [stop-color="#10b981"],
+html.theme-zen [stop-color="#10B981"],
+html.theme-zen [stop-color="#22c55e"],
+html.theme-zen [stop-color="#22C55E"],
+html.theme-zen [stop-color="#16a34a"],
+html.theme-zen [stop-color="#16A34A"],
+html.theme-zen [stop-color="#48bb78"],
+html.theme-zen [stop-color="#48BB78"],
+html.theme-zen [stop-color="#4ade80"],
+html.theme-zen [stop-color="#4ADE80"],
+html.theme-zen [stop-color="#34d399"],
+html.theme-zen [stop-color="#34D399"],
+html.theme-zen [stop-color="#68d391"],
+html.theme-zen [stop-color="#68D391"],
+html.theme-zen [stop-color="#96ceb4"],
+html.theme-zen [stop-color="#96CEB4"] {
+    stop-color: var(--zen-moss);
+}
+
+html.theme-zen [style*="--ring-color: #10b981"],
+html.theme-zen [style*="--ring-color: #10B981"],
+html.theme-zen [style*="--ring-color: #22c55e"],
+html.theme-zen [style*="--ring-color: #22C55E"],
+html.theme-zen [style*="--ring-color: #16a34a"],
+html.theme-zen [style*="--ring-color: #16A34A"],
+html.theme-zen [style*="--ring-color: #48bb78"],
+html.theme-zen [style*="--ring-color: #48BB78"],
+html.theme-zen [style*="--ring-color: #4ade80"],
+html.theme-zen [style*="--ring-color: #4ADE80"],
+html.theme-zen [style*="--ring-color: #34d399"],
+html.theme-zen [style*="--ring-color: #34D399"],
+html.theme-zen [style*="--ring-color: #68d391"],
+html.theme-zen [style*="--ring-color: #68D391"],
+html.theme-zen [style*="--ring-color: #96ceb4"],
+html.theme-zen [style*="--ring-color: #96CEB4"] {
+    --ring-color: var(--zen-moss) !important;
+}
+
+/* ---- vermilion ---- */
+
+html.theme-zen [style^="color: rgb(239, 68, 68)"],
+html.theme-zen [style*="; color: rgb(239, 68, 68)"],
+html.theme-zen [style^="color: rgba(239, 68, 68,"],
+html.theme-zen [style*="; color: rgba(239, 68, 68,"],
+html.theme-zen [style^="color: rgb(248, 113, 113)"],
+html.theme-zen [style*="; color: rgb(248, 113, 113)"],
+html.theme-zen [style^="color: rgba(248, 113, 113,"],
+html.theme-zen [style*="; color: rgba(248, 113, 113,"],
+html.theme-zen [style^="color: rgb(255, 107, 107)"],
+html.theme-zen [style*="; color: rgb(255, 107, 107)"],
+html.theme-zen [style^="color: rgba(255, 107, 107,"],
+html.theme-zen [style*="; color: rgba(255, 107, 107,"],
+html.theme-zen [style^="color: rgb(220, 38, 38)"],
+html.theme-zen [style*="; color: rgb(220, 38, 38)"],
+html.theme-zen [style^="color: rgba(220, 38, 38,"],
+html.theme-zen [style*="; color: rgba(220, 38, 38,"],
+html.theme-zen [style^="color: rgb(245, 101, 101)"],
+html.theme-zen [style*="; color: rgb(245, 101, 101)"],
+html.theme-zen [style^="color: rgba(245, 101, 101,"],
+html.theme-zen [style*="; color: rgba(245, 101, 101,"],
+html.theme-zen [style^="color: rgb(244, 63, 94)"],
+html.theme-zen [style*="; color: rgb(244, 63, 94)"],
+html.theme-zen [style^="color: rgba(244, 63, 94,"],
+html.theme-zen [style*="; color: rgba(244, 63, 94,"],
+html.theme-zen [style^="color: rgb(252, 129, 129)"],
+html.theme-zen [style*="; color: rgb(252, 129, 129)"],
+html.theme-zen [style^="color: rgba(252, 129, 129,"],
+html.theme-zen [style*="; color: rgba(252, 129, 129,"] {
+    color: var(--zen-vermilion) !important;
+}
+
+html.theme-zen [style*="background: rgb(239, 68, 68)"],
+html.theme-zen [style*="background-color: rgb(239, 68, 68)"],
+html.theme-zen [style*="background: rgb(248, 113, 113)"],
+html.theme-zen [style*="background-color: rgb(248, 113, 113)"],
+html.theme-zen [style*="background: rgb(255, 107, 107)"],
+html.theme-zen [style*="background-color: rgb(255, 107, 107)"],
+html.theme-zen [style*="background: rgb(220, 38, 38)"],
+html.theme-zen [style*="background-color: rgb(220, 38, 38)"],
+html.theme-zen [style*="background: rgb(245, 101, 101)"],
+html.theme-zen [style*="background-color: rgb(245, 101, 101)"],
+html.theme-zen [style*="background: rgb(244, 63, 94)"],
+html.theme-zen [style*="background-color: rgb(244, 63, 94)"],
+html.theme-zen [style*="background: rgb(252, 129, 129)"],
+html.theme-zen [style*="background-color: rgb(252, 129, 129)"] {
+    background-color: var(--zen-vermilion) !important;
+}
+
+html.theme-zen [style*="background: rgba(239, 68, 68,"],
+html.theme-zen [style*="background-color: rgba(239, 68, 68,"],
+html.theme-zen [style*="background: rgba(248, 113, 113,"],
+html.theme-zen [style*="background-color: rgba(248, 113, 113,"],
+html.theme-zen [style*="background: rgba(255, 107, 107,"],
+html.theme-zen [style*="background-color: rgba(255, 107, 107,"],
+html.theme-zen [style*="background: rgba(220, 38, 38,"],
+html.theme-zen [style*="background-color: rgba(220, 38, 38,"],
+html.theme-zen [style*="background: rgba(245, 101, 101,"],
+html.theme-zen [style*="background-color: rgba(245, 101, 101,"],
+html.theme-zen [style*="background: rgba(244, 63, 94,"],
+html.theme-zen [style*="background-color: rgba(244, 63, 94,"],
+html.theme-zen [style*="background: rgba(252, 129, 129,"],
+html.theme-zen [style*="background-color: rgba(252, 129, 129,"] {
+    background-color: color-mix(in srgb, var(--zen-vermilion) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(239, 68, 68)"],
+html.theme-zen [style*="solid rgb(248, 113, 113)"],
+html.theme-zen [style*="solid rgb(255, 107, 107)"],
+html.theme-zen [style*="solid rgb(220, 38, 38)"],
+html.theme-zen [style*="solid rgb(245, 101, 101)"],
+html.theme-zen [style*="solid rgb(244, 63, 94)"],
+html.theme-zen [style*="solid rgb(252, 129, 129)"] {
+    border-color: var(--zen-vermilion) !important;
+}
+
+html.theme-zen [style*="solid rgba(239, 68, 68,"],
+html.theme-zen [style*="dashed rgba(239, 68, 68,"],
+html.theme-zen [style*="solid rgba(248, 113, 113,"],
+html.theme-zen [style*="dashed rgba(248, 113, 113,"],
+html.theme-zen [style*="solid rgba(255, 107, 107,"],
+html.theme-zen [style*="dashed rgba(255, 107, 107,"],
+html.theme-zen [style*="solid rgba(220, 38, 38,"],
+html.theme-zen [style*="dashed rgba(220, 38, 38,"],
+html.theme-zen [style*="solid rgba(245, 101, 101,"],
+html.theme-zen [style*="dashed rgba(245, 101, 101,"],
+html.theme-zen [style*="solid rgba(244, 63, 94,"],
+html.theme-zen [style*="dashed rgba(244, 63, 94,"],
+html.theme-zen [style*="solid rgba(252, 129, 129,"],
+html.theme-zen [style*="dashed rgba(252, 129, 129,"] {
+    border-color: color-mix(in srgb, var(--zen-vermilion) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(239, 68, 68)"],
+html.theme-zen [style*="gradient(rgb(239, 68, 68)"],
+html.theme-zen [style*="to right, rgb(239, 68, 68)"],
+html.theme-zen [style*="to bottom, rgb(239, 68, 68)"],
+html.theme-zen [style*="deg, rgb(248, 113, 113)"],
+html.theme-zen [style*="gradient(rgb(248, 113, 113)"],
+html.theme-zen [style*="to right, rgb(248, 113, 113)"],
+html.theme-zen [style*="to bottom, rgb(248, 113, 113)"],
+html.theme-zen [style*="deg, rgb(255, 107, 107)"],
+html.theme-zen [style*="gradient(rgb(255, 107, 107)"],
+html.theme-zen [style*="to right, rgb(255, 107, 107)"],
+html.theme-zen [style*="to bottom, rgb(255, 107, 107)"],
+html.theme-zen [style*="deg, rgb(220, 38, 38)"],
+html.theme-zen [style*="gradient(rgb(220, 38, 38)"],
+html.theme-zen [style*="to right, rgb(220, 38, 38)"],
+html.theme-zen [style*="to bottom, rgb(220, 38, 38)"],
+html.theme-zen [style*="deg, rgb(245, 101, 101)"],
+html.theme-zen [style*="gradient(rgb(245, 101, 101)"],
+html.theme-zen [style*="to right, rgb(245, 101, 101)"],
+html.theme-zen [style*="to bottom, rgb(245, 101, 101)"],
+html.theme-zen [style*="deg, rgb(244, 63, 94)"],
+html.theme-zen [style*="gradient(rgb(244, 63, 94)"],
+html.theme-zen [style*="to right, rgb(244, 63, 94)"],
+html.theme-zen [style*="to bottom, rgb(244, 63, 94)"],
+html.theme-zen [style*="deg, rgb(252, 129, 129)"],
+html.theme-zen [style*="gradient(rgb(252, 129, 129)"],
+html.theme-zen [style*="to right, rgb(252, 129, 129)"],
+html.theme-zen [style*="to bottom, rgb(252, 129, 129)"] {
+    background-image: linear-gradient(135deg, var(--zen-vermilion), color-mix(in srgb, var(--zen-vermilion) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(239, 68, 68,"],
+html.theme-zen [style*="gradient(rgba(239, 68, 68,"],
+html.theme-zen [style*="to right, rgba(239, 68, 68,"],
+html.theme-zen [style*="to bottom, rgba(239, 68, 68,"],
+html.theme-zen [style*="deg, rgba(248, 113, 113,"],
+html.theme-zen [style*="gradient(rgba(248, 113, 113,"],
+html.theme-zen [style*="to right, rgba(248, 113, 113,"],
+html.theme-zen [style*="to bottom, rgba(248, 113, 113,"],
+html.theme-zen [style*="deg, rgba(255, 107, 107,"],
+html.theme-zen [style*="gradient(rgba(255, 107, 107,"],
+html.theme-zen [style*="to right, rgba(255, 107, 107,"],
+html.theme-zen [style*="to bottom, rgba(255, 107, 107,"],
+html.theme-zen [style*="deg, rgba(220, 38, 38,"],
+html.theme-zen [style*="gradient(rgba(220, 38, 38,"],
+html.theme-zen [style*="to right, rgba(220, 38, 38,"],
+html.theme-zen [style*="to bottom, rgba(220, 38, 38,"],
+html.theme-zen [style*="deg, rgba(245, 101, 101,"],
+html.theme-zen [style*="gradient(rgba(245, 101, 101,"],
+html.theme-zen [style*="to right, rgba(245, 101, 101,"],
+html.theme-zen [style*="to bottom, rgba(245, 101, 101,"],
+html.theme-zen [style*="deg, rgba(244, 63, 94,"],
+html.theme-zen [style*="gradient(rgba(244, 63, 94,"],
+html.theme-zen [style*="to right, rgba(244, 63, 94,"],
+html.theme-zen [style*="to bottom, rgba(244, 63, 94,"],
+html.theme-zen [style*="deg, rgba(252, 129, 129,"],
+html.theme-zen [style*="gradient(rgba(252, 129, 129,"],
+html.theme-zen [style*="to right, rgba(252, 129, 129,"],
+html.theme-zen [style*="to bottom, rgba(252, 129, 129,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-vermilion) 13%, transparent), color-mix(in srgb, var(--zen-vermilion) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(239, 68, 68,"],
+html.theme-zen [style*="px, rgba(239, 68, 68,"],
+html.theme-zen [style*="box-shadow: rgba(248, 113, 113,"],
+html.theme-zen [style*="px, rgba(248, 113, 113,"],
+html.theme-zen [style*="box-shadow: rgba(255, 107, 107,"],
+html.theme-zen [style*="px, rgba(255, 107, 107,"],
+html.theme-zen [style*="box-shadow: rgba(220, 38, 38,"],
+html.theme-zen [style*="px, rgba(220, 38, 38,"],
+html.theme-zen [style*="box-shadow: rgba(245, 101, 101,"],
+html.theme-zen [style*="px, rgba(245, 101, 101,"],
+html.theme-zen [style*="box-shadow: rgba(244, 63, 94,"],
+html.theme-zen [style*="px, rgba(244, 63, 94,"],
+html.theme-zen [style*="box-shadow: rgba(252, 129, 129,"],
+html.theme-zen [style*="px, rgba(252, 129, 129,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#ef4444"],
+html.theme-zen [stroke="#EF4444"],
+html.theme-zen [stroke="#f87171"],
+html.theme-zen [stroke="#F87171"],
+html.theme-zen [stroke="#ff6b6b"],
+html.theme-zen [stroke="#FF6B6B"],
+html.theme-zen [stroke="#dc2626"],
+html.theme-zen [stroke="#DC2626"],
+html.theme-zen [stroke="#f56565"],
+html.theme-zen [stroke="#F56565"],
+html.theme-zen [stroke="#f43f5e"],
+html.theme-zen [stroke="#F43F5E"],
+html.theme-zen [stroke="#fc8181"],
+html.theme-zen [stroke="#FC8181"] {
+    stroke: var(--zen-vermilion);
+}
+
+html.theme-zen [fill="#ef4444"],
+html.theme-zen [fill="#EF4444"],
+html.theme-zen [fill="#f87171"],
+html.theme-zen [fill="#F87171"],
+html.theme-zen [fill="#ff6b6b"],
+html.theme-zen [fill="#FF6B6B"],
+html.theme-zen [fill="#dc2626"],
+html.theme-zen [fill="#DC2626"],
+html.theme-zen [fill="#f56565"],
+html.theme-zen [fill="#F56565"],
+html.theme-zen [fill="#f43f5e"],
+html.theme-zen [fill="#F43F5E"],
+html.theme-zen [fill="#fc8181"],
+html.theme-zen [fill="#FC8181"] {
+    fill: var(--zen-vermilion);
+}
+
+html.theme-zen [stop-color="#ef4444"],
+html.theme-zen [stop-color="#EF4444"],
+html.theme-zen [stop-color="#f87171"],
+html.theme-zen [stop-color="#F87171"],
+html.theme-zen [stop-color="#ff6b6b"],
+html.theme-zen [stop-color="#FF6B6B"],
+html.theme-zen [stop-color="#dc2626"],
+html.theme-zen [stop-color="#DC2626"],
+html.theme-zen [stop-color="#f56565"],
+html.theme-zen [stop-color="#F56565"],
+html.theme-zen [stop-color="#f43f5e"],
+html.theme-zen [stop-color="#F43F5E"],
+html.theme-zen [stop-color="#fc8181"],
+html.theme-zen [stop-color="#FC8181"] {
+    stop-color: var(--zen-vermilion);
+}
+
+html.theme-zen [style*="--ring-color: #ef4444"],
+html.theme-zen [style*="--ring-color: #EF4444"],
+html.theme-zen [style*="--ring-color: #f87171"],
+html.theme-zen [style*="--ring-color: #F87171"],
+html.theme-zen [style*="--ring-color: #ff6b6b"],
+html.theme-zen [style*="--ring-color: #FF6B6B"],
+html.theme-zen [style*="--ring-color: #dc2626"],
+html.theme-zen [style*="--ring-color: #DC2626"],
+html.theme-zen [style*="--ring-color: #f56565"],
+html.theme-zen [style*="--ring-color: #F56565"],
+html.theme-zen [style*="--ring-color: #f43f5e"],
+html.theme-zen [style*="--ring-color: #F43F5E"],
+html.theme-zen [style*="--ring-color: #fc8181"],
+html.theme-zen [style*="--ring-color: #FC8181"] {
+    --ring-color: var(--zen-vermilion) !important;
+}
+
+/* ---- ochre ---- */
+
+html.theme-zen [style^="color: rgb(245, 158, 11)"],
+html.theme-zen [style*="; color: rgb(245, 158, 11)"],
+html.theme-zen [style^="color: rgba(245, 158, 11,"],
+html.theme-zen [style*="; color: rgba(245, 158, 11,"],
+html.theme-zen [style^="color: rgb(234, 179, 8)"],
+html.theme-zen [style*="; color: rgb(234, 179, 8)"],
+html.theme-zen [style^="color: rgba(234, 179, 8,"],
+html.theme-zen [style*="; color: rgba(234, 179, 8,"],
+html.theme-zen [style^="color: rgb(251, 191, 36)"],
+html.theme-zen [style*="; color: rgb(251, 191, 36)"],
+html.theme-zen [style^="color: rgba(251, 191, 36,"],
+html.theme-zen [style*="; color: rgba(251, 191, 36,"],
+html.theme-zen [style^="color: rgb(255, 209, 102)"],
+html.theme-zen [style*="; color: rgb(255, 209, 102)"],
+html.theme-zen [style^="color: rgba(255, 209, 102,"],
+html.theme-zen [style*="; color: rgba(255, 209, 102,"],
+html.theme-zen [style^="color: rgb(236, 201, 75)"],
+html.theme-zen [style*="; color: rgb(236, 201, 75)"],
+html.theme-zen [style^="color: rgba(236, 201, 75,"],
+html.theme-zen [style*="; color: rgba(236, 201, 75,"],
+html.theme-zen [style^="color: rgb(251, 211, 141)"],
+html.theme-zen [style*="; color: rgb(251, 211, 141)"],
+html.theme-zen [style^="color: rgba(251, 211, 141,"],
+html.theme-zen [style*="; color: rgba(251, 211, 141,"],
+html.theme-zen [style^="color: rgb(250, 204, 21)"],
+html.theme-zen [style*="; color: rgb(250, 204, 21)"],
+html.theme-zen [style^="color: rgba(250, 204, 21,"],
+html.theme-zen [style*="; color: rgba(250, 204, 21,"] {
+    color: var(--zen-ochre) !important;
+}
+
+html.theme-zen [style*="background: rgb(245, 158, 11)"],
+html.theme-zen [style*="background-color: rgb(245, 158, 11)"],
+html.theme-zen [style*="background: rgb(234, 179, 8)"],
+html.theme-zen [style*="background-color: rgb(234, 179, 8)"],
+html.theme-zen [style*="background: rgb(251, 191, 36)"],
+html.theme-zen [style*="background-color: rgb(251, 191, 36)"],
+html.theme-zen [style*="background: rgb(255, 209, 102)"],
+html.theme-zen [style*="background-color: rgb(255, 209, 102)"],
+html.theme-zen [style*="background: rgb(236, 201, 75)"],
+html.theme-zen [style*="background-color: rgb(236, 201, 75)"],
+html.theme-zen [style*="background: rgb(251, 211, 141)"],
+html.theme-zen [style*="background-color: rgb(251, 211, 141)"],
+html.theme-zen [style*="background: rgb(250, 204, 21)"],
+html.theme-zen [style*="background-color: rgb(250, 204, 21)"] {
+    background-color: var(--zen-ochre) !important;
+}
+
+html.theme-zen [style*="background: rgba(245, 158, 11,"],
+html.theme-zen [style*="background-color: rgba(245, 158, 11,"],
+html.theme-zen [style*="background: rgba(234, 179, 8,"],
+html.theme-zen [style*="background-color: rgba(234, 179, 8,"],
+html.theme-zen [style*="background: rgba(251, 191, 36,"],
+html.theme-zen [style*="background-color: rgba(251, 191, 36,"],
+html.theme-zen [style*="background: rgba(255, 209, 102,"],
+html.theme-zen [style*="background-color: rgba(255, 209, 102,"],
+html.theme-zen [style*="background: rgba(236, 201, 75,"],
+html.theme-zen [style*="background-color: rgba(236, 201, 75,"],
+html.theme-zen [style*="background: rgba(251, 211, 141,"],
+html.theme-zen [style*="background-color: rgba(251, 211, 141,"],
+html.theme-zen [style*="background: rgba(250, 204, 21,"],
+html.theme-zen [style*="background-color: rgba(250, 204, 21,"] {
+    background-color: color-mix(in srgb, var(--zen-ochre) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(245, 158, 11)"],
+html.theme-zen [style*="solid rgb(234, 179, 8)"],
+html.theme-zen [style*="solid rgb(251, 191, 36)"],
+html.theme-zen [style*="solid rgb(255, 209, 102)"],
+html.theme-zen [style*="solid rgb(236, 201, 75)"],
+html.theme-zen [style*="solid rgb(251, 211, 141)"],
+html.theme-zen [style*="solid rgb(250, 204, 21)"] {
+    border-color: var(--zen-ochre) !important;
+}
+
+html.theme-zen [style*="solid rgba(245, 158, 11,"],
+html.theme-zen [style*="dashed rgba(245, 158, 11,"],
+html.theme-zen [style*="solid rgba(234, 179, 8,"],
+html.theme-zen [style*="dashed rgba(234, 179, 8,"],
+html.theme-zen [style*="solid rgba(251, 191, 36,"],
+html.theme-zen [style*="dashed rgba(251, 191, 36,"],
+html.theme-zen [style*="solid rgba(255, 209, 102,"],
+html.theme-zen [style*="dashed rgba(255, 209, 102,"],
+html.theme-zen [style*="solid rgba(236, 201, 75,"],
+html.theme-zen [style*="dashed rgba(236, 201, 75,"],
+html.theme-zen [style*="solid rgba(251, 211, 141,"],
+html.theme-zen [style*="dashed rgba(251, 211, 141,"],
+html.theme-zen [style*="solid rgba(250, 204, 21,"],
+html.theme-zen [style*="dashed rgba(250, 204, 21,"] {
+    border-color: color-mix(in srgb, var(--zen-ochre) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(245, 158, 11)"],
+html.theme-zen [style*="gradient(rgb(245, 158, 11)"],
+html.theme-zen [style*="to right, rgb(245, 158, 11)"],
+html.theme-zen [style*="to bottom, rgb(245, 158, 11)"],
+html.theme-zen [style*="deg, rgb(234, 179, 8)"],
+html.theme-zen [style*="gradient(rgb(234, 179, 8)"],
+html.theme-zen [style*="to right, rgb(234, 179, 8)"],
+html.theme-zen [style*="to bottom, rgb(234, 179, 8)"],
+html.theme-zen [style*="deg, rgb(251, 191, 36)"],
+html.theme-zen [style*="gradient(rgb(251, 191, 36)"],
+html.theme-zen [style*="to right, rgb(251, 191, 36)"],
+html.theme-zen [style*="to bottom, rgb(251, 191, 36)"],
+html.theme-zen [style*="deg, rgb(255, 209, 102)"],
+html.theme-zen [style*="gradient(rgb(255, 209, 102)"],
+html.theme-zen [style*="to right, rgb(255, 209, 102)"],
+html.theme-zen [style*="to bottom, rgb(255, 209, 102)"],
+html.theme-zen [style*="deg, rgb(236, 201, 75)"],
+html.theme-zen [style*="gradient(rgb(236, 201, 75)"],
+html.theme-zen [style*="to right, rgb(236, 201, 75)"],
+html.theme-zen [style*="to bottom, rgb(236, 201, 75)"],
+html.theme-zen [style*="deg, rgb(251, 211, 141)"],
+html.theme-zen [style*="gradient(rgb(251, 211, 141)"],
+html.theme-zen [style*="to right, rgb(251, 211, 141)"],
+html.theme-zen [style*="to bottom, rgb(251, 211, 141)"],
+html.theme-zen [style*="deg, rgb(250, 204, 21)"],
+html.theme-zen [style*="gradient(rgb(250, 204, 21)"],
+html.theme-zen [style*="to right, rgb(250, 204, 21)"],
+html.theme-zen [style*="to bottom, rgb(250, 204, 21)"] {
+    background-image: linear-gradient(135deg, var(--zen-ochre), color-mix(in srgb, var(--zen-ochre) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(245, 158, 11,"],
+html.theme-zen [style*="gradient(rgba(245, 158, 11,"],
+html.theme-zen [style*="to right, rgba(245, 158, 11,"],
+html.theme-zen [style*="to bottom, rgba(245, 158, 11,"],
+html.theme-zen [style*="deg, rgba(234, 179, 8,"],
+html.theme-zen [style*="gradient(rgba(234, 179, 8,"],
+html.theme-zen [style*="to right, rgba(234, 179, 8,"],
+html.theme-zen [style*="to bottom, rgba(234, 179, 8,"],
+html.theme-zen [style*="deg, rgba(251, 191, 36,"],
+html.theme-zen [style*="gradient(rgba(251, 191, 36,"],
+html.theme-zen [style*="to right, rgba(251, 191, 36,"],
+html.theme-zen [style*="to bottom, rgba(251, 191, 36,"],
+html.theme-zen [style*="deg, rgba(255, 209, 102,"],
+html.theme-zen [style*="gradient(rgba(255, 209, 102,"],
+html.theme-zen [style*="to right, rgba(255, 209, 102,"],
+html.theme-zen [style*="to bottom, rgba(255, 209, 102,"],
+html.theme-zen [style*="deg, rgba(236, 201, 75,"],
+html.theme-zen [style*="gradient(rgba(236, 201, 75,"],
+html.theme-zen [style*="to right, rgba(236, 201, 75,"],
+html.theme-zen [style*="to bottom, rgba(236, 201, 75,"],
+html.theme-zen [style*="deg, rgba(251, 211, 141,"],
+html.theme-zen [style*="gradient(rgba(251, 211, 141,"],
+html.theme-zen [style*="to right, rgba(251, 211, 141,"],
+html.theme-zen [style*="to bottom, rgba(251, 211, 141,"],
+html.theme-zen [style*="deg, rgba(250, 204, 21,"],
+html.theme-zen [style*="gradient(rgba(250, 204, 21,"],
+html.theme-zen [style*="to right, rgba(250, 204, 21,"],
+html.theme-zen [style*="to bottom, rgba(250, 204, 21,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-ochre) 13%, transparent), color-mix(in srgb, var(--zen-ochre) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(245, 158, 11,"],
+html.theme-zen [style*="px, rgba(245, 158, 11,"],
+html.theme-zen [style*="box-shadow: rgba(234, 179, 8,"],
+html.theme-zen [style*="px, rgba(234, 179, 8,"],
+html.theme-zen [style*="box-shadow: rgba(251, 191, 36,"],
+html.theme-zen [style*="px, rgba(251, 191, 36,"],
+html.theme-zen [style*="box-shadow: rgba(255, 209, 102,"],
+html.theme-zen [style*="px, rgba(255, 209, 102,"],
+html.theme-zen [style*="box-shadow: rgba(236, 201, 75,"],
+html.theme-zen [style*="px, rgba(236, 201, 75,"],
+html.theme-zen [style*="box-shadow: rgba(251, 211, 141,"],
+html.theme-zen [style*="px, rgba(251, 211, 141,"],
+html.theme-zen [style*="box-shadow: rgba(250, 204, 21,"],
+html.theme-zen [style*="px, rgba(250, 204, 21,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#f59e0b"],
+html.theme-zen [stroke="#F59E0B"],
+html.theme-zen [stroke="#eab308"],
+html.theme-zen [stroke="#EAB308"],
+html.theme-zen [stroke="#fbbf24"],
+html.theme-zen [stroke="#FBBF24"],
+html.theme-zen [stroke="#ffd166"],
+html.theme-zen [stroke="#FFD166"],
+html.theme-zen [stroke="#ecc94b"],
+html.theme-zen [stroke="#ECC94B"],
+html.theme-zen [stroke="#fbd38d"],
+html.theme-zen [stroke="#FBD38D"],
+html.theme-zen [stroke="#facc15"],
+html.theme-zen [stroke="#FACC15"] {
+    stroke: var(--zen-ochre);
+}
+
+html.theme-zen [fill="#f59e0b"],
+html.theme-zen [fill="#F59E0B"],
+html.theme-zen [fill="#eab308"],
+html.theme-zen [fill="#EAB308"],
+html.theme-zen [fill="#fbbf24"],
+html.theme-zen [fill="#FBBF24"],
+html.theme-zen [fill="#ffd166"],
+html.theme-zen [fill="#FFD166"],
+html.theme-zen [fill="#ecc94b"],
+html.theme-zen [fill="#ECC94B"],
+html.theme-zen [fill="#fbd38d"],
+html.theme-zen [fill="#FBD38D"],
+html.theme-zen [fill="#facc15"],
+html.theme-zen [fill="#FACC15"] {
+    fill: var(--zen-ochre);
+}
+
+html.theme-zen [stop-color="#f59e0b"],
+html.theme-zen [stop-color="#F59E0B"],
+html.theme-zen [stop-color="#eab308"],
+html.theme-zen [stop-color="#EAB308"],
+html.theme-zen [stop-color="#fbbf24"],
+html.theme-zen [stop-color="#FBBF24"],
+html.theme-zen [stop-color="#ffd166"],
+html.theme-zen [stop-color="#FFD166"],
+html.theme-zen [stop-color="#ecc94b"],
+html.theme-zen [stop-color="#ECC94B"],
+html.theme-zen [stop-color="#fbd38d"],
+html.theme-zen [stop-color="#FBD38D"],
+html.theme-zen [stop-color="#facc15"],
+html.theme-zen [stop-color="#FACC15"] {
+    stop-color: var(--zen-ochre);
+}
+
+html.theme-zen [style*="--ring-color: #f59e0b"],
+html.theme-zen [style*="--ring-color: #F59E0B"],
+html.theme-zen [style*="--ring-color: #eab308"],
+html.theme-zen [style*="--ring-color: #EAB308"],
+html.theme-zen [style*="--ring-color: #fbbf24"],
+html.theme-zen [style*="--ring-color: #FBBF24"],
+html.theme-zen [style*="--ring-color: #ffd166"],
+html.theme-zen [style*="--ring-color: #FFD166"],
+html.theme-zen [style*="--ring-color: #ecc94b"],
+html.theme-zen [style*="--ring-color: #ECC94B"],
+html.theme-zen [style*="--ring-color: #fbd38d"],
+html.theme-zen [style*="--ring-color: #FBD38D"],
+html.theme-zen [style*="--ring-color: #facc15"],
+html.theme-zen [style*="--ring-color: #FACC15"] {
+    --ring-color: var(--zen-ochre) !important;
+}
+
+/* ---- persimmon ---- */
+
+html.theme-zen [style^="color: rgb(249, 115, 22)"],
+html.theme-zen [style*="; color: rgb(249, 115, 22)"],
+html.theme-zen [style^="color: rgba(249, 115, 22,"],
+html.theme-zen [style*="; color: rgba(249, 115, 22,"],
+html.theme-zen [style^="color: rgb(251, 146, 60)"],
+html.theme-zen [style*="; color: rgb(251, 146, 60)"],
+html.theme-zen [style^="color: rgba(251, 146, 60,"],
+html.theme-zen [style*="; color: rgba(251, 146, 60,"],
+html.theme-zen [style^="color: rgb(234, 88, 12)"],
+html.theme-zen [style*="; color: rgb(234, 88, 12)"],
+html.theme-zen [style^="color: rgba(234, 88, 12,"],
+html.theme-zen [style*="; color: rgba(234, 88, 12,"] {
+    color: var(--zen-persimmon) !important;
+}
+
+html.theme-zen [style*="background: rgb(249, 115, 22)"],
+html.theme-zen [style*="background-color: rgb(249, 115, 22)"],
+html.theme-zen [style*="background: rgb(251, 146, 60)"],
+html.theme-zen [style*="background-color: rgb(251, 146, 60)"],
+html.theme-zen [style*="background: rgb(234, 88, 12)"],
+html.theme-zen [style*="background-color: rgb(234, 88, 12)"] {
+    background-color: var(--zen-persimmon) !important;
+}
+
+html.theme-zen [style*="background: rgba(249, 115, 22,"],
+html.theme-zen [style*="background-color: rgba(249, 115, 22,"],
+html.theme-zen [style*="background: rgba(251, 146, 60,"],
+html.theme-zen [style*="background-color: rgba(251, 146, 60,"],
+html.theme-zen [style*="background: rgba(234, 88, 12,"],
+html.theme-zen [style*="background-color: rgba(234, 88, 12,"] {
+    background-color: color-mix(in srgb, var(--zen-persimmon) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(249, 115, 22)"],
+html.theme-zen [style*="solid rgb(251, 146, 60)"],
+html.theme-zen [style*="solid rgb(234, 88, 12)"] {
+    border-color: var(--zen-persimmon) !important;
+}
+
+html.theme-zen [style*="solid rgba(249, 115, 22,"],
+html.theme-zen [style*="dashed rgba(249, 115, 22,"],
+html.theme-zen [style*="solid rgba(251, 146, 60,"],
+html.theme-zen [style*="dashed rgba(251, 146, 60,"],
+html.theme-zen [style*="solid rgba(234, 88, 12,"],
+html.theme-zen [style*="dashed rgba(234, 88, 12,"] {
+    border-color: color-mix(in srgb, var(--zen-persimmon) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(249, 115, 22)"],
+html.theme-zen [style*="gradient(rgb(249, 115, 22)"],
+html.theme-zen [style*="to right, rgb(249, 115, 22)"],
+html.theme-zen [style*="to bottom, rgb(249, 115, 22)"],
+html.theme-zen [style*="deg, rgb(251, 146, 60)"],
+html.theme-zen [style*="gradient(rgb(251, 146, 60)"],
+html.theme-zen [style*="to right, rgb(251, 146, 60)"],
+html.theme-zen [style*="to bottom, rgb(251, 146, 60)"],
+html.theme-zen [style*="deg, rgb(234, 88, 12)"],
+html.theme-zen [style*="gradient(rgb(234, 88, 12)"],
+html.theme-zen [style*="to right, rgb(234, 88, 12)"],
+html.theme-zen [style*="to bottom, rgb(234, 88, 12)"] {
+    background-image: linear-gradient(135deg, var(--zen-persimmon), color-mix(in srgb, var(--zen-persimmon) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(249, 115, 22,"],
+html.theme-zen [style*="gradient(rgba(249, 115, 22,"],
+html.theme-zen [style*="to right, rgba(249, 115, 22,"],
+html.theme-zen [style*="to bottom, rgba(249, 115, 22,"],
+html.theme-zen [style*="deg, rgba(251, 146, 60,"],
+html.theme-zen [style*="gradient(rgba(251, 146, 60,"],
+html.theme-zen [style*="to right, rgba(251, 146, 60,"],
+html.theme-zen [style*="to bottom, rgba(251, 146, 60,"],
+html.theme-zen [style*="deg, rgba(234, 88, 12,"],
+html.theme-zen [style*="gradient(rgba(234, 88, 12,"],
+html.theme-zen [style*="to right, rgba(234, 88, 12,"],
+html.theme-zen [style*="to bottom, rgba(234, 88, 12,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-persimmon) 13%, transparent), color-mix(in srgb, var(--zen-persimmon) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(249, 115, 22,"],
+html.theme-zen [style*="px, rgba(249, 115, 22,"],
+html.theme-zen [style*="box-shadow: rgba(251, 146, 60,"],
+html.theme-zen [style*="px, rgba(251, 146, 60,"],
+html.theme-zen [style*="box-shadow: rgba(234, 88, 12,"],
+html.theme-zen [style*="px, rgba(234, 88, 12,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#f97316"],
+html.theme-zen [stroke="#F97316"],
+html.theme-zen [stroke="#fb923c"],
+html.theme-zen [stroke="#FB923C"],
+html.theme-zen [stroke="#ea580c"],
+html.theme-zen [stroke="#EA580C"] {
+    stroke: var(--zen-persimmon);
+}
+
+html.theme-zen [fill="#f97316"],
+html.theme-zen [fill="#F97316"],
+html.theme-zen [fill="#fb923c"],
+html.theme-zen [fill="#FB923C"],
+html.theme-zen [fill="#ea580c"],
+html.theme-zen [fill="#EA580C"] {
+    fill: var(--zen-persimmon);
+}
+
+html.theme-zen [stop-color="#f97316"],
+html.theme-zen [stop-color="#F97316"],
+html.theme-zen [stop-color="#fb923c"],
+html.theme-zen [stop-color="#FB923C"],
+html.theme-zen [stop-color="#ea580c"],
+html.theme-zen [stop-color="#EA580C"] {
+    stop-color: var(--zen-persimmon);
+}
+
+html.theme-zen [style*="--ring-color: #f97316"],
+html.theme-zen [style*="--ring-color: #F97316"],
+html.theme-zen [style*="--ring-color: #fb923c"],
+html.theme-zen [style*="--ring-color: #FB923C"],
+html.theme-zen [style*="--ring-color: #ea580c"],
+html.theme-zen [style*="--ring-color: #EA580C"] {
+    --ring-color: var(--zen-persimmon) !important;
+}
+
+/* ---- plum ---- */
+
+html.theme-zen [style^="color: rgb(236, 72, 153)"],
+html.theme-zen [style*="; color: rgb(236, 72, 153)"],
+html.theme-zen [style^="color: rgba(236, 72, 153,"],
+html.theme-zen [style*="; color: rgba(236, 72, 153,"],
+html.theme-zen [style^="color: rgb(244, 114, 182)"],
+html.theme-zen [style*="; color: rgb(244, 114, 182)"],
+html.theme-zen [style^="color: rgba(244, 114, 182,"],
+html.theme-zen [style*="; color: rgba(244, 114, 182,"],
+html.theme-zen [style^="color: rgb(219, 39, 119)"],
+html.theme-zen [style*="; color: rgb(219, 39, 119)"],
+html.theme-zen [style^="color: rgba(219, 39, 119,"],
+html.theme-zen [style*="; color: rgba(219, 39, 119,"],
+html.theme-zen [style^="color: rgb(217, 70, 239)"],
+html.theme-zen [style*="; color: rgb(217, 70, 239)"],
+html.theme-zen [style^="color: rgba(217, 70, 239,"],
+html.theme-zen [style*="; color: rgba(217, 70, 239,"] {
+    color: var(--zen-plum) !important;
+}
+
+html.theme-zen [style*="background: rgb(236, 72, 153)"],
+html.theme-zen [style*="background-color: rgb(236, 72, 153)"],
+html.theme-zen [style*="background: rgb(244, 114, 182)"],
+html.theme-zen [style*="background-color: rgb(244, 114, 182)"],
+html.theme-zen [style*="background: rgb(219, 39, 119)"],
+html.theme-zen [style*="background-color: rgb(219, 39, 119)"],
+html.theme-zen [style*="background: rgb(217, 70, 239)"],
+html.theme-zen [style*="background-color: rgb(217, 70, 239)"] {
+    background-color: var(--zen-plum) !important;
+}
+
+html.theme-zen [style*="background: rgba(236, 72, 153,"],
+html.theme-zen [style*="background-color: rgba(236, 72, 153,"],
+html.theme-zen [style*="background: rgba(244, 114, 182,"],
+html.theme-zen [style*="background-color: rgba(244, 114, 182,"],
+html.theme-zen [style*="background: rgba(219, 39, 119,"],
+html.theme-zen [style*="background-color: rgba(219, 39, 119,"],
+html.theme-zen [style*="background: rgba(217, 70, 239,"],
+html.theme-zen [style*="background-color: rgba(217, 70, 239,"] {
+    background-color: color-mix(in srgb, var(--zen-plum) 11%, transparent) !important;
+}
+
+html.theme-zen [style*="solid rgb(236, 72, 153)"],
+html.theme-zen [style*="solid rgb(244, 114, 182)"],
+html.theme-zen [style*="solid rgb(219, 39, 119)"],
+html.theme-zen [style*="solid rgb(217, 70, 239)"] {
+    border-color: var(--zen-plum) !important;
+}
+
+html.theme-zen [style*="solid rgba(236, 72, 153,"],
+html.theme-zen [style*="dashed rgba(236, 72, 153,"],
+html.theme-zen [style*="solid rgba(244, 114, 182,"],
+html.theme-zen [style*="dashed rgba(244, 114, 182,"],
+html.theme-zen [style*="solid rgba(219, 39, 119,"],
+html.theme-zen [style*="dashed rgba(219, 39, 119,"],
+html.theme-zen [style*="solid rgba(217, 70, 239,"],
+html.theme-zen [style*="dashed rgba(217, 70, 239,"] {
+    border-color: color-mix(in srgb, var(--zen-plum) 32%, transparent) !important;
+}
+
+html.theme-zen [style*="deg, rgb(236, 72, 153)"],
+html.theme-zen [style*="gradient(rgb(236, 72, 153)"],
+html.theme-zen [style*="to right, rgb(236, 72, 153)"],
+html.theme-zen [style*="to bottom, rgb(236, 72, 153)"],
+html.theme-zen [style*="deg, rgb(244, 114, 182)"],
+html.theme-zen [style*="gradient(rgb(244, 114, 182)"],
+html.theme-zen [style*="to right, rgb(244, 114, 182)"],
+html.theme-zen [style*="to bottom, rgb(244, 114, 182)"],
+html.theme-zen [style*="deg, rgb(219, 39, 119)"],
+html.theme-zen [style*="gradient(rgb(219, 39, 119)"],
+html.theme-zen [style*="to right, rgb(219, 39, 119)"],
+html.theme-zen [style*="to bottom, rgb(219, 39, 119)"],
+html.theme-zen [style*="deg, rgb(217, 70, 239)"],
+html.theme-zen [style*="gradient(rgb(217, 70, 239)"],
+html.theme-zen [style*="to right, rgb(217, 70, 239)"],
+html.theme-zen [style*="to bottom, rgb(217, 70, 239)"] {
+    background-image: linear-gradient(135deg, var(--zen-plum), color-mix(in srgb, var(--zen-plum) 82%, #1c1915)) !important;
+}
+
+html.theme-zen [style*="deg, rgba(236, 72, 153,"],
+html.theme-zen [style*="gradient(rgba(236, 72, 153,"],
+html.theme-zen [style*="to right, rgba(236, 72, 153,"],
+html.theme-zen [style*="to bottom, rgba(236, 72, 153,"],
+html.theme-zen [style*="deg, rgba(244, 114, 182,"],
+html.theme-zen [style*="gradient(rgba(244, 114, 182,"],
+html.theme-zen [style*="to right, rgba(244, 114, 182,"],
+html.theme-zen [style*="to bottom, rgba(244, 114, 182,"],
+html.theme-zen [style*="deg, rgba(219, 39, 119,"],
+html.theme-zen [style*="gradient(rgba(219, 39, 119,"],
+html.theme-zen [style*="to right, rgba(219, 39, 119,"],
+html.theme-zen [style*="to bottom, rgba(219, 39, 119,"],
+html.theme-zen [style*="deg, rgba(217, 70, 239,"],
+html.theme-zen [style*="gradient(rgba(217, 70, 239,"],
+html.theme-zen [style*="to right, rgba(217, 70, 239,"],
+html.theme-zen [style*="to bottom, rgba(217, 70, 239,"] {
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--zen-plum) 13%, transparent), color-mix(in srgb, var(--zen-plum) 5%, transparent)) !important;
+}
+
+html.theme-zen [style*="box-shadow: rgba(236, 72, 153,"],
+html.theme-zen [style*="px, rgba(236, 72, 153,"],
+html.theme-zen [style*="box-shadow: rgba(244, 114, 182,"],
+html.theme-zen [style*="px, rgba(244, 114, 182,"],
+html.theme-zen [style*="box-shadow: rgba(219, 39, 119,"],
+html.theme-zen [style*="px, rgba(219, 39, 119,"],
+html.theme-zen [style*="box-shadow: rgba(217, 70, 239,"],
+html.theme-zen [style*="px, rgba(217, 70, 239,"] {
+    box-shadow: var(--zen-shadow-soft) !important;
+}
+
+html.theme-zen [stroke="#ec4899"],
+html.theme-zen [stroke="#EC4899"],
+html.theme-zen [stroke="#f472b6"],
+html.theme-zen [stroke="#F472B6"],
+html.theme-zen [stroke="#db2777"],
+html.theme-zen [stroke="#DB2777"],
+html.theme-zen [stroke="#d946ef"],
+html.theme-zen [stroke="#D946EF"] {
+    stroke: var(--zen-plum);
+}
+
+html.theme-zen [fill="#ec4899"],
+html.theme-zen [fill="#EC4899"],
+html.theme-zen [fill="#f472b6"],
+html.theme-zen [fill="#F472B6"],
+html.theme-zen [fill="#db2777"],
+html.theme-zen [fill="#DB2777"],
+html.theme-zen [fill="#d946ef"],
+html.theme-zen [fill="#D946EF"] {
+    fill: var(--zen-plum);
+}
+
+html.theme-zen [stop-color="#ec4899"],
+html.theme-zen [stop-color="#EC4899"],
+html.theme-zen [stop-color="#f472b6"],
+html.theme-zen [stop-color="#F472B6"],
+html.theme-zen [stop-color="#db2777"],
+html.theme-zen [stop-color="#DB2777"],
+html.theme-zen [stop-color="#d946ef"],
+html.theme-zen [stop-color="#D946EF"] {
+    stop-color: var(--zen-plum);
+}
+
+html.theme-zen [style*="--ring-color: #ec4899"],
+html.theme-zen [style*="--ring-color: #EC4899"],
+html.theme-zen [style*="--ring-color: #f472b6"],
+html.theme-zen [style*="--ring-color: #F472B6"],
+html.theme-zen [style*="--ring-color: #db2777"],
+html.theme-zen [style*="--ring-color: #DB2777"],
+html.theme-zen [style*="--ring-color: #d946ef"],
+html.theme-zen [style*="--ring-color: #D946EF"] {
+    --ring-color: var(--zen-plum) !important;
+}

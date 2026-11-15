@@ -26,6 +26,16 @@ export const THEMES = [
         previewAccent: '#64ffda',
         statusBarColor: '#0a192f',
     },
+    {
+        id: 'zen',
+        label: 'Ancient Zen',
+        icon: '🎋',
+        preview: '#f4eee1',
+        previewAccent: '#b4412c',
+        statusBarColor: '#f2ebdc',
+        // Loaded on demand the first time the theme is applied
+        fontHref: 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap',
+    },
 ];
 
 const ThemeContext = createContext({});
@@ -50,9 +60,19 @@ export const ThemeProvider = ({ children }) => {
         // Apply new theme class
         root.classList.add(`theme-${theme}`);
 
+        const currentTheme = THEMES.find(t => t.id === theme);
+
+        // Load the theme's web fonts once, only when the theme is actually used
+        if (currentTheme?.fontHref && !document.querySelector(`link[data-theme-font="${currentTheme.id}"]`)) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = currentTheme.fontHref;
+            link.dataset.themeFont = currentTheme.id;
+            document.head.appendChild(link);
+        }
+
         // Update PWA status bar color
         const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-        const currentTheme = THEMES.find(t => t.id === theme);
         if (metaThemeColor && currentTheme) {
             metaThemeColor.setAttribute('content', currentTheme.statusBarColor);
         }

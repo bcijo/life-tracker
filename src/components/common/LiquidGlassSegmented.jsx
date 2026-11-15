@@ -846,7 +846,7 @@ const LiquidGlassSegmented = memo(function LiquidGlassSegmented({
         .apple-liquid-seg-count {
           font-size: 10px;
           font-weight: 800;
-          font-family: monospace;
+          font-family: var(--font-mono);
           padding: 2px 5.5px;
           border-radius: 9999px;
           line-height: 1;

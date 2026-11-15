@@ -960,7 +960,7 @@ const ExpensesView = () => {
                                                 fontSize: '13.5px',
                                                 fontWeight: '800',
                                                 color: 'var(--text-primary)',
-                                                fontFamily: 'monospace',
+                                                fontFamily: 'var(--font-mono)',
                                                 letterSpacing: '-0.2px'
                                             }}>
                                                 ₹{Math.round(group.total).toLocaleString('en-IN')}
@@ -1109,7 +1109,7 @@ const ExpensesView = () => {
                                                                         fontSize: '16px',
                                                                         fontWeight: '800',
                                                                         color: isExpense ? 'var(--text-primary)' : 'var(--success, #10b981)',
-                                                                        fontFamily: 'monospace',
+                                                                        fontFamily: 'var(--font-mono)',
                                                                         letterSpacing: '-0.3px',
                                                                         textAlign: 'right'
                                                                     }}>
