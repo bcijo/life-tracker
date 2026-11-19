@@ -3636,7 +3636,7 @@ const Calories = () => {
                     overflow: hidden; border-radius: 22px;
                     display: grid; grid-template-areas: "stack";
                     align-items: center; justify-items: center;
-                    max-width: 92vw; max-height: 84vh;
+                    max-width: 92vw; max-height: calc(var(--app-vh, 1vh) * 84);
                     box-shadow: 0 28px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.14);
                     background: rgba(12, 14, 24, 0.55);
                 }
@@ -3648,7 +3648,7 @@ const Calories = () => {
                     display: block;
                     width: auto; height: auto;
                     max-width: min(92vw, 760px);
-                    max-height: 78vh;
+                    max-height: calc(var(--app-vh, 1vh) * 78);
                     object-fit: contain;
                     transition: filter 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
                 }
@@ -3984,9 +3984,9 @@ const Calories = () => {
                 /* Keeps the Log button in view while the sheet scrolls */
                 .cal-plate-footer {
                     position: sticky;
-                    bottom: -24px;
-                    margin: 0 -24px -24px;
-                    padding: 14px 24px 24px;
+                    bottom: calc(-1 * var(--modal-pad-b, 24px));
+                    margin: 0 calc(-1 * var(--modal-pad-x, 24px)) calc(-1 * var(--modal-pad-b, 24px));
+                    padding: 14px var(--modal-pad-x, 24px) var(--modal-pad-b, 24px);
                     background: linear-gradient(to bottom, transparent, var(--surface-elevated) 18px);
                     z-index: 2;
                 }

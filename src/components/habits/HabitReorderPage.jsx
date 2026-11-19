@@ -230,7 +230,7 @@ export function HabitReorderPage({ habits, onSave, onClose }) {
           style={{
             width: '100%',
             maxWidth: '780px',
-            maxHeight: '88vh',
+            maxHeight: 'calc(var(--app-vh, 1vh) * 88)',
             background: 'var(--surface-elevated, #131b2e)',
             border: '1px solid var(--glass-card-border, rgba(255, 255, 255, 0.1))',
             borderRadius: '24px',

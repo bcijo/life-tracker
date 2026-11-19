@@ -167,7 +167,7 @@ const RecurringExpensesModal = ({
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '8px',
-                            maxHeight: '48vh',
+                            maxHeight: 'calc(var(--app-vh, 1vh) * 48)',
                             overflowY: 'auto',
                             paddingRight: '2px'
                         }}>

@@ -655,7 +655,7 @@ const Assistant = () => {
                 .ai-page {
                     display: flex;
                     flex-direction: column;
-                    height: calc(100vh - 80px);
+                    height: calc(var(--app-vh, 1vh) * 100 - 80px);
                     position: relative;
                     width: 100%;
                     overflow: hidden;
@@ -694,9 +694,15 @@ const Assistant = () => {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    justify-content: center;
+                    justify-content: flex-start;
                     gap: 12px;
                     padding: 40px 20px;
+                }
+                /* Centre vertically, but stay scrollable from the top when it doesn't fit */
+                .ai-empty-state > :first-child { margin-top: auto; }
+                .ai-empty-state > :last-child { margin-bottom: auto; }
+                @media (max-width: 767px) {
+                    .ai-empty-state { padding: 12px 4px 16px; }
                 }
                 .ai-hero-icon {
                     width: 72px;

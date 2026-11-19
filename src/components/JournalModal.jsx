@@ -92,7 +92,7 @@ export const JournalModal = ({ isOpen, onClose }) => {
                     style={{
                         width: '100%',
                         maxWidth: '520px',
-                        maxHeight: '90vh',
+                        maxHeight: 'calc(var(--app-vh, 1vh) * 90)',
                         overflowY: 'auto',
                         background: 'var(--surface-elevated, #161f36)',
                         border: '1px solid var(--glass-card-border, rgba(255, 255, 255, 0.12))',

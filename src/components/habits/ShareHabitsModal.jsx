@@ -107,7 +107,7 @@ export const ShareHabitsModal = ({ dateLabel, isToday, habits, bestStreak, week 
                 transition={{ duration: 0.2, ease: 'easeOut' }}
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '100%', maxWidth: 420, maxHeight: '92vh', overflowY: 'auto',
+                    width: '100%', maxWidth: 420, maxHeight: 'calc(var(--app-vh, 1vh) * 92)', overflowY: 'auto',
                     background: 'var(--surface-elevated, #161622)',
                     border: '1px solid rgba(168,85,247,0.35)',
                     borderRadius: 24, padding: '18px 16px',

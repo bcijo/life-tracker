@@ -70,7 +70,7 @@ const CategorySettingsModal = ({ card, onClose, onDeleteCategory, onUpdateCatego
 
     return (
         <Modal isOpen={true} onClose={onClose} title="Edit Category">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: 'calc(var(--app-vh, 1vh) * 75)', overflowY: 'auto', paddingRight: '4px' }}>
                 {/* Name */}
                 <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', letterSpacing: '0.5px' }}>
