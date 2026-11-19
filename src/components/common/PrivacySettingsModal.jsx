@@ -129,7 +129,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                         right: 0,
                         bottom: 0,
                         width: '100vw',
-                        height: '100vh',
+                        height: 'calc(var(--app-vh, 1vh) * 100)',
                         zIndex: 99999,
                         display: 'flex',
                         alignItems: 'center',
@@ -157,7 +157,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
                             color: 'var(--text-primary, #fff)',
                             position: 'relative',
-                            maxHeight: 'min(90vh, 720px)',
+                            maxHeight: 'min(calc(var(--app-vh, 1vh) * 90), 720px)',
                             overflowY: 'auto',
                             overscrollBehavior: 'contain'
                         }}
@@ -183,7 +183,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>
                                     Privacy & Encryption
                                 </h3>
-                                <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                                <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                                     Zero-Knowledge Client-Side Protection
                                 </p>
                             </div>
@@ -199,7 +199,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: 'rgba(255, 255, 255, 0.6)',
+                                color: 'var(--text-secondary)',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s'
                             }}
@@ -220,7 +220,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                             <Lock size={16} />
                             {isEncryptionReady ? 'AES-256-GCM Active' : 'Vault Initializing...'}
                         </div>
-                        <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', color: 'rgba(255, 255, 255, 0.7)' }}>
+                        <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', color: 'var(--text-secondary)' }}>
                             Your journal reflections and private notes are encrypted directly on your device before being transmitted to the cloud. Even the server and database host cannot read your entries.
                         </p>
                     </div>
@@ -231,14 +231,14 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                             <Key size={15} color="#8b5cf6" />
                             Multi-Device Vault PIN
                         </h4>
-                        <p style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 12px', lineHeight: '1.4' }}>
+                        <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: '1.4' }}>
                             {hasPinSet 
                                 ? 'Your vault key is synced. If you switch devices, you can enter this PIN to unlock your encrypted entries.'
                                 : 'Set a 4-6 digit PIN so you can access your encrypted diary and notes when signing in on other phones or browsers.'}
                         </p>
 
                         <form onSubmit={handleSavePin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
                                 <input
                                     type="password"
                                     placeholder="Enter Security PIN"
@@ -246,13 +246,15 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                     onChange={(e) => setPin(e.target.value)}
                                     maxLength={12}
                                     style={{
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--surface-input)',
+                                        border: '1px solid var(--surface-input-border)',
                                         borderRadius: '10px',
                                         padding: '10px 14px',
                                         fontSize: '13px',
-                                        color: '#fff',
-                                        outline: 'none'
+                                        color: 'var(--text-primary)',
+                                        outline: 'none',
+                                        width: '100%',
+                                        minWidth: 0
                                     }}
                                 />
                                 <input
@@ -262,13 +264,15 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                     onChange={(e) => setConfirmPin(e.target.value)}
                                     maxLength={12}
                                     style={{
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--surface-input)',
+                                        border: '1px solid var(--surface-input-border)',
                                         borderRadius: '10px',
                                         padding: '10px 14px',
                                         fontSize: '13px',
-                                        color: '#fff',
-                                        outline: 'none'
+                                        color: 'var(--text-primary)',
+                                        outline: 'none',
+                                        width: '100%',
+                                        minWidth: 0
                                     }}
                                 />
                             </div>
@@ -316,7 +320,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                             <Lock size={15} color="#38bdf8" />
                             Emergency Recovery Key
                         </h4>
-                        <p style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 12px' }}>
+                        <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '0 0 12px' }}>
                             You can export your raw encryption key and save it into a password manager as an ultimate backup.
                         </p>
 
@@ -324,9 +328,9 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                             <button
                                 onClick={handleViewRecoveryKey}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.06)',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                                    color: '#fff',
+                                    background: 'var(--surface-input)',
+                                    border: '1px solid var(--surface-input-border)',
+                                    color: 'var(--text-primary)',
                                     borderRadius: '10px',
                                     padding: '8px 14px',
                                     fontSize: '12.5px',
@@ -345,7 +349,7 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                 style={{
                                     background: 'transparent',
                                     border: '1px solid rgba(255, 255, 255, 0.08)',
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--text-secondary)',
                                     borderRadius: '10px',
                                     padding: '8px 14px',
                                     fontSize: '12.5px',
@@ -375,11 +379,11 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                 <button
                                     onClick={handleCopyKey}
                                     style={{
-                                        background: copiedKey ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                                        background: copiedKey ? '#10b981' : 'var(--surface-input)',
                                         border: 'none',
                                         borderRadius: '8px',
                                         padding: '6px 10px',
-                                        color: '#fff',
+                                        color: copiedKey ? '#fff' : 'var(--text-primary)',
                                         fontSize: '11px',
                                         cursor: 'pointer',
                                         display: 'flex',
@@ -403,12 +407,12 @@ const PrivacySettingsModal = ({ isOpen, onClose }) => {
                                     value={importKeyInput}
                                     onChange={(e) => setImportKeyInput(e.target.value)}
                                     style={{
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--surface-input)',
+                                        border: '1px solid var(--surface-input-border)',
                                         borderRadius: '10px',
                                         padding: '10px 14px',
                                         fontSize: '12px',
-                                        color: '#fff',
+                                        color: 'var(--text-primary)',
                                         outline: 'none',
                                         fontFamily: 'var(--font-mono)'
                                     }}

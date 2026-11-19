@@ -135,7 +135,7 @@ const WeeklyChart = ({ transactions, categories, onClose }) => {
             <div className="glass-panel" style={{
                 width: '100%',
                 maxWidth: '500px',
-                maxHeight: '90vh',
+                maxHeight: 'calc(var(--app-vh, 1vh) * 90)',
                 overflow: 'auto',
                 padding: '24px',
                 position: 'relative',

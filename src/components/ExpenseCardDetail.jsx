@@ -203,7 +203,7 @@ const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCa
                 style={{
                     width: '100%',
                     maxWidth: '540px',
-                    maxHeight: '90vh',
+                    maxHeight: 'calc(var(--app-vh, 1vh) * 90)',
                     display: 'flex',
                     flexDirection: 'column',
                     background: 'var(--surface-elevated, #131b2e)',
@@ -216,7 +216,7 @@ const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCa
                 {/* Hero Header */}
                 <div style={{
                     padding: '20px 22px',
-                    background: `linear-gradient(135deg, color-mix(in srgb, ${cardColor} 28%, #131b2e), color-mix(in srgb, ${cardColor} 10%, #0d121f))`,
+                    background: `linear-gradient(135deg, color-mix(in srgb, ${cardColor} 22%, var(--surface-elevated, #131b2e)), color-mix(in srgb, ${cardColor} 8%, var(--surface-elevated, #0d121f)))`,
                     borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
                     display: 'flex',
                     alignItems: 'center',
@@ -291,8 +291,11 @@ const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCa
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
+                                className={`ecd-tab ${isActive ? 'is-active' : ''}`}
+                                aria-label={tab.label}
                                 style={{
-                                    flex: 1,
+                                    flex: isActive ? '1 0 auto' : 1,
+                                    minWidth: 0,
                                     padding: '8px 10px',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -311,9 +314,9 @@ const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCa
                                 }}
                             >
                                 <Icon size={14} color={isActive ? cardColor : 'currentColor'} />
-                                <span>{tab.label}</span>
+                                <span className="ecd-tab-label">{tab.label}</span>
                                 {tab.count !== undefined && tab.count > 0 && (
-                                    <span style={{
+                                    <span className="ecd-tab-count" style={{
                                         fontSize: '10px',
                                         padding: '1px 6px',
                                         borderRadius: '8px',
@@ -328,6 +331,14 @@ const ExpenseCardDetail = ({ card, onClose, onEdit, onDeleteCategory, onUpdateCa
                         );
                     })}
                 </div>
+
+                {/* Phones: inactive tabs show only their icon so all four fit */}
+                <style>{`
+                    @media (max-width: 480px) {
+                        .ecd-tab:not(.is-active) .ecd-tab-label,
+                        .ecd-tab:not(.is-active) .ecd-tab-count { display: none; }
+                    }
+                `}</style>
 
                 {/* Tab Body */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 22px 20px' }}>

@@ -113,7 +113,7 @@ const AskAI = () => {
             <div style={{
                 width: '100%',
                 maxWidth: '500px',
-                height: '80vh',
+                height: 'calc(var(--app-vh, 1vh) * 80)',
                 display: 'flex',
                 flexDirection: 'column',
                 background: 'var(--surface-elevated)',

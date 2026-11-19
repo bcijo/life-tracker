@@ -939,7 +939,7 @@ const CompareView = ({
                 boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                 color: 'var(--text-primary)',
                 position: 'relative',
-                maxHeight: '85vh',
+                maxHeight: 'calc(var(--app-vh, 1vh) * 85)',
                 overflowY: 'auto',
               }}
               onClick={(e) => e.stopPropagation()}
