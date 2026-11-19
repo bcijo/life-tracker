@@ -21,6 +21,7 @@ import {
     Upload,
     Sparkles,
     Clock,
+    ChevronDown,
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -172,6 +173,8 @@ const Calories = () => {
     const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
     const [mode, setMode] = useState('food'); // 'food' | 'exercise' | 'weight'
     const [logFilter, setLogFilter] = useState('all');
+    // Which meal / exercise / water groups are expanded in Today's Log
+    const [openLogGroups, setOpenLogGroups] = useState({});
     const [chartTab, setChartTab] = useState('calories'); // 'calories' | 'weight'
     const [view, setView] = useState('today'); // 'today' | 'saved'
 
@@ -218,6 +221,10 @@ const Calories = () => {
     const [searchingWeb, setSearchingWeb] = useState(false);
     const [feedback, setFeedback] = useState('');
     const [lookupError, setLookupError] = useState('');
+    // Items collected for one meal before logging them together
+    const [plate, setPlate] = useState([]);
+    const [loggingPlate, setLoggingPlate] = useState(false);
+    const foodSearchRef = useRef(null);
 
     /* ── Exercise logger state ── */
     const [exerciseType, setExerciseType] = useState(COMMON_EXERCISES[0].name);
@@ -231,6 +238,7 @@ const Calories = () => {
 
     /* ── Add Entry Modal state (Food / Exercise / Weight) ── */
     const [showAddModal, setShowAddModal] = useState(false);
+    // The plate is kept on close so collected items aren't lost by accident
     const closeAddModal = () => {
         setShowAddModal(false);
         setSelectedFood(null);
@@ -539,6 +547,88 @@ const Calories = () => {
         [selectedFood, effectiveGrams]
     );
 
+    /* ── Meal plate: several foods logged to one meal in one go ── */
+    const buildPendingItem = () => {
+        if (!selectedFood || !effectiveGrams || effectiveGrams <= 0) return null;
+        const isLiquid = Boolean(unitInfo.isLiquid || selectedFood.is_liquid || isLiquidFood(selectedFood));
+        const count = portionMode === 'unit' ? parseFloat(countInput) || null : null;
+        const portionLabel = portionMode === 'unit'
+            ? `${count} ${unitInfo.unitName}${count === 1 ? '' : 's'} · ${Math.round(effectiveGrams)}${isLiquid ? 'ml' : 'g'}`
+            : portionMode === 'ml' ? `${Math.round(effectiveGrams)} ml` : `${Math.round(effectiveGrams)} g`;
+        return {
+            key: `${selectedFood.id || selectedFood.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            food: selectedFood,
+            grams: effectiveGrams,
+            count,
+            unit: portionMode === 'ml' ? 'ml' : (portionMode === 'unit' ? unitInfo.unitName : 'g'),
+            portionMode,
+            countInput,
+            gramsInput,
+            mlInput,
+            portionLabel,
+            preview: calculateFromPer100g(selectedFood, effectiveGrams),
+        };
+    };
+
+    // Moves the food currently being edited onto the plate
+    function commitPendingToPlate() {
+        const pending = buildPendingItem();
+        if (pending) setPlate((prev) => [...prev, pending]);
+        setSelectedFood(null);
+    }
+
+    const editPlateItem = (item) => {
+        commitPendingToPlate();
+        setPlate((prev) => prev.filter((p) => p.key !== item.key));
+        setSelectedFood(item.food);
+        setPortionMode(item.portionMode);
+        setCountInput(item.countInput);
+        setGramsInput(item.gramsInput);
+        setMlInput(item.mlInput);
+        setFoodSearch('');
+        setFeedback('');
+    };
+
+    const removePlateItem = (key) => setPlate((prev) => prev.filter((p) => p.key !== key));
+
+    const pendingItem = buildPendingItem();
+    const plateItems = pendingItem ? [...plate, pendingItem] : plate;
+    const plateTotals = plateItems.reduce((acc, it) => ({
+        calories: acc.calories + (Number(it.preview?.calories) || 0),
+        protein: acc.protein + (Number(it.preview?.protein_g) || 0),
+        carbs: acc.carbs + (Number(it.preview?.carbs_g) || 0),
+        fat: acc.fat + (Number(it.preview?.fat_g) || 0),
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+    const mealLabel = (MEALS.find((m) => m.id === mealType) || MEALS[1]).label;
+
+    const handleLogPlate = async () => {
+        if (loggingPlate || plateItems.length === 0) return;
+        const items = plateItems;
+        const meal = mealType;
+        setLoggingPlate(true);
+        try {
+            // Sequential so entries keep the order they were added in
+            for (const it of items) {
+                await addFoodIntake({
+                    foodItem: it.food,
+                    grams: it.grams,
+                    count: it.count,
+                    unit: it.unit,
+                    mealType: meal,
+                    date: selectedDate,
+                });
+            }
+        } finally {
+            setLoggingPlate(false);
+        }
+        setPlate([]);
+        setSelectedFood(null);
+        setFoodSearch('');
+        setFeedback('');
+        setShowAddModal(false);
+        setOpenLogGroups((prev) => ({ ...prev, [meal]: true }));
+    };
+
     const weight = Number(bmrSettings.weight_kg) || 70;
     const activeExercise = COMMON_EXERCISES.find((e) => e.name === exerciseType) || COMMON_EXERCISES[0];
     const autoCalories = Math.round(activeExercise.met * weight * ((parseFloat(exerciseDuration) || 0) / 60));
@@ -599,6 +689,45 @@ const Calories = () => {
         return true;
     });
 
+    // Today's Log grouped by meal, then exercise and water
+    const logGroups = useMemo(() => {
+        const byTimeAsc = (a, b) => new Date(a.created_at || a.logged_at || 0) - new Date(b.created_at || b.logged_at || 0);
+        const sum = (items, key) => items.reduce((t, i) => t + (Number(i[key]) || 0), 0);
+        const groups = [];
+        const food = visibleLogs.filter((l) => l.type === 'intake');
+        const known = new Set(MEALS.map((m) => m.id));
+        const mealGroups = [
+            ...MEALS.map((m) => ({ ...m, items: food.filter((l) => (l.meal_type || 'snack') === m.id) })),
+            { id: 'other', label: 'Other', emoji: '🍽️', items: food.filter((l) => !known.has(l.meal_type || 'snack')) },
+        ];
+        mealGroups.forEach((m) => {
+            if (!m.items.length) return;
+            const items = [...m.items].sort(byTimeAsc);
+            groups.push({
+                id: m.id, kind: 'meal', label: m.label, emoji: m.emoji, items,
+                total: sum(items, 'calories'),
+                protein: sum(items, 'protein_g'), carbs: sum(items, 'carbs_g'), fat: sum(items, 'fat_g'),
+            });
+        });
+        const burn = visibleLogs.filter((l) => l.type === 'burn').sort(byTimeAsc);
+        if (burn.length) {
+            groups.push({ id: 'exercise', kind: 'burn', label: 'Exercise', items: burn, total: sum(burn, 'calories'), minutes: sum(burn, 'duration_mins') });
+        }
+        const water = visibleLogs.filter((l) => l.type === 'water').sort(byTimeAsc);
+        if (water.length) {
+            groups.push({ id: 'water', kind: 'water', label: 'Water', items: water, total: sum(water, 'amount_ml') });
+        }
+        return groups;
+    }, [visibleLogs]);
+
+    const toggleLogGroup = (id) => setOpenLogGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    const openAddForMeal = (mealId) => {
+        if (MEALS.some((m) => m.id === mealId)) setMealType(mealId);
+        setMode('food');
+        setShowAddModal(true);
+    };
+
     const logOptions = [
         { id: 'all', label: 'All', count: allLogs.length },
         { id: 'food', label: 'Food', count: dailySummary.intakeLogs.length },
@@ -612,8 +741,9 @@ const Calories = () => {
         const info = resolveFoodUnit(food);
         const pq = queryOverride || dbSearch.parsedQuery;
 
+        commitPendingToPlate();
         setSelectedFood(food);
-        setFoodSearch(food.name);
+        setFoodSearch('');
 
         if (pq?.mode === 'ml' && pq.ml > 0) {
             setPortionMode('ml');
@@ -666,10 +796,10 @@ const Calories = () => {
         }
     };
 
+    // Enter key: pick the top search result, otherwise put the edited food on the plate
     const handleFoodSubmit = async (e) => {
         e.preventDefault();
-        if (!selectedFood) {
-            if (!foodSearch.trim()) return;
+        if (foodSearch.trim()) {
             if (dbSearch.results.length > 0) {
                 selectFoodItem(dbSearch.results[0], dbSearch.parsedQuery);
             } else {
@@ -677,21 +807,11 @@ const Calories = () => {
             }
             return;
         }
-        if (!effectiveGrams || effectiveGrams <= 0) return;
-        const loggedCount = portionMode === 'unit' ? parseFloat(countInput) || null : null;
-        const loggedUnit = portionMode === 'ml' ? 'ml' : (portionMode === 'unit' ? unitInfo.unitName : 'g');
-        await addFoodIntake({
-            foodItem: selectedFood,
-            grams: effectiveGrams,
-            count: loggedCount,
-            unit: loggedUnit,
-            mealType,
-            date: selectedDate,
-        });
-        setSelectedFood(null);
-        setFoodSearch('');
-        setFeedback('');
-        setShowAddModal(false);
+        if (selectedFood) {
+            if (!effectiveGrams || effectiveGrams <= 0) return;
+            commitPendingToPlate();
+            foodSearchRef.current?.focus();
+        }
     };
 
     const handleExerciseSubmit = async (e) => {
@@ -1259,15 +1379,17 @@ const Calories = () => {
                     <div style={{ position: 'relative' }}>
                         <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
+                            ref={foodSearchRef}
                             type="text"
                             value={foodSearch}
                             onChange={(e) => {
+                                // Starting a new search keeps the food being edited on the plate
+                                if (selectedFood && e.target.value.trim()) commitPendingToPlate();
                                 setFoodSearch(e.target.value);
-                                if (selectedFood && e.target.value !== selectedFood.name) setSelectedFood(null);
                                 setLookupError('');
                                 setFeedback('');
                             }}
-                            placeholder="Search food or count, e.g. 2 roti, boiled egg"
+                            placeholder={plateItems.length > 0 ? 'Add another item, e.g. dal, curd' : 'Search food or count, e.g. 2 roti, boiled egg'}
                             className="surface-input"
                             style={{ ...inputStyle, paddingLeft: 40, paddingRight: 38 }}
                         />
@@ -1495,10 +1617,10 @@ const Calories = () => {
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => { setSelectedFood(null); setFeedback(''); }}
+                                        onClick={() => { setSelectedFood(null); setFeedback(''); foodSearchRef.current?.focus(); }}
                                         style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: 0, flexShrink: 0 }}
                                     >
-                                        Change
+                                        Remove
                                     </button>
                                 </div>
 
@@ -1684,15 +1806,84 @@ const Calories = () => {
                                     </div>
                                     <button
                                         type="submit"
-                                        className="btn-primary cal-add-btn"
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 20px', fontSize: 14 }}
+                                        className="btn-ghost cal-add-btn"
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 16px', fontSize: 13 }}
                                     >
-                                        <Plus size={16} /> Add
+                                        <Plus size={15} /> Add another item
                                     </button>
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {plateItems.length > 0 && (
+                        <div className="cal-plate">
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '4px 8px', flexWrap: 'wrap' }}>
+                                <Label style={{ whiteSpace: 'nowrap' }}>{mealLabel} plate · {plateItems.length} item{plateItems.length === 1 ? '' : 's'}</Label>
+                                <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)' }}>
+                                    P {Math.round(plateTotals.protein)} · C {Math.round(plateTotals.carbs)} · F {Math.round(plateTotals.fat)}
+                                </span>
+                            </div>
+
+                            {plate.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {plate.map((it) => (
+                                        <div key={it.key} className="cal-plate-row">
+                                            <button
+                                                type="button"
+                                                className="cal-plate-row-main"
+                                                onClick={() => editPlateItem(it)}
+                                                title="Edit portion"
+                                            >
+                                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {it.food.name}
+                                                </span>
+                                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>{it.portionLabel}</span>
+                                            </button>
+                                            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>
+                                                {fmt(it.preview?.calories)}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => removePlateItem(it.key)}
+                                                aria-label={`Remove ${it.food.name} from plate`}
+                                                className="cal-del"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {pendingItem && plate.length > 0 && (
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                    Includes {pendingItem.food.name} from above.
+                                </div>
+                            )}
+
+                        </div>
+                    )}
+
+                    {plateItems.length > 0 && (
+                        <div className="cal-plate-footer">
+                                <button
+                                    type="button"
+                                    onClick={handleLogPlate}
+                                    disabled={loggingPlate}
+                                    className="btn-primary"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                                        padding: '12px 16px', fontSize: 14, width: '100%', opacity: loggingPlate ? 0.7 : 1,
+                                    }}
+                                >
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                                        {loggingPlate ? <Loader2 size={16} className="spin-animation" /> : <Check size={16} />}
+                                        {loggingPlate ? 'Logging…' : `Log to ${mealLabel}`}
+                                    </span>
+                                    <span style={{ fontFamily: MONO, fontWeight: 800 }}>{fmt(plateTotals.calories)} kcal</span>
+                                </button>
+                        </div>
+                    )}
                 </form>
             ) : mode === 'exercise' ? (
                 <form onSubmit={handleExerciseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1899,6 +2090,78 @@ const Calories = () => {
             )}
         </div>
     );
+
+    /* ── One entry in Today's Log ── */
+    const renderLogRow = (item) => {
+        const isWater = item.type === 'water';
+        const isBurn = item.type === 'burn';
+        const isFood = !isWater && !isBurn;
+        const Icon = isWater ? Droplets : isBurn ? Dumbbell : Utensils;
+        const tint = isWater ? '#06b6d4' : isBurn ? AMBER : ACCENT;
+        return (
+            <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`cal-log-row ${isFood ? 'is-clickable' : ''}`}
+                onClick={() => {
+                    if (isFood) setSelectedFoodLog(item);
+                }}
+                role={isFood ? 'button' : undefined}
+                tabIndex={isFood ? 0 : undefined}
+                onKeyDown={(e) => {
+                    if (isFood && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        setSelectedFoodLog(item);
+                    }
+                }}
+                title={isFood ? 'Click to view nutrition details' : undefined}
+            >
+                <div style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: `${tint}1f`, color: tint,
+                }}>
+                    <Icon size={16} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {isWater
+                            ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
+                            : isBurn
+                            ? `${item.duration_mins || '—'} min`
+                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
+                    </div>
+                </div>
+                <span style={{
+                    fontFamily: MONO, fontSize: 14, fontWeight: 800,
+                    color: isWater ? '#06b6d4' : isBurn ? AMBER : 'var(--text-primary)',
+                    flexShrink: 0,
+                }}>
+                    {isWater
+                        ? `${item.amount_ml >= 1000 ? `${(item.amount_ml / 1000).toFixed(1)} L` : `${item.amount_ml} ml`}`
+                        : `${isBurn ? '+' : ''}${fmt(item.calories)}`}
+                </span>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        isWater ? deleteWaterLog(item.id) : deleteCalorieLog(item.id);
+                    }}
+                    aria-label={`Remove ${item.name}`}
+                    className="cal-del"
+                >
+                    <Trash2 size={15} />
+                </button>
+            </motion.div>
+        );
+    };
 
     /* ═══════════════ RENDER ═══════════════ */
     return (
@@ -2436,78 +2699,82 @@ const Calories = () => {
                             </div>
                         ) : (
                             <div>
-                                <AnimatePresence initial={false}>
-                                    {visibleLogs.map((item) => {
-                                        const isWater = item.type === 'water';
-                                        const isBurn = item.type === 'burn';
-                                        const isFood = !isWater && !isBurn;
-                                        const Icon = isWater ? Droplets : isBurn ? Dumbbell : Utensils;
-                                        const tint = isWater ? '#06b6d4' : isBurn ? AMBER : ACCENT;
-                                        return (
-                                            <motion.div
-                                                key={item.id}
-                                                layout
-                                                initial={{ opacity: 0, y: 6 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                                className={`cal-log-row ${isFood ? 'is-clickable' : ''}`}
-                                                onClick={() => {
-                                                    if (isFood) setSelectedFoodLog(item);
-                                                }}
-                                                role={isFood ? 'button' : undefined}
-                                                tabIndex={isFood ? 0 : undefined}
-                                                onKeyDown={(e) => {
-                                                    if (isFood && (e.key === 'Enter' || e.key === ' ')) {
-                                                        e.preventDefault();
-                                                        setSelectedFoodLog(item);
-                                                    }
-                                                }}
-                                                title={isFood ? 'Click to view nutrition details' : undefined}
+                                {logGroups.map((g) => {
+                                    const isOpen = Boolean(openLogGroups[g.id]);
+                                    const tint = g.kind === 'water' ? '#06b6d4' : g.kind === 'burn' ? AMBER : ACCENT;
+                                    const GroupIcon = g.kind === 'water' ? Droplets : g.kind === 'burn' ? Dumbbell : null;
+                                    const count = g.items.length;
+                                    const subtitle = g.kind === 'meal'
+                                        ? `${count} item${count === 1 ? '' : 's'} · P${Math.round(g.protein)} C${Math.round(g.carbs)} F${Math.round(g.fat)}`
+                                        : g.kind === 'burn'
+                                            ? `${count} session${count === 1 ? '' : 's'}${g.minutes ? ` · ${fmt(g.minutes)} min` : ''}`
+                                            : `${count} drink${count === 1 ? '' : 's'}`;
+                                    const totalLabel = g.kind === 'water'
+                                        ? (g.total >= 1000 ? `${(g.total / 1000).toFixed(1)} L` : `${fmt(g.total)} ml`)
+                                        : `${g.kind === 'burn' ? '+' : ''}${fmt(g.total)}`;
+                                    return (
+                                        <div key={g.id} className={`cal-log-group ${isOpen ? 'is-open' : ''}`}>
+                                            <button
+                                                type="button"
+                                                className="cal-log-group-head"
+                                                onClick={() => toggleLogGroup(g.id)}
+                                                aria-expanded={isOpen}
                                             >
                                                 <div style={{
-                                                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                                                    width: 36, height: 36, borderRadius: 11, flexShrink: 0,
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    background: `${tint}1f`, color: tint,
+                                                    background: `${tint}1f`, color: tint, fontSize: 17,
                                                 }}>
-                                                    <Icon size={16} />
+                                                    {GroupIcon ? <GroupIcon size={17} /> : g.emoji}
                                                 </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {item.name}
-                                                    </div>
+                                                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                                                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{g.label}</div>
                                                     <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {isWater
-                                                            ? (item.logged_at ? new Date(item.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Hydration')
-                                                            : isBurn
-                                                            ? `${item.duration_mins || '—'} min`
-                                                            : `${item.grams}${item.unit === 'ml' || isLiquidFood(item) ? 'ml' : 'g'} · ${item.meal_type} · P${Math.round(item.protein_g)} C${Math.round(item.carbs_g)} F${Math.round(item.fat_g)}`}
+                                                        {subtitle}
                                                     </div>
                                                 </div>
                                                 <span style={{
-                                                    fontFamily: MONO, fontSize: 14, fontWeight: 800,
-                                                    color: isWater ? '#06b6d4' : isBurn ? AMBER : 'var(--text-primary)',
-                                                    flexShrink: 0,
+                                                    fontFamily: MONO, fontSize: 15, fontWeight: 800, flexShrink: 0,
+                                                    color: g.kind === 'water' ? '#06b6d4' : g.kind === 'burn' ? AMBER : 'var(--text-primary)',
                                                 }}>
-                                                    {isWater
-                                                        ? `${item.amount_ml >= 1000 ? `${(item.amount_ml / 1000).toFixed(1)} L` : `${item.amount_ml} ml`}`
-                                                        : `${isBurn ? '+' : ''}${fmt(item.calories)}`}
+                                                    {totalLabel}
+                                                    {g.kind !== 'water' && <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 3 }}>kcal</span>}
                                                 </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        isWater ? deleteWaterLog(item.id) : deleteCalorieLog(item.id);
-                                                    }}
-                                                    aria-label={`Remove ${item.name}`}
-                                                    className="cal-del"
-                                                >
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            </motion.div>
-                                        );
-                                    })}
-                                </AnimatePresence>
+                                                <ChevronDown
+                                                    size={16}
+                                                    style={{ color: 'var(--text-muted)', flexShrink: 0, transition: 'transform 0.2s ease', transform: isOpen ? 'rotate(180deg)' : 'none' }}
+                                                />
+                                            </button>
+                                            <AnimatePresence initial={false}>
+                                                {isOpen && (
+                                                    <motion.div
+                                                        key="items"
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        style={{ overflow: 'hidden' }}
+                                                    >
+                                                        <div className="cal-log-group-body">
+                                                            <AnimatePresence initial={false}>
+                                                                {g.items.map(renderLogRow)}
+                                                            </AnimatePresence>
+                                                            {g.kind === 'meal' && g.id !== 'other' && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="cal-log-group-add"
+                                                                    onClick={() => openAddForMeal(g.id)}
+                                                                >
+                                                                    <Plus size={13} /> Add to {g.label}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </motion.section>
@@ -3666,6 +3933,85 @@ const Calories = () => {
                 .cal-row-btn:last-child { border-bottom: none; }
                 .cal-row-btn:hover { background: var(--surface-input); }
 
+                .cal-log-group {
+                    border-bottom: 1px solid var(--border-subtle);
+                }
+                .cal-log-group:last-child { border-bottom: none; }
+                .cal-log-group-head {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 4px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font: inherit;
+                    color: inherit;
+                }
+                .cal-log-group-head:hover { background: var(--surface-input); }
+                .cal-log-group-body {
+                    margin: 0 0 10px 18px;
+                    padding-left: 12px;
+                    border-left: 2px solid var(--border-subtle);
+                }
+                .cal-log-group-body .cal-log-row { padding-left: 6px; }
+                .cal-log-group-add {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    margin: 6px 0 2px;
+                    padding: 6px 10px;
+                    border-radius: 9px;
+                    border: 1px dashed var(--border-subtle);
+                    background: transparent;
+                    color: var(--text-secondary);
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                }
+                .cal-log-group-add:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+                .cal-plate {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    padding: 12px 14px;
+                    border-radius: 16px;
+                    background: var(--surface-input);
+                    border: 1px solid var(--border-subtle);
+                }
+                /* Keeps the Log button in view while the sheet scrolls */
+                .cal-plate-footer {
+                    position: sticky;
+                    bottom: -24px;
+                    margin: 0 -24px -24px;
+                    padding: 14px 24px 24px;
+                    background: linear-gradient(to bottom, transparent, var(--surface-elevated) 18px);
+                    z-index: 2;
+                }
+                .cal-plate-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 6px 0;
+                    border-bottom: 1px solid var(--border-subtle);
+                }
+                .cal-plate-row:last-child { border-bottom: none; }
+                .cal-plate-row-main {
+                    flex: 1;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 1px;
+                    background: transparent;
+                    border: none;
+                    padding: 0;
+                    cursor: pointer;
+                    text-align: left;
+                    font: inherit;
+                }
                 .cal-log-row {
                     display: flex; align-items: center; gap: 12px; padding: 10px 0;
                     border-bottom: 1px solid var(--border-subtle); overflow: hidden;
