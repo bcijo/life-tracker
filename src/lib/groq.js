@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { APP_KNOWLEDGE_BASE } from './appKnowledge';
+import { appKnowledgeForTopic } from './appKnowledge';
 
 // Groq LLM Integration
 // Add VITE_GROQ_API_KEY to your .env file
@@ -189,13 +189,17 @@ const ASSISTANT_TOOLS = [
         type: "function",
         function: {
             name: "lookup_app_guide",
-            description: "Use ONLY when the user asks how a LifeTracker feature works, how to do something in the app, how XP/levels or Runway are calculated, or how to install the PWA.",
+            description: "Returns the official LifeTracker User Guide sections for a topic. Use whenever the user asks how the app or any feature works, where something is, or how to do something (habits, streaks, starter pack, calories, meals, water, finances, budgets, tasks, journal, encryption, friends, pacts, themes, XP/levels, bill splitter, day summary, installing the app). Answer only from what it returns.",
             parameters: {
                 type: "object",
                 properties: {
                     topic: {
                         type: "string",
-                        description: "Feature or topic being asked about (e.g. 'runway', 'xp', 'pwa', 'split bill', 'habits', 'overview')"
+                        description: "Feature or topic being asked about (e.g. 'streaks', 'log a meal', 'vault pin', 'themes', 'xp', 'split bill')"
+                    },
+                    question: {
+                        type: "string",
+                        description: "The user's question in their own words"
                     }
                 },
                 required: ["topic"]
@@ -566,7 +570,8 @@ function executeSpecializedTool(toolName, args, contextData) {
     }
 
     if (toolName === 'lookup_app_guide') {
-        return { guide: APP_KNOWLEDGE_BASE };
+        // Answers come from the in-app User Guide; send only the relevant sections
+        return { guide: appKnowledgeForTopic(`${args?.topic || ''} ${args?.question || ''}`) };
     }
 
     return { error: "Unknown tool" };
@@ -750,8 +755,8 @@ Always call the matching specialized tool before answering detailed questions:
   -> Call \`get_tasks_and_shopping\` with \`filter\` ("overdue" | "due_this_week" | "no_deadline" | "oldest_pending" | "completed_recently" | "shopping_list" | "all_pending").
 - **Mood / Journal Reflections**
   -> Call \`get_journal_and_mood\`.
-- **How LifeTracker Works / App Features / PWA Install / XP & Level Formula / Bill Splitter**
-  -> Call \`lookup_app_guide\`.
+- **How LifeTracker Works / Where Is / How Do I / Any App Feature, Setting or Formula**
+  -> Call \`lookup_app_guide\` with the topic and the user's question, then answer ONLY from the guide it returns, using its button and screen names. Don't invent features.
 - **Custom Database Query not covered above**
   -> Call \`execute_read_only_query\`.`;
 

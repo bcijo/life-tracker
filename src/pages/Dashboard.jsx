@@ -25,6 +25,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DailyReportModal } from '../components/dashboard/DailyReportModal';
 import { DailyWhisper } from '../components/dashboard/DailyWhisper';
+import HabitPackPrompt from '../components/habits/HabitPackPrompt';
 import DateDisplay from '../components/common/DateDisplay';
 
 const getUserDisplayName = (profile) => {
@@ -37,7 +38,7 @@ const getUserDisplayName = (profile) => {
 
 const Dashboard = () => {
     const { todos } = useTodos();
-    const { habits, loading: habitsLoading, getStatusForDate } = useHabits();
+    const { habits, loading: habitsLoading, getStatusForDate, addHabit } = useHabits();
     const { items: shoppingItems } = useShopping();
     const { transactions, loading: txLoading } = useTransactions();
     const { profile, updateProfile } = useProfile();
@@ -202,6 +203,9 @@ const Dashboard = () => {
                         </motion.div>
                     </Link>
                 </header>
+
+                {/* One-time starter habit pack for new users */}
+                <HabitPackPrompt habits={habits} loading={habitsLoading} addHabit={addHabit} />
 
                 <DailyWhisper
                     open={showWhisper}

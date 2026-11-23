@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, BarChart2, CalendarDays, Check, Zap, Play, PauseCircle } from 'lucide-react';
 import useHabits, { parseLocalDate, getLocalDateStr, calculateHabitStreak } from '../hooks/useHabits';
+import HabitPackSheet from '../components/habits/HabitPackSheet';
+import HabitPackPrompt from '../components/habits/HabitPackPrompt';
+import { VITAL_SEVEN, missingFromPack } from '../lib/habitPacks';
 import useMutualHabits from '../hooks/useMutualHabits';
 import { useFriends } from '../hooks/useFriends';
 import HabitAnalytics from '../components/HabitAnalytics';
@@ -56,6 +59,7 @@ const Habits = () => {
     const { friends } = useFriends();
 
     const [showForm, setShowForm] = useState(false);
+    const [showPackSheet, setShowPackSheet] = useState(false);
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedDays, setSelectedDays] = useState(ALL_DAYS);
     const [newHabitTimeOfDay, setNewHabitTimeOfDay] = useState('morning');
@@ -796,6 +800,18 @@ const Habits = () => {
                         >
                             Start Habit ✨
                         </button>
+                        {missingFromPack(VITAL_SEVEN, habits).length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => { setShowForm(false); setShowPackSheet(true); }}
+                                style={{
+                                    width: '100%', marginTop: 10, padding: '6px', border: 'none', background: 'transparent',
+                                    color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                                }}
+                            >
+                                Or add a ready-made set: <span style={{ color: 'var(--accent-primary)' }}>{VITAL_SEVEN.name}</span>
+                            </button>
+                        )}
                     </motion.form>
                 )}
             </AnimatePresence>
@@ -964,10 +980,27 @@ const Habits = () => {
                         No habits yet
                     </h3>
                     <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                        Tap the + button to start building your first habit
+                        Tap the + button to start building your first habit, or begin with a ready-made set.
                     </p>
+                    <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => setShowPackSheet(true)}
+                        style={{ marginTop: 18, padding: '11px 20px', fontSize: 14 }}
+                    >
+                        Start with {VITAL_SEVEN.name}
+                    </button>
                 </motion.div>
             )}
+
+            {/* Starter habit pack: opened on demand, and offered once to new users */}
+            <HabitPackSheet
+                isOpen={showPackSheet}
+                onClose={() => setShowPackSheet(false)}
+                habits={habits}
+                addHabit={addHabitDb}
+            />
+            <HabitPackPrompt habits={habits} loading={loading} addHabit={addHabitDb} />
 
             {/* Habit Detail Modal */}
             <AnimatePresence>
