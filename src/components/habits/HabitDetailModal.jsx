@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Flame, Trash2, Edit2, ChevronLeft, X, Check, Trophy, Target, TrendingUp, PauseCircle, Play, Handshake, Zap, UserPlus } from 'lucide-react';
+import { habitEmojiOf, suggestHabitEmojis } from '../../lib/habitEmoji';
+import { isVitalHabit } from '../../lib/habitPacks';
 import { AuraSpringToggle } from './AuraSpringToggle';
 import LiquidGlassSegmented from '../common/LiquidGlassSegmented';
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isFuture, isToday, subDays } from 'date-fns';
@@ -61,6 +63,7 @@ export function HabitDetailModal({
   getStatusForDate,
   onToggle,
   onDelete,
+  onEmojiChange,
   onSaveEditDays,
   onTimeOfDayChange,
   onCalendarClick,
@@ -705,12 +708,45 @@ export function HabitDetailModal({
           </div>
         )}
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '8px 0 2px' }}>Danger Zone</p>
+        {onEmojiChange && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '4px 0' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 4 }}>Icon</span>
+            {[...new Set([habitEmojiOf(habit), ...suggestHabitEmojis(habit.name)])].slice(0, 6).map((emo) => {
+              const active = habitEmojiOf(habit) === emo;
+              return (
+                <button
+                  key={emo}
+                  type="button"
+                  onClick={() => onEmojiChange(habit.id, emo)}
+                  aria-label={`Use ${emo}`}
+                  aria-pressed={active}
+                  style={{
+                    width: 36, height: 36, borderRadius: 10, fontSize: 18, cursor: 'pointer',
+                    background: active ? 'var(--surface-input)' : 'transparent',
+                    border: active ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                  }}
+                >
+                  {emo}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        <button onClick={handleDelete} style={{ ...rowBtn, color: '#f87171', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
-          <span style={{ ...iconBox, background: 'rgba(239,68,68,0.15)' }}><Trash2 size={15} color="#f87171" /></span>
-          Delete Habit
-        </button>
+        {isVitalHabit(habit) ? (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '10px 2px 0', lineHeight: 1.5 }}>
+            Part of the Vital Seven, so it can't be deleted. Pause it if you need a break.
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '8px 0 2px' }}>Danger Zone</p>
+
+            <button onClick={handleDelete} style={{ ...rowBtn, color: '#f87171', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <span style={{ ...iconBox, background: 'rgba(239,68,68,0.15)' }}><Trash2 size={15} color="#f87171" /></span>
+              Delete Habit
+            </button>
+          </>
+        )}
       </motion.div>
     </>
   );
@@ -794,7 +830,7 @@ export function HabitDetailModal({
                 fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text-primary, #fff)',
                 lineHeight: 1.2, wordBreak: 'break-word',
               }}>
-                {habit.name}
+                <span aria-hidden="true" style={{ marginRight: 8 }}>{habitEmojiOf(habit)}</span>{habit.name}
               </h2>
             </div>
 
@@ -923,7 +959,7 @@ export function HabitDetailModal({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }}>
-            {habit.name}
+            <span aria-hidden="true" style={{ marginRight: 8 }}>{habitEmojiOf(habit)}</span>{habit.name}
           </h1>
         </div>
 

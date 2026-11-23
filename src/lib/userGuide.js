@@ -15,16 +15,16 @@ export const GUIDE_SECTIONS = [
         category: 'Basics',
         icon: 'Compass',
         color: '#6366f1',
-        summary: 'Your Home screen, the starter habit pack, moving around the app and installing it on your phone.',
-        keywords: ['home', 'dashboard', 'start', 'new', 'sign up', 'navigation', 'install', 'pwa', 'iphone', 'android', 'dock', 'vital seven', 'starter'],
+        summary: 'Your Home screen, the Vital Seven habits, moving around the app and installing it on your phone.',
+        keywords: ['home', 'dashboard', 'start', 'new', 'sign up', 'navigation', 'install', 'pwa', 'iphone', 'android', 'dock', 'vital seven', 'vital', 'starter', 'default habits'],
         topics: [
             {
                 title: 'The Home screen',
                 content: "Home shows today's date, a Journal shortcut, Daily Status (habits completed and tasks remaining), a 7-day spending trend, and Quick Access cards for the AI Assistant, Todos, Split a Bill and the Daily Report.",
             },
             {
-                title: 'Starter pack: The Vital Seven',
-                content: "New users are offered The Vital Seven, a ready-made set of seven healthy daily habits: Wake up early, Drink a glass of water, Meditate 10 minutes, Walk 10,000 steps, Eat healthy, No screens before bed and Sleep on time. Every habit starts ticked; untick any you don't want and tap Add. Choose 'Not now' to skip it. You can add the pack later from the Habits page (the empty-state button, or the link under the new-habit form), and delete any of its habits like a normal habit.",
+                title: 'The Vital Seven',
+                content: "Every account comes with The Vital Seven, seven healthy daily habits: Wake up early, Drink a glass of water, Meditate 10 minutes, Walk 10,000 steps, Eat healthy, No screens before bed and Sleep on time. They sit in their own section at the top of the Habits page, with a ring showing how many you've done today. Tap the section header to fold it away. They can't be deleted, but you can pause any of them. Your Vital Seven progress is the only habit data your friends can see.",
             },
             {
                 title: 'Moving around',
@@ -43,11 +43,11 @@ export const GUIDE_SECTIONS = [
         icon: 'Activity',
         color: '#10b981',
         summary: 'Create habits, check them off, keep streaks going, pause for holidays, and see your progress.',
-        keywords: ['habit', 'habits', 'streak', 'check', 'complete', 'missed', 'failed', 'pause', 'vacation', 'holiday', 'reorder', 'analytics', 'morning', 'evening', 'schedule', 'days', 'tracking start', 'accountability', 'partner'],
+        keywords: ['habit', 'habits', 'icon', 'emoji', 'streak', 'check', 'complete', 'missed', 'failed', 'pause', 'vacation', 'holiday', 'reorder', 'analytics', 'morning', 'evening', 'schedule', 'days', 'tracking start', 'accountability', 'partner'],
         topics: [
             {
                 title: 'Adding a habit',
-                content: "Tap + on the Habits page. Enter a name, choose Morning or Evening, and pick the days of the week it applies to (every day by default). You can also invite a friend as an accountability partner. Tap 'Start Habit'. Prefer a ready-made set? Use The Vital Seven starter pack.",
+                content: "Tap + on the Habits page. Enter a name; an icon (emoji) is suggested from the name, and you can tap another one. Choose Morning or Evening and the days of the week it applies to (every day by default), optionally invite a friend as an accountability partner, and tap 'Start Habit'. If no icon fits the name, the AI picks one for you. Change a habit's icon later from its details. Your own habits are listed under 'Your habits' and are private to you.",
             },
             {
                 title: 'Checking off a habit',
@@ -67,7 +67,7 @@ export const GUIDE_SECTIONS = [
             },
             {
                 title: 'Habit details',
-                content: 'Tap a habit name to open its details: current streak, best streak, success rate and total check-ins, a month calendar you can mark, its time of day, pausing, and inviting an accountability partner.',
+                content: 'Tap a habit name to open its details: current streak, best streak, success rate and total check-ins, a month calendar you can mark, its time of day and icon, pausing, inviting an accountability partner, and deleting it (not available for the Vital Seven).',
             },
             {
                 title: 'Analytics and reordering',

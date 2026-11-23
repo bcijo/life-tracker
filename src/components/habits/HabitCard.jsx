@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Flame, Play, PauseCircle, Zap, Check } from 'lucide-react';
 import { AuraSpringToggle } from './AuraSpringToggle';
 import { computeDuoStreak, getPartnerDailyStatus } from '../../utils/duoHabitGamification';
+import { habitEmojiOf } from '../../lib/habitEmoji';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -120,9 +121,10 @@ export function HabitCard({
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* Top line: Name + Streak / Paused badge + Duo Badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+                <span aria-hidden="true" style={{ fontSize: 17, lineHeight: 1, flexShrink: 0 }}>{habitEmojiOf(habit)}</span>
                 <h3 style={{
                   margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
                 }}>
                   {habit.name}
                 </h3>

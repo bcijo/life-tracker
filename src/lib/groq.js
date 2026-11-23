@@ -1629,3 +1629,19 @@ Return ONLY valid JSON:
         calories_burned: Math.round(burned || computedCals),
     };
 }
+
+/**
+ * Picks emojis for a habit name. Used only when the on-device keyword list
+ * has no match. Returns up to 5 emojis, best first.
+ */
+export async function suggestHabitEmojisAI(habitName) {
+    const jsonStr = await callGroq(
+        [{ role: 'user', content: `Habit: "${String(habitName).slice(0, 80)}"\nReturn JSON: {"emojis": ["…", "…", "…", "…", "…"]}` }],
+        'You choose emojis for habit-tracker items. Return strictly JSON with 5 single emojis that best represent the habit, best first. No text, no flags, no skin-tone modifiers.',
+        true
+    );
+    const parsed = extractJsonObject(jsonStr);
+    const list = Array.isArray(parsed?.emojis) ? parsed.emojis : [];
+    // Keep short, non-ASCII strings only (an emoji, possibly with a joiner)
+    return list.map((e) => String(e).trim()).filter((e) => e && e.length <= 8 && !/[A-Za-z0-9]/.test(e)).slice(0, 5);
+}

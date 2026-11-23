@@ -8,6 +8,7 @@
  * "- " bullets that read well as plain text or Markdown.
  */
 import { format } from 'date-fns';
+import { isVitalHabit, VITAL_SEVEN } from './habitPacks';
 
 const MEAL_ORDER = ['breakfast', 'lunch', 'snack', 'dinner'];
 const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
@@ -76,7 +77,18 @@ function caloriesSection(today) {
     return lines;
 }
 
-function habitsSection(habits) {
+function vitalSection(habits) {
+    const vital = habits.filter((h) => isVitalHabit(h));
+    const done = vital.filter((h) => h.todayStatus === 'completed');
+    const lines = [`${VITAL_SEVEN.name.toUpperCase()} (${done.length} of ${VITAL_SEVEN.habits.length} done)`];
+    const not = vital.filter((h) => h.todayStatus !== 'completed');
+    if (done.length) lines.push(`- Done: ${done.map((h) => (h.streak > 0 ? `${h.name} (streak ${h.streak})` : h.name)).join(', ')}`);
+    if (not.length) lines.push(`- Not done: ${not.map((h) => h.name).join(', ')}`);
+    return lines;
+}
+
+function habitsSection(allHabits) {
+    const habits = allHabits.filter((h) => !isVitalHabit(h));
     const scheduled = habits.filter((h) => h.isScheduledToday);
     const paused = habits.filter((h) => h.isPaused);
     const withStreak = (h) => (h.streak > 0 ? `${h.name} (streak ${h.streak})` : h.name);
@@ -85,9 +97,9 @@ function habitsSection(habits) {
     const missed = scheduled.filter((h) => h.todayStatus === 'failed');
     const open = scheduled.filter((h) => !['completed', 'failed', 'paused'].includes(h.todayStatus));
 
-    const lines = [scheduled.length ? `HABITS (${done.length} of ${scheduled.length} done)` : 'HABITS'];
+    const lines = [scheduled.length ? `PERSONAL HABITS (${done.length} of ${scheduled.length} done)` : 'PERSONAL HABITS'];
     if (!scheduled.length && !paused.length) {
-        lines.push('- No habits scheduled today.');
+        lines.push('- No personal habits scheduled today.');
         return lines;
     }
     if (done.length) lines.push(`- Done: ${done.map(withStreak).join(', ')}`);
@@ -173,6 +185,7 @@ export function buildDaySummary(contextData, date = new Date()) {
 
     const sections = [
         caloriesSection(raw.caloriesSummary?.today),
+        vitalSection(raw.habits || []),
         habitsSection(raw.habits || []),
         tasksSection(raw.todos || [], todayStr),
         moneySection(raw, summary.financesThisMonth?.totalSpend, todayStr),
