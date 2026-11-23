@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, BarChart2, CalendarDays, Check, Zap, Play, PauseCircle } from 'lucide-react';
 import useHabits, { parseLocalDate, getLocalDateStr, calculateHabitStreak } from '../hooks/useHabits';
-import HabitPackSheet from '../components/habits/HabitPackSheet';
-import HabitPackPrompt from '../components/habits/HabitPackPrompt';
-import { VITAL_SEVEN, missingFromPack } from '../lib/habitPacks';
+import { VITAL_SEVEN, isVitalHabit, sortVital } from '../lib/habitPacks';
+import { suggestHabitEmojis, hasKeywordEmoji } from '../lib/habitEmoji';
+import { suggestHabitEmojisAI } from '../lib/groq';
 import useMutualHabits from '../hooks/useMutualHabits';
 import { useFriends } from '../hooks/useFriends';
 import HabitAnalytics from '../components/HabitAnalytics';
@@ -30,6 +30,7 @@ const Habits = () => {
         habits,
         loading,
         addHabit: addHabitDb,
+        updateHabitEmoji,
         updateHabitDays,
         updateHabitTimeOfDay,
         setHabitStatus,
@@ -59,7 +60,10 @@ const Habits = () => {
     const { friends } = useFriends();
 
     const [showForm, setShowForm] = useState(false);
-    const [showPackSheet, setShowPackSheet] = useState(false);
+    const [newHabitEmoji, setNewHabitEmoji] = useState(null); // null = use the first suggestion
+    const [showVital, setShowVital] = useState(() => {
+        try { return localStorage.getItem('lt_vital_collapsed') !== '1'; } catch { return true; }
+    });
     const [newHabitName, setNewHabitName] = useState('');
     const [selectedDays, setSelectedDays] = useState(ALL_DAYS);
     const [newHabitTimeOfDay, setNewHabitTimeOfDay] = useState('morning');
@@ -131,7 +135,17 @@ const Habits = () => {
         e.preventDefault();
         if (!newHabitName.trim()) return;
         if (selectedDays.length === 0) { alert('Pick at least one day'); return; }
-        const createdHabit = await addHabitDb(newHabitName, selectedDays, newHabitTimeOfDay);
+        const name = newHabitName.trim();
+        const chosenEmoji = newHabitEmoji || suggestHabitEmojis(name)[0];
+        const res = await addHabitDb(name, selectedDays, newHabitTimeOfDay, { emoji: chosenEmoji });
+        const createdHabit = res?.data;
+
+        // No keyword match and no manual pick: let the AI choose a better emoji in the background
+        if (!newHabitEmoji && !hasKeywordEmoji(name) && createdHabit?.id) {
+            suggestHabitEmojisAI(name)
+                .then((emojis) => { if (emojis[0]) updateHabitEmoji(createdHabit.id, emojis[0]); })
+                .catch(() => {});
+        }
 
         // If accountability partner was selected, send pact invite
         if (enableDuoPact && duoPartnerId && createdHabit?.id) {
@@ -149,6 +163,7 @@ const Habits = () => {
         }
 
         setNewHabitName('');
+        setNewHabitEmoji(null);
         setSelectedDays(ALL_DAYS);
         setNewHabitTimeOfDay('morning');
         setEnableDuoPact(false);
@@ -696,6 +711,29 @@ const Habits = () => {
                                 fontFamily: 'inherit',
                             }}
                         />
+                        {/* Emoji: suggested from the name; tap another to choose it */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '-4px 0 14px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 2 }}>Icon</span>
+                            {suggestHabitEmojis(newHabitName).map((emo, i) => {
+                                const active = (newHabitEmoji || suggestHabitEmojis(newHabitName)[0]) === emo;
+                                return (
+                                    <button
+                                        key={emo + i}
+                                        type="button"
+                                        onClick={() => setNewHabitEmoji(emo)}
+                                        aria-label={`Use ${emo}`}
+                                        aria-pressed={active}
+                                        style={{
+                                            width: 36, height: 36, borderRadius: 10, fontSize: 18, cursor: 'pointer',
+                                            background: active ? 'var(--surface-input)' : 'transparent',
+                                            border: active ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                                        }}
+                                    >
+                                        {emo}
+                                    </button>
+                                );
+                            })}
+                        </div>
 
                         {/* Apple Liquid Glass Time of Day Selector */}
                         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Time of Day</p>
@@ -800,18 +838,6 @@ const Habits = () => {
                         >
                             Start Habit ✨
                         </button>
-                        {missingFromPack(VITAL_SEVEN, habits).length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => { setShowForm(false); setShowPackSheet(true); }}
-                                style={{
-                                    width: '100%', marginTop: 10, padding: '6px', border: 'none', background: 'transparent',
-                                    color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                                }}
-                            >
-                                Or add a ready-made set: <span style={{ color: 'var(--accent-primary)' }}>{VITAL_SEVEN.name}</span>
-                            </button>
-                        )}
                     </motion.form>
                 )}
             </AnimatePresence>
@@ -879,11 +905,18 @@ const Habits = () => {
                 </motion.div>
             )}
 
-            {/* Habit Cards — split into pending, completed, and rest */}
+            {/* Habit Cards: the Vital Seven, then personal habits split into pending, completed and rest */}
             {(() => {
-                const activeHabits    = sortedHabits.filter(h => !h.is_paused && isDateActive(h) && (getDateStatus(h) !== 'completed' || h.id === celebratingId));
-                const completedHabits = sortedHabits.filter(h => !h.is_paused && isDateActive(h) && getDateStatus(h) === 'completed' && h.id !== celebratingId);
-                const restHabits      = sortedHabits.filter(h => !h.is_paused && !isDateActive(h));
+                const vitalHabits     = sortVital(sortedHabits);
+                const personalHabits  = sortedHabits.filter(h => !isVitalHabit(h));
+                const activeHabits    = personalHabits.filter(h => !h.is_paused && isDateActive(h) && (getDateStatus(h) !== 'completed' || h.id === celebratingId));
+                const completedHabits = personalHabits.filter(h => !h.is_paused && isDateActive(h) && getDateStatus(h) === 'completed' && h.id !== celebratingId);
+                const restHabits      = personalHabits.filter(h => !h.is_paused && !isDateActive(h));
+                const vitalDone       = vitalHabits.filter(h => getDateStatus(h) === 'completed').length;
+                const toggleVital = () => setShowVital((v) => {
+                    try { localStorage.setItem('lt_vital_collapsed', v ? '1' : '0'); } catch { /* ignore */ }
+                    return !v;
+                });
 
                 const renderCard = (habit, index) => (
                     <HabitCard
@@ -955,6 +988,56 @@ const Habits = () => {
 
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 2 }}>
+                        {vitalHabits.length > 0 && (
+                            <section className={`vital-panel ${showVital ? 'is-open' : ''}`}>
+                                <button type="button" className="vital-head" onClick={toggleVital} aria-expanded={showVital}>
+                                    <span className="vital-ring" style={{ '--pct': `${(vitalDone / vitalHabits.length) * 100}%` }}>
+                                        <span>{vitalDone}</span>
+                                    </span>
+                                    <span className="vital-head-text">
+                                        <span className="vital-title">{VITAL_SEVEN.name}</span>
+                                        <span className="vital-sub">
+                                            {vitalDone === vitalHabits.length ? 'All done today 🎉' : `${vitalDone} of ${vitalHabits.length} done today`}
+                                        </span>
+                                    </span>
+                                    <span className="vital-dots" aria-hidden="true">
+                                        {vitalHabits.map((h) => (
+                                            <span key={h.id} className={getDateStatus(h) === 'completed' ? 'on' : getDateStatus(h) === 'failed' ? 'miss' : ''} />
+                                        ))}
+                                    </span>
+                                    <motion.span animate={{ rotate: showVital ? 180 : 0 }} transition={{ duration: 0.2 }} className="vital-chev">▾</motion.span>
+                                </button>
+                                <AnimatePresence initial={false}>
+                                    {showVital && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                            style={{ overflow: 'hidden' }}
+                                        >
+                                            <div className="vital-body">
+                                                {vitalHabits.map((habit, i) => (
+                                                    <div key={habit.id} style={getDateStatus(habit) === 'completed' ? { opacity: 0.8 } : undefined}>
+                                                        {renderCard(habit, i)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </section>
+                        )}
+
+                        <div className="your-habits-label">
+                            <span>Your habits</span>
+                            {personalHabits.length > 0 && <span className="your-habits-count">{personalHabits.length}</span>}
+                        </div>
+                        {personalHabits.length === 0 && !loading && (
+                            <div className="your-habits-empty">
+                                Add your own habits with <strong>+</strong> at the top. They're private: friends only see your Vital Seven.
+                            </div>
+                        )}
                         {collapsibleSection(completedHabits, showCompleted, setShowCompleted, 'Completed', '✓', '#22c55e', 'rgba(34,197,94,0.06)', completedPulse)}
                         {collapsibleSection(restHabits, showRest, setShowRest, 'Rest Day', '💤', '#64748b', 'rgba(100,116,139,0.06)')}
                         <AnimatePresence mode="popLayout">
@@ -964,43 +1047,6 @@ const Habits = () => {
                 );
             })()}
 
-            {/* Empty state */}
-            {habits.length === 0 && !loading && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    style={{
-                        textAlign: 'center', padding: '60px 24px',
-                        position: 'relative', zIndex: 2,
-                    }}
-                >
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
-                    <h3 style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 8 }}>
-                        No habits yet
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                        Tap the + button to start building your first habit, or begin with a ready-made set.
-                    </p>
-                    <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={() => setShowPackSheet(true)}
-                        style={{ marginTop: 18, padding: '11px 20px', fontSize: 14 }}
-                    >
-                        Start with {VITAL_SEVEN.name}
-                    </button>
-                </motion.div>
-            )}
-
-            {/* Starter habit pack: opened on demand, and offered once to new users */}
-            <HabitPackSheet
-                isOpen={showPackSheet}
-                onClose={() => setShowPackSheet(false)}
-                habits={habits}
-                addHabit={addHabitDb}
-            />
-            <HabitPackPrompt habits={habits} loading={loading} addHabit={addHabitDb} />
 
             {/* Habit Detail Modal */}
             <AnimatePresence>
@@ -1017,6 +1063,7 @@ const Habits = () => {
                             isActiveToday={isDateActive(selectedHabit)}
                             getStatusForDate={getStatusForDate}
                             onToggle={(id, newStatus) => setHabitStatus(id, selectedDate, newStatus)}
+                            onEmojiChange={updateHabitEmoji}
                             onDelete={async (id) => {
                                 setSelectedHabitId(null);
                                 await deleteHabitDb(id);
@@ -1053,7 +1100,7 @@ const Habits = () => {
             <AnimatePresence>
                 {showReorder && (
                     <HabitReorderPage
-                        habits={habits}
+                        habits={habits.filter(h => !isVitalHabit(h))}
                         onSave={async (ordered) => {
                             await batchUpdateHabitOrders(ordered);
                             setShowReorder(false);
@@ -1063,6 +1110,98 @@ const Habits = () => {
                 )}
             </AnimatePresence>
 
+            <style>{`
+                .vital-panel {
+                    border-radius: 20px;
+                    border: 1px solid var(--glass-card-border);
+                    background: var(--glass-card-bg);
+                    overflow: hidden;
+                }
+                .vital-head {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 14px;
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    font: inherit;
+                    text-align: left;
+                }
+                .vital-ring {
+                    --pct: 0%;
+                    width: 42px;
+                    height: 42px;
+                    flex-shrink: 0;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: conic-gradient(var(--success) var(--pct), var(--border-subtle) 0);
+                }
+                .vital-ring > span {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: var(--surface-elevated);
+                    font-family: var(--font-mono);
+                    font-size: 14px;
+                    font-weight: 800;
+                    color: var(--text-primary);
+                }
+                .vital-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+                .vital-title { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--text-primary); }
+                .vital-sub { font-size: 12px; color: var(--text-muted); }
+                .vital-dots { display: flex; gap: 4px; flex-shrink: 0; }
+                .vital-dots > span {
+                    width: 7px; height: 7px; border-radius: 50%;
+                    background: var(--border-subtle);
+                    box-shadow: inset 0 0 0 1px var(--surface-input-border);
+                }
+                .vital-dots > span.on { background: var(--success); box-shadow: none; }
+                .vital-dots > span.miss { background: var(--danger); box-shadow: none; }
+                .vital-chev { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+                .vital-body {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    padding: 0 10px 12px;
+                }
+                .your-habits-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 6px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: var(--text-muted);
+                }
+                .your-habits-count {
+                    padding: 1px 7px;
+                    border-radius: 999px;
+                    background: var(--surface-input);
+                    font-size: 11px;
+                    letter-spacing: 0;
+                }
+                .your-habits-empty {
+                    padding: 16px;
+                    border-radius: 16px;
+                    border: 1px dashed var(--border-subtle);
+                    font-size: 13px;
+                    line-height: 1.5;
+                    color: var(--text-muted);
+                    text-align: center;
+                }
+                @media (max-width: 380px) {
+                    .vital-dots { display: none; }
+                }
+            `}</style>
         </div>
     );
 };

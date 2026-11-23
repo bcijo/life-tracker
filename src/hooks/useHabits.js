@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import useSupabaseData from './useSupabaseData';
+import { supabase } from '../lib/supabase';
+import { VITAL_SEVEN, vitalDefOf, isVitalHabit } from '../lib/habitPacks';
 
 // Default active days: all days of the week (Sunday=0 to Saturday=6)
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -78,6 +81,42 @@ export const calculateHabitStreak = (habit, trackingStartDate = null) => {
     return streak;
 };
 
+// Errors that mean the Vital Seven migration (emoji / pack_key columns) hasn't been run
+const isMissingColumnError = (err) => {
+    const msg = String(err || '').toLowerCase();
+    return msg.includes('emoji') || msg.includes('pack_key') || msg.includes('column') || msg.includes('schema cache');
+};
+
+// Done Vital Seven keys for one day, from habit histories
+const vitalDoneKeys = (habits, dateStr) => habits
+    .filter((h) => isVitalHabit(h))
+    .filter((h) => (h.history || []).some((e) => (typeof e === 'string'
+        ? e.split('T')[0] === dateStr
+        : e?.date === dateStr && (e.status || 'completed') === 'completed')))
+    .map((h) => vitalDefOf(h).key);
+
+/**
+ * Writes Vital Seven progress for the given days to `vital_progress`, the
+ * only habit data friends can read. Fails silently if the table doesn't exist.
+ */
+const syncVitalProgress = async (habits, dates) => {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId || !dates.length) return;
+        const rows = dates.map((date) => {
+            const keys = [...new Set(vitalDoneKeys(habits, date))];
+            return { user_id: userId, date, done_keys: keys, done_count: keys.length, total: VITAL_SEVEN.habits.length, updated_at: new Date().toISOString() };
+        });
+        await supabase.from('vital_progress').upsert(rows, { onConflict: 'user_id,date' });
+    } catch {
+        // Table may not exist yet; friends features simply show no data
+    }
+};
+
+// Once per user per app session
+const vitalSetupDone = new Set();
+
 function useHabits() {
     const { data: habits, loading, error, insert, update, remove } = useSupabaseData('habits');
 
@@ -99,7 +138,7 @@ function useHabits() {
         return activeDays.includes(dayOfWeek);
     };
 
-    const addHabit = async (name, activeDays = ALL_DAYS, timeOfDay = 'morning') => {
+    const addHabit = async (name, activeDays = ALL_DAYS, timeOfDay = 'morning', extra = {}) => {
         // IMPORTANT: Only insert columns that exist in the DB schema.
         // tracking_start_date and is_paused were added in migrations that may not have been applied.
         // - tracking_start_date: calculateSuccessRate falls back to created_at when absent
@@ -110,9 +149,55 @@ function useHabits() {
             history: [],
             active_days: activeDays,
             time_of_day: timeOfDay,
+            ...(extra.emoji ? { emoji: extra.emoji } : {}),
+            ...(extra.packKey ? { pack_key: extra.packKey } : {}),
         };
-        return await insert(newHabit);
+        const res = await insert(newHabit);
+        // Before the Vital Seven migration, the emoji / pack_key columns don't exist
+        if (res?.error && (extra.emoji || extra.packKey) && isMissingColumnError(res.error)) {
+            const { emoji, pack_key, ...plain } = newHabit;
+            return await insert(plain);
+        }
+        return res;
     };
+
+    // Change a habit's emoji (needs the Vital Seven migration to be saved)
+    const updateHabitEmoji = async (id, emoji) => update(id, { emoji });
+
+    // Every user gets the Vital Seven. Runs once per session after habits load:
+    // adds any that are missing, tags same-named habits from before, and
+    // backfills the last 60 days of progress for friends.
+    useEffect(() => {
+        if (loading) return undefined;
+        let cancelled = false;
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+            if (!userId || vitalSetupDone.has(userId) || cancelled) return;
+            vitalSetupDone.add(userId);
+
+            const current = habits || [];
+            for (const def of VITAL_SEVEN.habits) {
+                const match = current.find((h) => vitalDefOf(h)?.key === def.key);
+                if (!match) {
+                    await addHabit(def.name, def.activeDays, def.timeOfDay, { emoji: def.emoji, packKey: def.key });
+                } else if (!match.pack_key && !String(match.id).startsWith('temp-')) {
+                    // A same-named habit (e.g. added from the old starter pack): tag it
+                    const res = await update(match.id, { pack_key: def.key, emoji: match.emoji || def.emoji });
+                    if (res?.error) break; // columns not there yet; name matching still works
+                }
+            }
+
+            const days = Array.from({ length: 60 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                return getLocalDateStr(d);
+            });
+            syncVitalProgress(current, days);
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading]);
 
     // Update habit's active days
     const updateHabitDays = async (id, activeDays) => {
@@ -228,7 +313,12 @@ function useHabits() {
 
         newHistory.sort((a, b) => b.date.localeCompare(a.date));
 
-        return await update(id, { history: newHistory });
+        const result = await update(id, { history: newHistory });
+        if (isVitalHabit(habit)) {
+            const nextHabits = habits.map((h) => (h.id === id ? { ...h, history: newHistory } : h));
+            syncVitalProgress(nextHabits, [targetDate]);
+        }
+        return result;
     };
 
     // Calculate Habit Check-in Streak across all habits
@@ -289,6 +379,8 @@ function useHabits() {
     };
 
     const deleteHabit = async (id) => {
+        const target = habits.find((h) => h.id === id);
+        if (isVitalHabit(target)) return { error: 'The Vital Seven can\'t be deleted' };
         return await remove(id);
     };
 
@@ -605,6 +697,7 @@ function useHabits() {
         loading,
         error,
         addHabit,
+        updateHabitEmoji,
         updateHabitDays,
         updateHabitTimeOfDay,
         toggleHabit,
