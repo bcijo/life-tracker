@@ -1410,28 +1410,13 @@ const Calories = () => {
                     </div>
 
                     {!foodSearch.trim() && !selectedFood && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: -4 }}>
-                            <button
-                                type="button"
-                                onClick={() => openManualFoodModal('', 'camera')}
-                                style={{
-                                    background: 'transparent', border: 'none', color: '#10b981',
-                                    fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                    padding: '2px 4px',
-                                }}
-                            >
-                                <Camera size={12} /> Scan label
+                        <div className="cal-fallback-links" style={{ justifyContent: 'flex-end', marginTop: -4 }}>
+                            <button type="button" className="cal-link-btn" onClick={() => openManualFoodModal('', 'camera')}>
+                                <Camera size={13} /> Scan a label
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => openManualFoodModal('')}
-                                style={{
-                                    background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                                    fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                    padding: '2px 4px',
-                                }}
-                            >
-                                <Plus size={12} /> Add manually
+                            <span className="cal-link-dot" aria-hidden="true">·</span>
+                            <button type="button" className="cal-link-btn" onClick={() => openManualFoodModal('')}>
+                                <Plus size={13} /> Enter manually
                             </button>
                         </div>
                     )}
@@ -1456,135 +1441,72 @@ const Calories = () => {
                                     transition={{ duration: 0.15 }}
                                 >
                                     {dbSearch.results.length > 0 ? (
-                                        <div style={{ maxHeight: 250, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
+                                        <>
                                             <Label style={{ display: 'block', margin: '2px 0 6px' }}>
-                                                Database suggestions ({dbSearch.results.length})
+                                                Your foods ({dbSearch.results.length})
                                             </Label>
-                                            {dbSearch.results.slice(0, 8).map((item) => {
-                                                const itemUnit = resolveFoodUnit(item);
-                                                const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
-                                                return (
-                                                    <button
-                                                        key={item.id || item.normalized_name}
-                                                        type="button"
-                                                        onClick={() => { selectFoodItem(item); setFeedback(''); }}
-                                                        className="cal-row-btn"
-                                                    >
-                                                        <span style={{ minWidth: 0, textAlign: 'left' }}>
-                                                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
-                                                                {getSourceChip(item.source)}
+                                            {/* Only the list scrolls; the actions below stay in view */}
+                                            <div className="cal-results-scroll">
+                                                {dbSearch.results.slice(0, 30).map((item) => {
+                                                    const itemUnit = resolveFoodUnit(item);
+                                                    const unitKcal = Math.round((item.calories_per_100g * itemUnit.gramsPerUnit) / 100);
+                                                    return (
+                                                        <button
+                                                            key={item.id || item.normalized_name}
+                                                            type="button"
+                                                            onClick={() => { selectFoodItem(item); setFeedback(''); }}
+                                                            className="cal-row-btn"
+                                                        >
+                                                            <span style={{ minWidth: 0, textAlign: 'left' }}>
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                                                                    {getSourceChip(item.source)}
+                                                                </span>
+                                                                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+                                                                    {itemUnit.isCountable
+                                                                        ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
+                                                                        : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
+                                                                </span>
                                                             </span>
-                                                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                                                                {itemUnit.isCountable
-                                                                    ? `1 ${itemUnit.unitName} (${itemUnit.gramsPerUnit}g) · ${Math.round(item.calories_per_100g)}/100g`
-                                                                    : `P ${item.protein_per_100g} · C ${item.carbs_per_100g} · F ${item.fat_per_100g}`}
+                                                            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
+                                                                {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
+                                                                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                                                                    {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
+                                                                </span>
                                                             </span>
-                                                        </span>
-                                                        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: ACCENT, flexShrink: 0 }}>
-                                                            {itemUnit.isCountable ? unitKcal : Math.round(item.calories_per_100g)}
-                                                            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
-                                                                {itemUnit.isCountable ? ` /${itemUnit.unitName}` : ' /100g'}
-                                                            </span>
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-subtle)',
-                                                flexWrap: 'wrap',
-                                            }}>
-                                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Not in suggestions?</span>
-                                                <div style={{ display: 'flex', gap: 6 }}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openManualFoodModal(foodSearch, 'camera')}
-                                                        style={{
-                                                            padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                                            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
-                                                            color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                        }}
-                                                    >
-                                                        <Camera size={12} /> Scan
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleWebSearch(foodSearch)}
-                                                        disabled={searchingWeb}
-                                                        style={{
-                                                            padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                                            background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
-                                                            color: '#06b6d4', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                        }}
-                                                    >
-                                                        {searchingWeb ? <Loader2 size={12} className="spin" /> : <Globe size={12} />}
-                                                        {searchingWeb ? 'Searching…' : 'Web lookup'}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openManualFoodModal(foodSearch)}
-                                                        style={{
-                                                            padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                                            background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
-                                                            color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                                                        }}
-                                                    >
-                                                        <Plus size={12} /> Add manually
-                                                    </button>
-                                                </div>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
-                                        </div>
+                                        </>
                                     ) : (
-                                        <div style={{
-                                            display: 'flex', flexDirection: 'column', gap: 10, padding: '14px', borderRadius: 14,
-                                            background: 'var(--surface-input)', border: '1px solid var(--border-subtle)',
-                                        }}>
-                                            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                                "{foodSearch.trim()}" is not in your database yet.
-                                            </span>
-                                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openManualFoodModal(foodSearch, 'camera')}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                        padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
-                                                        background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
-                                                        color: '#10b981', borderRadius: 12, fontWeight: 700, cursor: 'pointer',
-                                                    }}
-                                                >
-                                                    <Camera size={14} /> Scan label
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleWebSearch(foodSearch)}
-                                                    disabled={searchingWeb}
-                                                    className="btn-primary"
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                                                        padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 140,
-                                                    }}
-                                                >
-                                                    {searchingWeb ? <Loader2 size={14} className="spin" /> : <Globe size={14} />}
-                                                    {searchingWeb ? 'Searching…' : 'Search web & save'}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openManualFoodModal(foodSearch)}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                        padding: '9px 14px', fontSize: 13, flex: 1, minWidth: 120,
-                                                        background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.35)',
-                                                        color: ACCENT, borderRadius: 12, fontWeight: 700, cursor: 'pointer',
-                                                    }}
-                                                >
-                                                    <Plus size={14} /> Add manually
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <p className="cal-no-match">
+                                            No match for <strong>“{foodSearch.trim()}”</strong> in your foods yet.
+                                        </p>
                                     )}
+
+                                    <div className="cal-fallback">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleWebSearch(foodSearch)}
+                                            disabled={searchingWeb}
+                                            className={`cal-fallback-primary ${dbSearch.results.length === 0 ? 'is-main' : ''}`}
+                                        >
+                                            {searchingWeb ? <Loader2 size={15} className="spin-animation" /> : <Globe size={15} />}
+                                            <span className="cal-fallback-primary-text">
+                                                {searchingWeb ? 'Looking it up…' : <>Look up “{foodSearch.trim()}” online</>}
+                                            </span>
+                                        </button>
+                                        <div className="cal-fallback-links">
+                                            <button type="button" className="cal-link-btn" onClick={() => openManualFoodModal(foodSearch, 'camera')}>
+                                                <Camera size={13} /> Scan a label
+                                            </button>
+                                            <span className="cal-link-dot" aria-hidden="true">·</span>
+                                            <button type="button" className="cal-link-btn" onClick={() => openManualFoodModal(foodSearch)}>
+                                                <Plus size={13} /> Enter manually
+                                            </button>
+                                        </div>
+                                    </div>
                                 </motion.div>
                             ) : null
                         ) : (
@@ -3932,6 +3854,84 @@ const Calories = () => {
                 }
                 .cal-row-btn:last-child { border-bottom: none; }
                 .cal-row-btn:hover { background: var(--surface-input); }
+
+                .cal-results-scroll {
+                    max-height: min(264px, calc(var(--app-vh, 1vh) * 34));
+                    overflow-y: auto;
+                    overscroll-behavior: contain;
+                    margin: 0 -4px;
+                    padding: 0 4px;
+                    border-bottom: 1px solid var(--border-subtle);
+                }
+                .cal-no-match {
+                    margin: 2px 0 0;
+                    font-size: 13px;
+                    color: var(--text-muted);
+                }
+                .cal-no-match strong { color: var(--text-primary); font-weight: 600; }
+                .cal-fallback {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-top: 10px;
+                }
+                .cal-fallback-primary {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    padding: 10px 14px;
+                    border-radius: 12px;
+                    border: 1px solid var(--border-subtle);
+                    background: transparent;
+                    color: var(--text-primary);
+                    font: inherit;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background .15s ease, border-color .15s ease;
+                }
+                .cal-fallback-primary svg { color: var(--accent-primary); flex-shrink: 0; }
+                .cal-fallback-primary:hover { background: var(--surface-input); border-color: var(--surface-input-border); }
+                .cal-fallback-primary:disabled { opacity: 0.7; cursor: default; }
+                /* When nothing matched, looking it up is the main action */
+                .cal-fallback-primary.is-main {
+                    background: var(--accent-gradient);
+                    border-color: transparent;
+                    color: #fff;
+                    padding: 12px 14px;
+                }
+                .cal-fallback-primary.is-main svg { color: inherit; }
+                .cal-fallback-primary.is-main:hover { background: var(--accent-gradient); opacity: 0.92; }
+                .cal-fallback-primary-text {
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .cal-fallback-links {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                }
+                .cal-link-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    padding: 4px 6px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-muted);
+                    font: inherit;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    border-radius: 8px;
+                }
+                .cal-link-btn:hover { color: var(--text-primary); }
+                .cal-link-dot { color: var(--text-muted); opacity: 0.6; font-size: 12px; }
 
                 .cal-log-group {
                     border-bottom: 1px solid var(--border-subtle);
