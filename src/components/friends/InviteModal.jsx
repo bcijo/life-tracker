@@ -76,7 +76,7 @@ const InviteModal = ({ isOpen, onClose, username, displayName }) => {
             display: 'flex',
             flexDirection: 'column',
             gap: '18px',
-            maxHeight: '90vh',
+            maxHeight: 'calc(var(--app-vh, 1vh) * 90)',
             overflowY: 'auto'
           }}
           onClick={(e) => e.stopPropagation()}

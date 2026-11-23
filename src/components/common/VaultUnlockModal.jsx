@@ -77,7 +77,7 @@ const VaultUnlockModal = () => {
                     <h3 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: '700' }}>
                         Unlock Your Vault
                     </h3>
-                    <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.65)', lineHeight: '1.5' }}>
+                    <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                         This device detected an encrypted vault. Enter your Security PIN to unlock your personal reflections and notes.
                     </p>
 
@@ -92,14 +92,14 @@ const VaultUnlockModal = () => {
                                 maxLength={12}
                                 style={{
                                     width: '100%',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                                    background: 'var(--surface-input)',
+                                    border: '1px solid var(--surface-input-border)',
                                     borderRadius: '12px',
                                     padding: '12px 16px',
                                     fontSize: '16px',
                                     textAlign: 'center',
                                     letterSpacing: '3px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     outline: 'none'
                                 }}
                             />

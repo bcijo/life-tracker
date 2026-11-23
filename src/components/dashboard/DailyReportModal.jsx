@@ -228,7 +228,7 @@ export const DailyReportModal = ({
                 style={{
                     width: '100%',
                     maxWidth: 440,
-                    maxHeight: '94vh',
+                    maxHeight: 'calc(var(--app-vh, 1vh) * 94)',
                     overflowY: 'auto',
                     background: 'var(--surface-elevated, #151421)',
                     border: '1px solid rgba(168,85,247,0.35)',
