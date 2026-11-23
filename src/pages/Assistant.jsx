@@ -12,11 +12,15 @@ import {
     Plus,
     Mic,
     Square,
-    Loader2
+    Loader2,
+    Copy,
+    Check,
+    ClipboardList
 } from 'lucide-react';
 import { askAI, transcribeAudio, getHumanReadableQueryDescription } from '../lib/groq';
 import useLifeContext from '../hooks/useLifeContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { buildDaySummary, isDaySummaryCommand } from '../lib/daySummary';
 
 /* ─── Follow-up suggestion pools by topic ─── */
 const FOLLOW_UPS = {
@@ -73,6 +77,11 @@ const FOLLOW_UPS = {
 
 const INITIAL_SUGGESTIONS = [
     {
+        label: "Summarize my day",
+        command: 'daySummary',
+        emoji: "📋"
+    },
+    {
         label: "Spending Breakdown",
         query: "How much did I spend this month and what are my top expense categories?",
         emoji: "💳"
@@ -93,6 +102,8 @@ const INITIAL_SUGGESTIONS = [
         emoji: "🎯"
     }
 ];
+
+const DAY_SUMMARY_LABEL = 'Summarize my day';
 
 const THINKING_PHASES = [
     "Thinking...",
@@ -161,6 +172,58 @@ const ThinkingText = () => {
     );
 };
 
+/* ─── Clipboard with a fallback for older mobile browsers ─── */
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch {
+            return false;
+        }
+    }
+}
+
+/* ─── Copyable day summary ─── */
+const DaySummaryCard = ({ text }) => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = async () => {
+        if (await copyText(text)) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1800);
+        }
+    };
+    const title = text.split('\n')[0];
+    const body = text.split('\n').slice(2).join('\n');
+    return (
+        <div className="ai-summary-card">
+            <div className="ai-summary-head">
+                <div style={{ minWidth: 0 }}>
+                    <div className="ai-summary-title"><ClipboardList size={15} /> Day summary</div>
+                    <div className="ai-summary-sub">{title.replace(/^Daily summary for /, '')}</div>
+                </div>
+                <button type="button" className={`ai-summary-copy ${copied ? 'is-copied' : ''}`} onClick={handleCopy}>
+                    {copied ? <Check size={15} /> : <Copy size={15} />}
+                    {copied ? 'Copied' : 'Copy'}
+                </button>
+            </div>
+            <pre className="ai-summary-text">{body}</pre>
+            <div className="ai-summary-foot">Made on your device. Nothing was sent to the AI.</div>
+        </div>
+    );
+};
+
 /* ═══════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
@@ -168,7 +231,7 @@ const Assistant = () => {
     const [messages, setMessages] = useState(() => {
         try {
             const saved = sessionStorage.getItem('lifetracker_ai_chat');
-            return saved ? JSON.parse(saved) : [];
+            return saved ? JSON.parse(saved).filter(m => !m.kind && m.content !== DAY_SUMMARY_LABEL) : [];
         } catch {
             return [];
         }
@@ -203,7 +266,8 @@ const Assistant = () => {
 
     useEffect(() => {
         try {
-            sessionStorage.setItem('lifetracker_ai_chat', JSON.stringify(messages));
+            // Day summaries can contain decrypted journal text, so they aren't stored
+            sessionStorage.setItem('lifetracker_ai_chat', JSON.stringify(messages.filter(m => !m.kind)));
         } catch {}
     }, [messages]);
 
@@ -300,9 +364,24 @@ const Assistant = () => {
         mediaRecorderRef.current.stop();
     };
 
+    // Builds the copyable day summary locally instead of asking the AI
+    const runDaySummary = () => {
+        const text = buildDaySummary(contextData);
+        setMessages(prev => [
+            ...prev,
+            { role: 'user', content: DAY_SUMMARY_LABEL, kind: 'daySummaryRequest' },
+            { role: 'assistant', content: text, kind: 'daySummary' },
+        ]);
+        setInput('');
+    };
+
     const handleSend = async (textToSend) => {
         const queryText = (textToSend || input).trim();
         if (!queryText || loading) return;
+        if (isDaySummaryCommand(queryText)) {
+            runDaySummary();
+            return;
+        }
 
         setMessages(prev => [...prev, { role: 'user', content: queryText }]);
         setInput('');
@@ -312,7 +391,7 @@ const Assistant = () => {
         try {
             const response = await askAI(queryText, contextData, (query) => {
                 setCurrentQueryLogs(prev => [...prev, query]);
-            }, messages);
+            }, messages.filter(m => !m.kind)); // summaries stay on the device
 
             const followUps = pickFollowUps(response.content, queryText);
 
@@ -404,7 +483,7 @@ const Assistant = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.3 + idx * 0.08, duration: 0.4 }}
-                                    onClick={() => handleSend(item.query)}
+                                    onClick={() => (item.command === 'daySummary' ? runDaySummary() : handleSend(item.query))}
                                     whileHover={{ y: -3, transition: { duration: 0.2 } }}
                                     whileTap={{ scale: 0.97 }}
                                 >
@@ -433,6 +512,10 @@ const Assistant = () => {
                             {isUser ? (
                                 <div className="ai-msg-user-bubble">
                                     {msg.content}
+                                </div>
+                            ) : msg.kind === 'daySummary' ? (
+                                <div className="ai-msg-ai-block">
+                                    <DaySummaryCard text={msg.content} />
                                 </div>
                             ) : (
                                 <div className="ai-msg-ai-block">
@@ -572,6 +655,15 @@ const Assistant = () => {
                 <div ref={messagesEndRef} />
             </div>
 
+            {/* ─── Quick command ─── */}
+            {!isEmpty && !loading && (
+                <div className="ai-quick-commands">
+                    <button type="button" className="ai-quick-chip" onClick={runDaySummary}>
+                        <ClipboardList size={13} /> Summarize my day
+                    </button>
+                </div>
+            )}
+
             {/* ─── Input bar ─── */}
             <form
                 className="ai-input-bar"
@@ -603,7 +695,7 @@ const Assistant = () => {
                                 ? `Listening (${recordingDuration}s)... tap mic to stop` 
                                 : isTranscribing 
                                 ? "Transcribing your voice..." 
-                                : "Ask anything about your data..."
+                                : "Ask anything, or type /day for a summary"
                         }
                         disabled={loading || isTranscribing}
                         className={`ai-input ${isRecording ? 'ai-input-recording' : ''}`}
@@ -678,6 +770,94 @@ const Assistant = () => {
                         width: calc(100% + 32px);
                     }
                 }
+
+                /* ── Day summary card ── */
+                .ai-summary-card {
+                    width: 100%;
+                    border: 1px solid var(--border-subtle);
+                    background: var(--glass-card-bg);
+                    border-radius: 16px;
+                    overflow: hidden;
+                }
+                .ai-summary-head {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    padding: 12px 14px;
+                    border-bottom: 1px solid var(--border-subtle);
+                }
+                .ai-summary-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+                .ai-summary-title svg { color: var(--accent-primary); }
+                .ai-summary-sub {
+                    font-size: 12px;
+                    color: var(--text-muted);
+                    margin-top: 2px;
+                }
+                .ai-summary-copy {
+                    flex-shrink: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 14px;
+                    border-radius: 10px;
+                    border: none;
+                    background: var(--accent-gradient);
+                    color: #fff;
+                    font: inherit;
+                    font-size: 13px;
+                    font-weight: 700;
+                    cursor: pointer;
+                }
+                .ai-summary-copy.is-copied { background: var(--success); }
+                .ai-summary-text {
+                    margin: 0;
+                    padding: 12px 14px;
+                    max-height: calc(var(--app-vh, 1vh) * 45);
+                    overflow-y: auto;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    font-family: var(--font-family);
+                    font-size: 12.5px;
+                    line-height: 1.55;
+                    color: var(--text-secondary);
+                }
+                .ai-summary-foot {
+                    padding: 8px 14px 10px;
+                    font-size: 11px;
+                    color: var(--text-muted);
+                    border-top: 1px solid var(--border-subtle);
+                }
+                .ai-quick-commands {
+                    display: flex;
+                    gap: 8px;
+                    padding: 0 2px 8px;
+                    overflow-x: auto;
+                }
+                .ai-quick-chip {
+                    flex-shrink: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px;
+                    border-radius: 999px;
+                    border: 1px solid var(--border-subtle);
+                    background: var(--glass-card-bg);
+                    color: var(--text-secondary);
+                    font: inherit;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                }
+                .ai-quick-chip svg { color: var(--accent-primary); }
+                .ai-quick-chip:hover { color: var(--text-primary); }
 
                 /* ── Scroll area ── */
                 .ai-scroll-area {
