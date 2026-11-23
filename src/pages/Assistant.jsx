@@ -60,6 +60,9 @@ const FOLLOW_UPS = {
     appGuide: [
         "How does the Runway & Burn rate calculator work?",
         "How do I install LifeTracker on my iPhone as a PWA?",
+        "How do I log a whole meal at once?",
+        "What is The Vital Seven starter pack?",
+        "How do I set a vault PIN for my journal?",
         "How is my Habit Level and XP calculated?",
         "How do I convert shopping list items into expenses?",
         "How do I reorder my habits?",
